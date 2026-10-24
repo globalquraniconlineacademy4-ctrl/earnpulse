@@ -263,6 +263,7 @@ export default function App() {
   const [withdrawStatusFilter, setWithdrawStatusFilter] = useState('all');
   const [withdrawDateFilter, setWithdrawDateFilter] = useState('all');
   const [withdrawHistoryLoading, setWithdrawHistoryLoading] = useState(false);
+  const [appDownloadUrl, setAppDownloadUrl] = useState('/downloads/EarnPulse.apk');
 
   // CheckIn State from backend
   const [checkInStatus, setCheckInStatus] = useState({
@@ -500,7 +501,7 @@ export default function App() {
     }
   };
 
-  // Fetch Public Site Configuration (Live min withdraw amount, site settings)
+  // Fetch Public Site Configuration (Live min withdraw amount, site settings, app download link)
   const fetchSystemConfig = async () => {
     try {
       const res = await fetch(`${API_BASE}/config`);
@@ -509,10 +510,26 @@ export default function App() {
         if (data.config.min_withdraw_amount) {
           setMinWithdrawAmount(parseFloat(data.config.min_withdraw_amount) || 100);
         }
+        if (data.config.app_download_url) {
+          setAppDownloadUrl(data.config.app_download_url);
+        }
       }
     } catch (e) {
       console.warn('fetchSystemConfig error:', e);
     }
+  };
+
+  // Immediate APK Direct Download Trigger
+  const handleDownloadApp = () => {
+    const url = appDownloadUrl || '/downloads/EarnPulse.apk';
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'EarnPulse.apk');
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   useEffect(() => {
@@ -1226,11 +1243,14 @@ export default function App() {
           </div>
 
           <button
-            onClick={() => alert(lang === 'bn' ? 'APP খুব শীঘ্রই উন্মুক্ত করা হবে' : 'APP download opening soon')}
+            onClick={handleDownloadApp}
+            title={lang === 'bn' ? 'অ্যান্ড্রয়েড অ্যাপ ডাউনলোড করুন' : 'Download Android APK'}
             style={{
-              display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px',
-              color: '#0e7033', background: '#e8f5e9', border: 'none',
-              padding: '6px 12px', borderRadius: '20px', fontWeight: '600', cursor: 'pointer'
+              display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px',
+              color: '#0e7033', background: '#e8f5e9', border: '1px solid #c8e6c9',
+              padding: '6px 12px', borderRadius: '20px', fontWeight: '700', cursor: 'pointer',
+              boxShadow: '0 2px 5px rgba(16, 185, 129, 0.15)',
+              transition: 'all 0.15s ease'
             }}
           >
             <Download size={13} strokeWidth={2.5} /> APP

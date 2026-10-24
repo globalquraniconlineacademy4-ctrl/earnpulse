@@ -842,7 +842,8 @@ app.get('/api/config', (req, res) => {
       user_reward_ratio: ratio,
       reward_percentage: percentage,
       currency: config.currency || '৳',
-      notice_message: config.notice_message || ''
+      notice_message: config.notice_message || '',
+      app_download_url: config.app_download_url || '/downloads/EarnPulse.apk'
     }
   });
 });
@@ -1117,6 +1118,10 @@ app.post('/api/admin/config', authenticateToken, requireAdmin, async (req, res) 
   if (configs.min_withdraw_amount !== undefined) {
     let m = parseFloat(configs.min_withdraw_amount);
     if (!isNaN(m) && m >= 1) configs.min_withdraw_amount = m;
+  }
+
+  if (configs.app_download_url !== undefined) {
+    configs.app_download_url = String(configs.app_download_url).trim();
   }
 
   db.set('system_config', { ...current, ...configs }).write();
