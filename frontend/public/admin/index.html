@@ -239,7 +239,7 @@
           <tr>
             <th>ফোন নম্বর</th>
             <th>ব্যালেন্স</th>
-            <th>মোট আয়</th>
+            <th>WP</th>
             <th>জয়েনিং তারিখ</th>
           </tr>
         </thead>
@@ -434,17 +434,27 @@
         waTable.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো হোয়াটসঅ্যাপ যুক্ত নেই</td></tr>';
       }
 
-      // Users Table (Only real registered members)
+      // Users Table (Only real registered members with live balance and connected WhatsApp)
       const uTable = document.getElementById('usersTable');
       if (d.usersList && d.usersList.length > 0) {
-        uTable.innerHTML = d.usersList.map(u => `
-          <tr>
-            <td><strong>${u.username}</strong></td>
-            <td style="color: #34d399; font-weight: 700;">৳ ${(u.balance || 0).toFixed(2)}</td>
-            <td>৳ ${(u.total_earned || 0).toFixed(2)}</td>
-            <td style="font-size: 11px; color: var(--text-muted);">${(u.created_at || '').substring(0, 16).replace('T', ' ')}</td>
-          </tr>
-        `).join('');
+        uTable.innerHTML = d.usersList.map(u => {
+          const wpDisplay = (u.wp_numbers && u.wp_numbers.length > 0)
+            ? u.wp_numbers.map(n => `
+                <span class="pill ${n.status === 'online' ? 'pill-green' : 'pill-red'}" style="margin: 2px 4px 2px 0; font-family: monospace; font-size: 11px;">
+                  ${n.status === 'online' ? '🟢' : '🔴'} ${n.phone}
+                </span>
+              `).join('')
+            : '<span style="color: var(--text-muted); font-size: 11px;">কানেক্ট নেই</span>';
+
+          return `
+            <tr>
+              <td><strong>${u.username}</strong></td>
+              <td style="color: #34d399; font-weight: 800; font-size: 14px;">৳ ${(parseFloat(u.balance) || 0).toFixed(2)}</td>
+              <td>${wpDisplay}</td>
+              <td style="font-size: 11px; color: var(--text-muted);">${(u.created_at || '').substring(0, 16).replace('T', ' ')}</td>
+            </tr>
+          `;
+        }).join('');
       } else {
         uTable.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো মেম্বার নেই</td></tr>';
       }

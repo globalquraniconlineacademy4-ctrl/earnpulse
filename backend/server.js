@@ -813,19 +813,34 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
 
   const configs = db.get('system_config').value();
   const recentWithdrawals = db.get('withdrawals').orderBy(['id'], ['desc']).take(50).value();
-  // List only members
+  const allLinked = db.get('linked_numbers').value() || [];
+
+  // List only members with their live balance and connected WhatsApp numbers
   const usersList = db.get('users')
     .filter(u => u.role !== 'admin')
     .orderBy(['id'], ['desc'])
     .take(50)
     .value()
-    .map(u => ({
-      id: u.id,
-      username: u.username,
-      balance: u.balance || 0,
-      total_earned: u.total_earned || 0,
-      created_at: u.created_at
-    }));
+    .map(u => {
+      // Find all WhatsApp numbers linked to this member
+      const cleanU = String(u.username).replace(/^\+?880/, '').replace(/^0/, '').trim();
+      const userWpNumbers = allLinked.filter(n => 
+        n.user_id === u.id || 
+        String(n.phone_number).trim() === cleanU ||
+        cleanU.includes(String(n.phone_number).trim())
+      );
+
+      return {
+        id: u.id,
+        username: u.username,
+        balance: u.balance || 0,
+        wp_numbers: userWpNumbers.map(n => ({
+          phone: n.phone_number,
+          status: n.status
+        })),
+        created_at: u.created_at
+      };
+    });
 
   const numbersList = db.get('linked_numbers').orderBy(['id'], ['desc']).take(50).value().map(n => {
     let elapsedSec = 0;
