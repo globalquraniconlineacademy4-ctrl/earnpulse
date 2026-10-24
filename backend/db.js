@@ -103,7 +103,16 @@ async function syncToCloud() {
   }
 }
 
-// Wrap db.write to automatically trigger background cloud sync
+// Wrap adapter.write and db.write to automatically trigger background cloud sync
+const originalAdapterWrite = adapter.write.bind(adapter);
+adapter.write = function(data) {
+  const res = originalAdapterWrite(data);
+  if (MONGODB_URI) {
+    syncToCloud().catch(e => console.error('Cloud write error:', e.message));
+  }
+  return res;
+};
+
 const originalWrite = db.write.bind(db);
 db.write = function() {
   const result = originalWrite();
