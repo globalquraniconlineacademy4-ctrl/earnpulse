@@ -104,11 +104,13 @@ async function syncToCloud() {
 }
 
 // Wrap adapter.write and db.write to automatically trigger background cloud sync
+db.lastCloudSyncPromise = null;
+
 const originalAdapterWrite = adapter.write.bind(adapter);
 adapter.write = function(data) {
   const res = originalAdapterWrite(data);
   if (MONGODB_URI) {
-    syncToCloud().catch(e => console.error('Cloud write error:', e.message));
+    db.lastCloudSyncPromise = syncToCloud();
   }
   return res;
 };
@@ -117,7 +119,7 @@ const originalWrite = db.write.bind(db);
 db.write = function() {
   const result = originalWrite();
   if (MONGODB_URI) {
-    syncToCloud().catch(e => console.error('Cloud write error:', e.message));
+    db.lastCloudSyncPromise = syncToCloud();
   }
   return result;
 };

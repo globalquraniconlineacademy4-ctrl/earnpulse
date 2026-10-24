@@ -22,15 +22,27 @@ app.use((req, res, next) => {
   next();
 });
 
-// Cloud Database Sync Middleware (MongoDB Atlas)
+// Cloud Database Sync Middleware (MongoDB Atlas 24/7 Persistent Storage)
 let isCloudSyncedOnce = false;
 app.use(async (req, res, next) => {
-  if (process.env.MONGODB_URI && (!isCloudSyncedOnce || Math.random() < 0.1)) {
+  if (db.syncFromCloud && (!isCloudSyncedOnce || Math.random() < 0.15)) {
     try {
-      if (db.syncFromCloud) await db.syncFromCloud();
+      await db.syncFromCloud();
       isCloudSyncedOnce = true;
     } catch (e) {}
   }
+
+  // Intercept res.json to ensure any pending MongoDB Atlas writes finish before responding
+  const originalJson = res.json.bind(res);
+  res.json = async function(data) {
+    if (db.lastCloudSyncPromise) {
+      try {
+        await db.lastCloudSyncPromise;
+      } catch (err) {}
+    }
+    return originalJson(data);
+  };
+
   next();
 });
 
