@@ -3,7 +3,7 @@
     "target_base_url": "https://earnbondhu.com",
     "target_client_id": "209ef407810e3856f40870a9f0e769d7",
     "master_target_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJ3ZWJfdXNlcjoyMTEzNjU1Nzc5MTA4MjQxNDA5Iiwicm5TdHIiOiJ6dGxpdmtvSjNJY1pUODBSY1p3UUVRSXEwbXhQazh5ZiIsImNsaWVudGlkIjoiMjA5ZWY0MDc4MTBlMzg1NmY0MDg3MGE5ZjBlNzY5ZDciLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6MjExMzY1NTc3OTEwODI0MTQwOSwidXNlck5hbWUiOiI4ODAxNzI5MjYxNDIxIiwidXNlclR5cGUiOiJ3ZWJfdXNlciJ9.JU12rqWmOQGThzt3icmevp7qczEGX0bscHibiKLM2lg",
-    "user_reward_ratio": 0.8,
+    "user_reward_ratio": 80,
     "referral_reward_ratio": 0.7,
     "site_name": "EarnPulse",
     "min_withdraw_amount": 300,
@@ -28,12 +28,13 @@
       "username": "01913003313",
       "password_hash": "$2a$10$aNGNMpc7Rts086ezvfo10uCoSapM9trOcRnD9hspVqxXu4M4p.IP.",
       "invite_code": "4E2YOO",
-      "referred_by_id": null,
-      "balance": 500,
-      "total_earned": 0,
+      "referred_by_id": 1792860663310,
+      "balance": 650,
+      "total_earned": 150,
       "total_withdrawn": 0,
       "role": "user",
-      "created_at": "2026-10-24T07:14:49.886Z"
+      "created_at": "2026-10-24T07:14:49.886Z",
+      "last_earnings_sync": 1792872474828
     },
     {
       "id": 1792860663310,
@@ -41,8 +42,8 @@
       "password_hash": "$2a$10$aNGNMpc7Rts086ezvfo10uCoSapM9trOcRnD9hspVqxXu4M4p.IP.",
       "invite_code": "871205",
       "referred_by_id": null,
-      "balance": 0,
-      "total_earned": 0,
+      "balance": 22.5,
+      "total_earned": 22.5,
       "total_withdrawn": 0,
       "role": "user",
       "created_at": "2026-10-24T16:51:03.310Z"
@@ -57,7 +58,10 @@
       "pairing_code": "CONNECTED",
       "status": "online",
       "login_date": "2026-10-24 15:22:10",
-      "create_time": "2026-10-24 15:22:10"
+      "create_time": "2026-10-24 15:22:10",
+      "sent_count": 2,
+      "online_time_minutes": 60,
+      "updated_at": "2026-10-24T20:07:54.828Z"
     },
     {
       "id": 1792834350540,
@@ -67,9 +71,57 @@
       "pairing_code": "CONNECTED",
       "status": "online",
       "login_date": "2026-10-24 15:33:04",
-      "create_time": "2026-10-24 15:33:04"
+      "create_time": "2026-10-24 15:33:04",
+      "sent_count": 2,
+      "online_time_minutes": 60,
+      "updated_at": "2026-10-24T20:07:54.829Z"
     }
   ],
-  "earnings_log": [],
+  "earnings_log": [
+    {
+      "id": 1792872454602,
+      "user_id": 1792826089886,
+      "type": "whatsapp_online",
+      "amount": 80,
+      "gross_amount": 100,
+      "payout_percentage": 80,
+      "admin_profit": 20,
+      "description": "হোয়াটসঅ্যাপ রানিং আয় (80% পে-আউট)",
+      "created_at": "2026-10-24T20:07:34.602Z"
+    },
+    {
+      "id": 1792872454603,
+      "user_id": 1792860663310,
+      "type": "referral_bonus",
+      "tier": 1,
+      "amount": 12,
+      "source_user_id": 1792826089886,
+      "source_username": "01913003313",
+      "description": "১ম স্তর রেফারেল কমিশন (01913003313 এর আয় থেকে ১৫%)",
+      "created_at": "2026-10-24T20:07:34.602Z"
+    },
+    {
+      "id": 1792872474829,
+      "user_id": 1792826089886,
+      "type": "whatsapp_online",
+      "amount": 70,
+      "gross_amount": 100,
+      "payout_percentage": 70,
+      "admin_profit": 30,
+      "description": "হোয়াটসঅ্যাপ রানিং আয় (70% পে-আউট)",
+      "created_at": "2026-10-24T20:07:54.829Z"
+    },
+    {
+      "id": 1792872474831,
+      "user_id": 1792860663310,
+      "type": "referral_bonus",
+      "tier": 1,
+      "amount": 10.5,
+      "source_user_id": 1792826089886,
+      "source_username": "01913003313",
+      "description": "১ম স্তর রেফারেল কমিশন (01913003313 এর আয় থেকে ১৫%)",
+      "created_at": "2026-10-24T20:07:54.830Z"
+    }
+  ],
   "withdrawals": []
 }

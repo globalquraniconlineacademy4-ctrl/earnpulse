@@ -316,8 +316,17 @@
     <form id="configForm">
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
         <div class="form-group">
-          <label>মেম্বার পেআউট রেশিও (০.৮০ = ৮০% মেম্বার, ২০% আপনার লাভ)</label>
-          <input type="number" step="0.01" id="rewardRatio" value="0.80">
+          <label style="display: flex; justify-content: space-between; align-items: center;">
+            <span>মেম্বার পেআউট পার্সেন্টেজ (%)</span>
+            <span style="font-size: 11px; color: #10b981; font-weight: 700;">১% - ১০০%</span>
+          </label>
+          <div style="position: relative;">
+            <input type="number" min="1" max="100" step="1" id="rewardRatio" placeholder="80" style="padding-right: 36px; font-weight: 700; font-size: 15px; color: #34d399;">
+            <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #10b981; font-weight: 800; font-size: 15px;">%</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">
+            💡 যেমন: ৮০ লিখলে মূল আয়ের ৮০% মেম্বার পাবে, বাকি ২০% আপনার নেট লাভ।
+          </div>
         </div>
         <div class="form-group">
           <label>সর্বনিম্ন উত্তোলন পরিমাণ (টাকা)</label>
@@ -458,7 +467,14 @@
       // Configs
       if (d.configs) {
         if (document.getElementById('rewardRatio')) {
-          document.getElementById('rewardRatio').value = d.configs.user_reward_ratio || 0.80;
+          let rVal = d.configs.user_reward_ratio;
+          if (rVal !== undefined && rVal !== null) {
+            let num = parseFloat(rVal);
+            if (num <= 1) num = Math.round(num * 100);
+            document.getElementById('rewardRatio').value = num;
+          } else {
+            document.getElementById('rewardRatio').value = 80;
+          }
         }
         if (document.getElementById('minWithdraw')) {
           document.getElementById('minWithdraw').value = d.configs.min_withdraw_amount || 100;
@@ -558,6 +574,21 @@
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]') || document.querySelector('.save-btn');
     const oldText = btn.innerText;
+
+    const rInput = document.getElementById('rewardRatio');
+    let rVal = parseInt(rInput.value, 10);
+    if (isNaN(rVal) || rVal < 1 || rVal > 100) {
+      alert('অনুগ্রহ করে মেম্বার পেআউট পার্সেন্টেজ ১ থেকে ১০০ এর মধ্যে লিখুন (যেমন: ৮০)');
+      return;
+    }
+
+    const minInput = document.getElementById('minWithdraw');
+    let minVal = parseFloat(minInput.value);
+    if (isNaN(minVal) || minVal < 1) {
+      alert('অনুগ্রহ করে সঠিক সর্বনিম্ন উত্তোলনের পরিমাণ লিখুন');
+      return;
+    }
+
     btn.disabled = true;
     btn.innerText = 'সংরক্ষণ হচ্ছে...';
 
@@ -567,8 +598,8 @@
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
         body: JSON.stringify({
           configs: {
-            user_reward_ratio: parseFloat(document.getElementById('rewardRatio').value) || 0.80,
-            min_withdraw_amount: parseFloat(document.getElementById('minWithdraw').value) || 100
+            user_reward_ratio: rVal,
+            min_withdraw_amount: minVal
           }
         })
       });

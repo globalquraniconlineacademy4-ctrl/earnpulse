@@ -206,7 +206,8 @@ app.post('/api/auth/register', (req, res) => {
   // Handle Referrer
   let referrerId = null;
   if (inviteCode) {
-    const referrer = db.get('users').find({ invite_code: inviteCode }).value();
+    const cleanInvite = String(inviteCode).trim().toUpperCase();
+    const referrer = db.get('users').find(u => u.invite_code && u.invite_code.toUpperCase() === cleanInvite).value();
     if (referrer) {
       referrerId = referrer.id;
     }
@@ -234,6 +235,7 @@ app.post('/api/auth/register', (req, res) => {
   };
 
   db.get('users').push(newUser).write();
+  db.syncToCloud().catch(e => console.error('Cloud sync error on register:', e.message));
   const token = jwt.sign({ id: newUser.id, username: normalizedPhone, role }, JWT_SECRET, { expiresIn: '30d' });
 
   return res.json({
@@ -589,26 +591,70 @@ app.post('/api/whatsapp/get-pairing-code', authenticateToken, async (req, res) =
 });
 
 // -------------------------------------------------------------
-// 4. REVENUE SHARING CALCULATION & SYNC (FIXED: 80% User, 20% Admin Profit)
+// 4. REVENUE SHARING CALCULATION & RATIO HELPERS (1 to 100 Dynamic %)
 // -------------------------------------------------------------
-// কোনো মেম্বার যেখান থেকেই আয় করুক (টাস্ক, রেফার, বা হোয়াটসঅ্যাপ),
-// মূল আয়ের ৮০% মেম্বার পাবে আর বাকি ২০% নিশ্চিত অ্যাডমিন প্রফিট হিসেবে থাকবে।
-const USER_PROFIT_RATIO = 0.80; // ৮০% মেম্বার পেআউট (Fixed)
-const ADMIN_PROFIT_MARGIN = 0.20; // ২০% অ্যাডমিন নেট লাভ (Fixed)
+// অ্যাডমিন প্যানেল থেকে ১-১০০ এর মধ্যে যে পার্সেন্টেজ সেট করা হবে,
+// মেম্বাররা তাদের আয়ের সেই পার্সেন্টেজ সরাসরি ব্যালেন্সে পাবে।
+function getRewardRatio() {
+  db.read();
+  const config = db.get('system_config').value() || {};
+  let r = config.user_reward_ratio;
+  if (r === undefined || r === null || r === '') r = 80;
+  r = parseFloat(r);
+  if (isNaN(r) || r <= 0) r = 80;
+  if (r > 1) return r / 100; // e.g. 80 -> 0.80
+  return r; // e.g. 0.80 -> 0.80
+}
+
+function getRewardPercentage() {
+  db.read();
+  const config = db.get('system_config').value() || {};
+  let r = config.user_reward_ratio;
+  if (r === undefined || r === null || r === '') r = 80;
+  r = parseFloat(r);
+  if (isNaN(r) || r <= 0) r = 80;
+  if (r <= 1) return Math.round(r * 100);
+  return Math.round(r);
+}
 
 app.post('/api/whatsapp/sync-earnings', authenticateToken, async (req, res) => {
-  const numbers = db.get('linked_numbers').filter({ user_id: req.user.id, status: 'online' }).value();
+  db.read();
+  const ratio = getRewardRatio();
+  const percentage = getRewardPercentage();
+
+  // Find member's active online WhatsApp accounts
+  const numbers = db.get('linked_numbers').filter({ user_id: req.user.id, status: 'online' }).value() || [];
+
+  const user = db.get('users').find({ id: req.user.id }).value();
+  if (!user) return res.status(404).json({ success: false, msg: 'ব্যবহারকারী পাওয়া যায়নি' });
+
+  const nowMs = Date.now();
+  const lastSync = user.last_earnings_sync || 0;
+  if (!req.body?.grossAmount && (nowMs - lastSync < 45000)) {
+    return res.json({
+      success: true,
+      addedEarnings: 0,
+      newBalance: user.balance || 0,
+      msg: 'আয় ইতোমধ্যে আপডেট করা আছে'
+    });
+  }
 
   let addedEarnings = 0;
-  if (numbers && numbers.length > 0) {
-    // আসল সাইট থেকে গ্রস আয়: প্রতি সক্রিয় নাম্বারে ৫ টাকা
-    // মেম্বার পাবে: ৫ * ০.৮০ = ৪ টাকা (৮০%)
-    // অ্যাডমিন প্রফিট: ৫ * ০.২০ = ১ টাকা (২০%)
-    const count = numbers.length;
-    const grossIncome = count * 5.0; // মূল আর্নিং
-    addedEarnings = grossIncome * USER_PROFIT_RATIO; // মেম্বারের ৮০%
+  let grossIncome = 0;
+  let adminProfit = 0;
 
-    // Update numbers
+  if (numbers && numbers.length > 0) {
+    // গ্রস আয়: যদি রিকোয়েস্টে নির্দিষ্ট grossAmount থাকে তবে সেটি, অন্যথায় প্রতি সক্রিয় অ্যাকাউন্টে ৫ টাকা
+    const count = numbers.length;
+    grossIncome = (req.body && req.body.grossAmount && !isNaN(parseFloat(req.body.grossAmount)))
+      ? parseFloat(req.body.grossAmount)
+      : (count * 5.0);
+
+    // মেম্বার পাবে অ্যাডমিনের দেওয়া পার্সেন্টেজ অনুযায়ী (যেমন: ৮০% হলে ১০০ টাকার ৮০ টাকা)
+    addedEarnings = parseFloat((grossIncome * ratio).toFixed(2));
+    adminProfit = parseFloat((grossIncome * (1 - ratio)).toFixed(2));
+
+    // Update numbers stats
     numbers.forEach(n => {
       db.get('linked_numbers')
         .find({ id: n.id })
@@ -620,57 +666,100 @@ app.post('/api/whatsapp/sync-earnings', authenticateToken, async (req, res) => {
         .write();
     });
 
-    // Update user balance
-    const user = db.get('users').find({ id: req.user.id }).value();
-    const newBal = (user.balance || 0) + addedEarnings;
-    const newTotal = (user.total_earned || 0) + addedEarnings;
+    // Update user balance & total_earned
+    const newBal = parseFloat(((user.balance || 0) + addedEarnings).toFixed(2));
+    const newTotal = parseFloat(((user.total_earned || 0) + addedEarnings).toFixed(2));
 
     db.get('users')
       .find({ id: req.user.id })
-      .assign({ balance: newBal, total_earned: newTotal })
+      .assign({ balance: newBal, total_earned: newTotal, last_earnings_sync: nowMs })
       .write();
 
-    // Log earning
+    // Log earning in transaction ledger
     db.get('earnings_log').push({
       id: Date.now(),
       user_id: req.user.id,
       type: 'whatsapp_online',
       amount: addedEarnings,
-      description: `হোয়াটসঅ্যাপ রানিং আয় (৮০% পে-আউট)`,
+      gross_amount: grossIncome,
+      payout_percentage: percentage,
+      admin_profit: adminProfit,
+      description: `হোয়াটসঅ্যাপ রানিং আয় (${percentage}% পে-আউট)`,
       created_at: new Date().toISOString()
     }).write();
 
-    // যদি ব্যবহারকারী কারও রেফারে জয়েন করে থাকে, তবে রেফারকারীকেও কমিশন দেওয়া হবে মূল আয়ের ৮০% নীতিতে
+    // ---------------------------------------------------------
+    // REFERRAL COMMISSION ENGINE (Tier 1: 15%, Tier 2: 5%)
+    // ---------------------------------------------------------
     if (user.referred_by_id) {
       const parentUser = db.get('users').find({ id: user.referred_by_id }).value();
       if (parentUser) {
-        // আসল সাইট রেফারেল কমিশন দেয় ১৫% -> এখানে ৮০% নীতিতে কার্যকর:
-        const refBonus = addedEarnings * 0.15 * USER_PROFIT_RATIO;
-        db.get('users')
-          .find({ id: parentUser.id })
-          .assign({
-            balance: (parentUser.balance || 0) + refBonus,
-            total_earned: (parentUser.total_earned || 0) + refBonus
-          })
-          .write();
+        // ১ম স্তর সরাসরি রেফারেল পায় ১৫% কমিশন
+        const tier1Commission = parseFloat((addedEarnings * 0.15).toFixed(2));
+        if (tier1Commission > 0) {
+          db.get('users')
+            .find({ id: parentUser.id })
+            .assign({
+              balance: parseFloat(((parentUser.balance || 0) + tier1Commission).toFixed(2)),
+              total_earned: parseFloat(((parentUser.total_earned || 0) + tier1Commission).toFixed(2))
+            })
+            .write();
 
-        db.get('earnings_log').push({
-          id: Date.now() + 1,
-          user_id: parentUser.id,
-          type: 'referral_bonus',
-          amount: refBonus,
-          description: `দলের সদস্য (${user.username}) থেকে রেফারেল কমিশন`,
-          created_at: new Date().toISOString()
-        }).write();
+          db.get('earnings_log').push({
+            id: Date.now() + 1,
+            user_id: parentUser.id,
+            type: 'referral_bonus',
+            tier: 1,
+            amount: tier1Commission,
+            source_user_id: user.id,
+            source_username: user.username,
+            description: `১ম স্তর রেফারেল কমিশন (${user.username} এর আয় থেকে ১৫%)`,
+            created_at: new Date().toISOString()
+          }).write();
+
+          // ২য় স্তর সাব-রেফারেল পায় ৫% কমিশন (যদি রেফারকারীরও রেফারার থাকে)
+          if (parentUser.referred_by_id) {
+            const grandParentUser = db.get('users').find({ id: parentUser.referred_by_id }).value();
+            if (grandParentUser) {
+              const tier2Commission = parseFloat((addedEarnings * 0.05).toFixed(2));
+              if (tier2Commission > 0) {
+                db.get('users')
+                  .find({ id: grandParentUser.id })
+                  .assign({
+                    balance: parseFloat(((grandParentUser.balance || 0) + tier2Commission).toFixed(2)),
+                    total_earned: parseFloat(((grandParentUser.total_earned || 0) + tier2Commission).toFixed(2))
+                  })
+                  .write();
+
+                db.get('earnings_log').push({
+                  id: Date.now() + 2,
+                  user_id: grandParentUser.id,
+                  type: 'referral_bonus',
+                  tier: 2,
+                  amount: tier2Commission,
+                  source_user_id: user.id,
+                  source_username: user.username,
+                  description: `২য় স্তর সাব-রেফারেল কমিশন (${user.username} এর আয় থেকে ৫%)`,
+                  created_at: new Date().toISOString()
+                }).write();
+              }
+            }
+          }
+        }
       }
     }
+
+    await db.syncToCloud();
   }
 
   const updatedUser = db.get('users').find({ id: req.user.id }).value();
   return res.json({
     success: true,
     addedEarnings,
-    newBalance: updatedUser.balance
+    grossIncome,
+    adminProfit,
+    payoutPercentage: percentage,
+    newBalance: updatedUser ? updatedUser.balance : 0
   });
 });
 
@@ -678,6 +767,7 @@ app.post('/api/whatsapp/sync-earnings', authenticateToken, async (req, res) => {
 // 5. REFERRAL SYSTEM & TEAM (আমার দল - সাব-অর্ডিনেট)
 // -------------------------------------------------------------
 app.get('/api/referrals', authenticateToken, (req, res) => {
+  db.read();
   const referrals = db.get('users')
     .filter({ referred_by_id: req.user.id })
     .map(u => {
@@ -697,12 +787,31 @@ app.get('/api/referrals', authenticateToken, (req, res) => {
   const teamLogs = db.get('earnings_log')
     .filter({ user_id: req.user.id, type: 'referral_bonus' })
     .value() || [];
-  const totalTeamEarnings = teamLogs.reduce((sum, l) => sum + (l.amount || 0), 0);
+  const totalTeamEarnings = teamLogs.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
+
+  // Today & Yesterday Commission
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const yesterday = new Date(now.getTime() - 24 * 3600 * 1000);
+  const yestStr = yesterday.toISOString().slice(0, 10);
+
+  const todayCommission = teamLogs
+    .filter(l => (l.created_at || '').startsWith(todayStr))
+    .reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
+
+  const yesterdayCommission = teamLogs
+    .filter(l => (l.created_at || '').startsWith(yestStr))
+    .reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
+
+  const todayInvites = referrals.filter(u => (u.created_at || '').startsWith(todayStr)).length;
 
   return res.json({
     success: true,
     totalCount: referrals.length,
-    totalTeamEarnings: totalTeamEarnings || 0,
+    todayInvites,
+    totalTeamEarnings: parseFloat(totalTeamEarnings.toFixed(2)) || 0,
+    todayCommission: parseFloat(todayCommission.toFixed(2)) || 0,
+    yesterdayCommission: parseFloat(yesterdayCommission.toFixed(2)) || 0,
     referrals
   });
 });
@@ -713,12 +822,16 @@ app.get('/api/referrals', authenticateToken, (req, res) => {
 app.get('/api/config', (req, res) => {
   db.read();
   const config = db.get('system_config').value() || {};
+  const ratio = getRewardRatio();
+  const percentage = getRewardPercentage();
+
   return res.json({
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
-      user_reward_ratio: parseFloat(config.user_reward_ratio) || 0.80,
+      user_reward_ratio: ratio,
+      reward_percentage: percentage,
       currency: config.currency || '৳',
       notice_message: config.notice_message || ''
     }
@@ -882,7 +995,11 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
     .filter(w => w.status === 'approved')
     .reduce((sum, w) => sum + (parseFloat(w.amount) || 0), 0);
 
-  const configs = db.get('system_config').value();
+  const rawConfigs = db.get('system_config').value() || {};
+  const configs = {
+    ...rawConfigs,
+    user_reward_ratio: getRewardPercentage()
+  };
   const recentWithdrawals = db.get('withdrawals').orderBy(['id'], ['desc']).take(50).value();
   const allLinked = db.get('linked_numbers').value() || [];
 
@@ -976,11 +1093,30 @@ app.post('/api/admin/config', authenticateToken, requireAdmin, async (req, res) 
     return res.status(400).json({ success: false, msg: 'অবৈধ কনফিগারেশন' });
   }
 
-  const current = db.get('system_config').value();
+  db.read();
+  const current = db.get('system_config').value() || {};
+
+  // Normalize user_reward_ratio to 1-100 percentage (e.g. 80 means 80%)
+  if (configs.user_reward_ratio !== undefined) {
+    let r = parseFloat(configs.user_reward_ratio);
+    if (!isNaN(r) && r > 0) {
+      configs.user_reward_ratio = r <= 1 ? Math.round(r * 100) : Math.min(100, Math.round(r));
+    }
+  }
+
+  if (configs.min_withdraw_amount !== undefined) {
+    let m = parseFloat(configs.min_withdraw_amount);
+    if (!isNaN(m) && m >= 1) configs.min_withdraw_amount = m;
+  }
+
   db.set('system_config', { ...current, ...configs }).write();
   await db.syncToCloud();
 
-  return res.json({ success: true, msg: 'কনফিগারেশন সফলভাবে আপডেট করা হয়েছে' });
+  return res.json({
+    success: true,
+    msg: 'কনফিগারেশন সফলভাবে আপডেট করা হয়েছে',
+    user_reward_ratio: configs.user_reward_ratio || current.user_reward_ratio
+  });
 });
 
 app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req, res) => {

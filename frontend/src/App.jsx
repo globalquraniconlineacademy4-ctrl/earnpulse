@@ -533,6 +533,30 @@ export default function App() {
     return () => clearInterval(syncInterval);
   }, [token, activeTab]);
 
+  // Periodic Live Background WhatsApp Earnings Sync (runs every 60s when user has active online numbers)
+  useEffect(() => {
+    if (!token) return;
+    const hasOnline = linkedNumbers && linkedNumbers.some(n => n.status === 'online');
+    if (!hasOnline) return;
+
+    const earningsInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/whatsapp/sync-earnings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+        });
+        const d = await res.json();
+        if (d && d.success && d.addedEarnings > 0) {
+          fetchUserData();
+        }
+      } catch (e) {
+        // quiet error
+      }
+    }, 60000);
+
+    return () => clearInterval(earningsInterval);
+  }, [token, linkedNumbers]);
+
   // Real-time WhatsApp connection listener (স্বয়ংক্রিয় লাইভ চেকার)
   useEffect(() => {
     let interval = null;
@@ -746,7 +770,10 @@ export default function App() {
             setReferrals(d.referrals || []);
             setTeamStats({
               totalCount: d.totalCount || (d.referrals ? d.referrals.length : 0),
-              totalTeamEarnings: d.totalTeamEarnings || 0
+              todayInvites: d.todayInvites || 0,
+              totalTeamEarnings: d.totalTeamEarnings || 0,
+              todayCommission: d.todayCommission || 0,
+              yesterdayCommission: d.yesterdayCommission || 0
             });
           }
         })
@@ -1679,7 +1706,7 @@ export default function App() {
                   </div>
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748b' }}>{t.todayInvites}</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>0</div>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{teamStats.todayInvites || 0}</div>
                   </div>
                 </div>
 
@@ -1689,7 +1716,7 @@ export default function App() {
                   </div>
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748b' }}>{t.todayCommission}</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>0.00</div>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#16a34a' }}>৳ {(teamStats.todayCommission || 0).toFixed(2)}</div>
                   </div>
                 </div>
 
@@ -1699,7 +1726,7 @@ export default function App() {
                   </div>
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748b' }}>{t.yesterdayCommission}</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>0.00</div>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>৳ {(teamStats.yesterdayCommission || 0).toFixed(2)}</div>
                   </div>
                 </div>
               </div>
