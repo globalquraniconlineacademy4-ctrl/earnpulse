@@ -205,30 +205,7 @@
     </div>
   </div>
 
-  <!-- Section 2: Active WhatsApp Accounts (কানেক্টেড হোয়াটসঅ্যাপ) -->
-  <div class="section-card">
-    <div class="section-header">
-      <div class="section-title">🟢 লাইভ হোয়াটসঅ্যাপ কানেকশন তালিকা</div>
-    </div>
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>WhatsApp নম্বর</th>
-            <th>স্ট্যাটাস</th>
-            <th>অনলাইন সময়</th>
-            <th>মেসেজ কাউন্ট</th>
-            <th>যুক্ত করার তারিখ</th>
-          </tr>
-        </thead>
-        <tbody id="waTable">
-          <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">লোড হচ্ছে...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Section 3: Registered Users (মেম্বার তালিকা) -->
+  <!-- Section 2: Registered Users (মেম্বার তালিকা) -->
   <div class="section-card">
     <div class="section-header">
       <div class="section-title">👥 সাম্প্রতিক নিবন্ধিত মেম্বারবৃন্দ</div>
@@ -412,26 +389,6 @@
         }).join('');
       } else {
         wTable.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো উইথড্রয়াল রিকোয়েস্ট নেই</td></tr>';
-      }
-
-      // WhatsApp Table
-      const waTable = document.getElementById('waTable');
-      if (d.numbersList && d.numbersList.length > 0) {
-        waTable.innerHTML = d.numbersList.map(n => `
-          <tr>
-            <td><strong>+${n.country_code || '880'} ${n.phone_number}</strong></td>
-            <td>
-              <span class="pill ${n.status === 'online' ? 'pill-green' : 'pill-red'}">
-                ${n.status === 'online' ? '● সচল (Online)' : 'অফলাইন'}
-              </span>
-            </td>
-            <td style="font-family: monospace; font-weight: 600;">${n.online_duration_str || '00:00:00'}</td>
-            <td>${n.sent_count || 0} টি</td>
-            <td style="font-size: 11px; color: var(--text-muted);">${(n.created_at || '').substring(0, 16).replace('T', ' ')}</td>
-          </tr>
-        `).join('');
-      } else {
-        waTable.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো হোয়াটসঅ্যাপ যুক্ত নেই</td></tr>';
       }
 
       // Users Table (Only real registered members with live balance and connected WhatsApp)
