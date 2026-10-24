@@ -179,14 +179,22 @@ app.post('/api/checkin/do', authenticateToken, (req, res) => {
 // 1. AUTHENTICATION & REGISTRATION
 // -------------------------------------------------------------
 app.post('/api/auth/register', (req, res) => {
-  const { username, password, inviteCode } = req.body;
+  let { username, password, inviteCode } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({ success: false, msg: 'ব্যবহারকারীর নাম ও পাসওয়ার্ড আবশ্যক' });
   }
 
-  // Check if user already exists
-  const existing = db.get('users').find({ username }).value();
+  // Standardize phone number to BD format (01XXXXXXXXX)
+  const cleanPhone = String(username).replace(/^\+?880/, '').replace(/^0/, '').trim();
+  const normalizedPhone = '0' + cleanPhone;
+
+  // Strict check if user already exists (whether entered with or without leading 0 or +880)
+  const existing = db.get('users').find(u => {
+    const existingClean = String(u.username).replace(/^\+?880/, '').replace(/^0/, '').trim();
+    return existingClean === cleanPhone;
+  }).value();
+
   if (existing) {
     return res.status(400).json({ 
       success: false, 
@@ -214,7 +222,7 @@ app.post('/api/auth/register', (req, res) => {
 
   const newUser = {
     id: Date.now(),
-    username,
+    username: normalizedPhone,
     password_hash: passwordHash,
     invite_code: userInviteCode,
     referred_by_id: referrerId,
@@ -226,7 +234,7 @@ app.post('/api/auth/register', (req, res) => {
   };
 
   db.get('users').push(newUser).write();
-  const token = jwt.sign({ id: newUser.id, username, role }, JWT_SECRET, { expiresIn: '30d' });
+  const token = jwt.sign({ id: newUser.id, username: normalizedPhone, role }, JWT_SECRET, { expiresIn: '30d' });
 
   return res.json({
     success: true,
@@ -249,14 +257,13 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(400).json({ success: false, msg: 'ব্যবহারকারীর নাম ও পাসওয়ার্ড প্রদান করুন' });
   }
 
-  username = String(username).trim();
-  const cleanPhone = username.replace(/^0/, '');
+  const cleanPhone = String(username).replace(/^\+?880/, '').replace(/^0/, '').trim();
   
-  // Find user by exact username, or with/without leading 0
-  let user = db.get('users').find({ username }).value();
-  if (!user) {
-    user = db.get('users').find(u => u.username === cleanPhone || u.username === '0' + cleanPhone).value();
-  }
+  // Find user by clean phone match (supports 01..., 19..., +88019...)
+  const user = db.get('users').find(u => {
+    const uClean = String(u.username).replace(/^\+?880/, '').replace(/^0/, '').trim();
+    return uClean === cleanPhone;
+  }).value();
 
   if (!user) {
     return res.status(400).json({ success: false, msg: 'ব্যবহারকারী খুঁজে পাওয়া যায়নি' });
