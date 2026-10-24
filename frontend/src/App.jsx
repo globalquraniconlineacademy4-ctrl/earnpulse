@@ -11,14 +11,14 @@ import { translations } from './translations';
 // API Base URL: Standardized to /api (Works with Vite proxy locally and Vercel in production)
 const API_BASE = '/api';
 
-// 24-Hour Live Settlement Countdown Timer (Exact EarnBondhu Match from loginDate)
+// 24-Hour Live Elapsed Active Timer (Main Site Synced: 00:00:01 থেকে বাড়বে, যেমন মেইন সাইটে ১৫ ঘণ্টা বাকি থাকলে এখানে ৯ ঘণ্টা দেখাবে)
 function WhatsAppCountdownTimer({ loginDate, createTime, status }) {
-  const [timeStr, setTimeStr] = useState('24 : 00 : 00');
+  const [timeStr, setTimeStr] = useState('00 : 00 : 00');
 
   useEffect(() => {
     const calc = () => {
       const dateStr = loginDate || createTime;
-      if (!dateStr) return '24 : 00 : 00';
+      if (!dateStr) return '00 : 00 : 00';
 
       // Parse date: EarnBondhu returns "2026-10-24 16:48:06" in BD Time (+06:00)
       let parsedDate = 0;
@@ -28,16 +28,17 @@ function WhatsAppCountdownTimer({ loginDate, createTime, status }) {
         parsedDate = new Date(dateStr.replace(' ', 'T') + '+06:00').getTime();
       }
 
-      if (isNaN(parsedDate)) return '24 : 00 : 00';
+      if (isNaN(parsedDate)) return '00 : 00 : 00';
 
       const now = Date.now();
+      // মেইন সাইটে লগইন হওয়ার পর থেকে কত সেকেন্ড পার হয়েছে (00:00:01 থেকে 24:00:00 পর্যন্ত বাড়বে)
       const elapsedSeconds = Math.max(0, Math.floor((now - parsedDate) / 1000));
-      const totalSeconds = 24 * 3600; // 24 Hours
-      const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
+      // ২৪ ঘণ্টায় ক্যাপ
+      const displaySeconds = Math.min(24 * 3600, elapsedSeconds);
 
-      const hours = Math.floor(remainingSeconds / 3600);
-      const minutes = Math.floor((remainingSeconds % 3600) / 60);
-      const seconds = remainingSeconds % 60;
+      const hours = Math.floor(displaySeconds / 3600);
+      const minutes = Math.floor((displaySeconds % 3600) / 60);
+      const seconds = displaySeconds % 60;
 
       return `${String(hours).padStart(2, '0')} : ${String(minutes).padStart(2, '0')} : ${String(seconds).padStart(2, '0')}`;
     };
