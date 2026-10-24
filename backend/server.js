@@ -22,27 +22,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Cloud Database Sync Middleware (MongoDB Atlas 24/7 Persistent Storage)
+// Cloud Database Sync Middleware (MongoDB Atlas 24/7 Persistent Storage - Ultra-Fast Non-Blocking)
 let isCloudSyncedOnce = false;
 app.use(async (req, res, next) => {
-  if (db.syncFromCloud && (!isCloudSyncedOnce || Math.random() < 0.15)) {
+  if (db.syncFromCloud && !isCloudSyncedOnce) {
     try {
       await db.syncFromCloud();
       isCloudSyncedOnce = true;
     } catch (e) {}
   }
-
-  // Intercept res.json to ensure any pending MongoDB Atlas writes finish before responding
-  const originalJson = res.json.bind(res);
-  res.json = async function(data) {
-    if (db.lastCloudSyncPromise) {
-      try {
-        await db.lastCloudSyncPromise;
-      } catch (err) {}
-    }
-    return originalJson(data);
-  };
-
   next();
 });
 
@@ -87,8 +75,26 @@ app.get('/api/checkin/status', authenticateToken, (req, res) => {
   const user = db.get('users').find({ id: req.user.id }).value();
   const linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value();
 
-  // Calculate total online hours of all numbers
-  const totalOnlineMinutes = linkedNumbers.reduce((sum, n) => sum + (n.online_time_minutes || 0), 0);
+  // Calculate total online hours dynamically from active WhatsApp session duration
+  const totalOnlineMinutes = linkedNumbers.reduce((sum, n) => {
+    let mins = n.online_time_minutes || 0;
+    if (n.status === 'online') {
+      const dStr = n.login_date || n.create_time;
+      if (dStr) {
+        const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
+        if (!isNaN(p)) {
+          mins += Math.max(0, Math.floor((Date.now() - p) / (1000 * 60)));
+        }
+      }
+    } else if (n.status === 'offline') {
+      if (n.frozen_elapsed_seconds) {
+        mins += Math.floor(n.frozen_elapsed_seconds / 60);
+      } else if (n.online_time_ms) {
+        mins += Math.floor(n.online_time_ms / (1000 * 60));
+      }
+    }
+    return sum + mins;
+  }, 0);
   const onlineHours = (totalOnlineMinutes / 60);
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -109,7 +115,25 @@ app.post('/api/checkin/do', authenticateToken, (req, res) => {
   const user = db.get('users').find({ id: req.user.id }).value();
   const linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value();
 
-  const totalOnlineMinutes = linkedNumbers.reduce((sum, n) => sum + (n.online_time_minutes || 0), 0);
+  const totalOnlineMinutes = linkedNumbers.reduce((sum, n) => {
+    let mins = n.online_time_minutes || 0;
+    if (n.status === 'online') {
+      const dStr = n.login_date || n.create_time;
+      if (dStr) {
+        const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
+        if (!isNaN(p)) {
+          mins += Math.max(0, Math.floor((Date.now() - p) / (1000 * 60)));
+        }
+      }
+    } else if (n.status === 'offline') {
+      if (n.frozen_elapsed_seconds) {
+        mins += Math.floor(n.frozen_elapsed_seconds / 60);
+      } else if (n.online_time_ms) {
+        mins += Math.floor(n.online_time_ms / (1000 * 60));
+      }
+    }
+    return sum + mins;
+  }, 0);
   const onlineHours = (totalOnlineMinutes / 60);
 
   const todayStr = new Date().toISOString().split('T')[0];

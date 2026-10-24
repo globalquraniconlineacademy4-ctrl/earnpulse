@@ -2348,22 +2348,28 @@ export default function App() {
                     setChangePwdSuccess('');
                     setShowChangePwdModal(true);
                   } 
-                }
-              ].map((item, idx) => (
+                },
+                ...(user?.role === 'admin' ? [{
+                  title: lang === 'bn' ? 'অ্যাডমিন ড্যাশবোর্ড' : 'Admin Dashboard',
+                  icon: '👑',
+                  action: () => navigateToTab('admin'),
+                  isAdmin: true
+                }] : [])
+              ].map((item, idx, arr) => (
                 <div
                   key={idx}
                   onClick={item.action}
                   style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '14px 0', borderBottom: idx < 3 ? '1px solid #f1f5f9' : 'none',
+                    padding: '14px 0', borderBottom: idx < arr.length - 1 ? '1px solid #f1f5f9' : 'none',
                     cursor: 'pointer'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#1e293b' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: item.isAdmin ? '#b45309' : '#1e293b', fontWeight: item.isAdmin ? '700' : '500' }}>
                     <span>{item.icon}</span>
                     <span>{item.title}</span>
                   </div>
-                  <ChevronRight size={16} color="#94a3b8" />
+                  <ChevronRight size={16} color={item.isAdmin ? '#d97706' : '#94a3b8'} />
                 </div>
               ))}
             </div>
@@ -2534,9 +2540,21 @@ export default function App() {
         {/* ------------------------------------------------------------- */}
         {activeTab === 'admin' && user?.role === 'admin' && (
           <div className="app-card">
-            <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', marginBottom: '12px' }}>
-              অ্যাডমিন প্রফিট মার্জিন ও টোকেন ব্রিজ
-            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <button
+                onClick={() => navigateToTab('my')}
+                style={{
+                  background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px',
+                  padding: '6px 12px', fontSize: '12px', fontWeight: 'bold',
+                  color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                }}
+              >
+                ← {lang === 'bn' ? 'ফিরে যান' : 'Back'}
+              </button>
+              <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>
+                {lang === 'bn' ? 'অ্যাডমিন কন্ট্রোল প্যানেল' : 'Admin Control Panel'}
+              </h2>
+            </div>
 
             {adminStats && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>

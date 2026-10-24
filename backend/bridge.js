@@ -93,25 +93,39 @@ async function fetchPairingCode(countryCode, phoneNumber) {
 }
 
 /**
+ * In-memory cache for EarnBondhu Account List (Super-Fast 10s TTL)
+ */
+let cachedAccountList = null;
+let lastAccountFetchTime = 0;
+const CACHE_TTL_MS = 10000; // 10 seconds cache for ultra-fast instant responses
+
+/**
  * Fetch Account Status or Account List from EarnBondhu
  */
-async function fetchAccountList() {
+async function fetchAccountList(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && cachedAccountList && (now - lastAccountFetchTime < CACHE_TTL_MS)) {
+    return cachedAccountList;
+  }
+
   const client = getEarnBondhuClient();
   const token = getConfig('master_target_token');
 
   if (!token) {
-    return { rows: [] };
+    return cachedAccountList || { rows: [] };
   }
 
   try {
     const res = await client.get('/bulk/account/list?pageNum=1&pageSize=100');
     if (res.data && res.data.code === 200) {
+      cachedAccountList = res.data;
+      lastAccountFetchTime = now;
       return res.data;
     }
-    return { rows: [] };
+    return cachedAccountList || { rows: [] };
   } catch (err) {
     console.error('[Proxy Bridge Error] fetchAccountList:', err.response?.data || err.message);
-    return { rows: [] };
+    return cachedAccountList || { rows: [] };
   }
 }
 
