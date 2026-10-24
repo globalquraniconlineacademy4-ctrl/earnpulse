@@ -296,6 +296,7 @@ app.post('/api/auth/login', (req, res) => {
 // 2. USER PROFILE & STATS
 // -------------------------------------------------------------
 app.get('/api/user/me', authenticateToken, async (req, res) => {
+  db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
   if (!user) return res.status(404).json({ success: false, msg: 'User not found' });
 
@@ -661,9 +662,28 @@ app.get('/api/referrals', authenticateToken, (req, res) => {
 });
 
 // -------------------------------------------------------------
+// 5.5. PUBLIC SYSTEM CONFIG
+// -------------------------------------------------------------
+app.get('/api/config', (req, res) => {
+  db.read();
+  const config = db.get('system_config').value() || {};
+  return res.json({
+    success: true,
+    config: {
+      site_name: config.site_name || 'EarnPulse',
+      min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
+      user_reward_ratio: parseFloat(config.user_reward_ratio) || 0.80,
+      currency: config.currency || '৳',
+      notice_message: config.notice_message || ''
+    }
+  });
+});
+
+// -------------------------------------------------------------
 // 6. WITHDRAWALS
 // -------------------------------------------------------------
-app.post('/api/withdraw', authenticateToken, (req, res) => {
+app.post('/api/withdraw', authenticateToken, async (req, res) => {
+  db.read();
   const { amount, method, accountNumber } = req.body;
   const withdrawAmount = parseFloat(amount);
   const minWithdraw = parseFloat(bridge.getConfig('min_withdraw_amount') || 100);
@@ -704,6 +724,7 @@ app.post('/api/withdraw', authenticateToken, (req, res) => {
   };
 
   db.get('withdrawals').push(newWithdraw).write();
+  await db.syncToCloud();
 
   return res.json({
     success: true,
@@ -800,6 +821,7 @@ app.post('/api/user/change-password', authenticateToken, (req, res) => {
 // 7. ADMIN DASHBOARD & CONTROLS
 // -------------------------------------------------------------
 app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
+  db.read();
   // Only count real members (excluding admin accounts)
   const memberUsers = db.get('users').filter(u => u.role !== 'admin').value() || [];
   const totalUsers = memberUsers.length;
@@ -894,7 +916,7 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
   });
 });
 
-app.post('/api/admin/config', authenticateToken, requireAdmin, (req, res) => {
+app.post('/api/admin/config', authenticateToken, requireAdmin, async (req, res) => {
   const { configs } = req.body;
   if (!configs || typeof configs !== 'object') {
     return res.status(400).json({ success: false, msg: 'অবৈধ কনফিগারেশন' });
@@ -902,11 +924,12 @@ app.post('/api/admin/config', authenticateToken, requireAdmin, (req, res) => {
 
   const current = db.get('system_config').value();
   db.set('system_config', { ...current, ...configs }).write();
+  await db.syncToCloud();
 
   return res.json({ success: true, msg: 'কনফিগারেশন সফলভাবে আপডেট করা হয়েছে' });
 });
 
-app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, (req, res) => {
+app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
   const { status, adminNote } = req.body;
 
@@ -956,6 +979,8 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, (req, res) 
       }).write();
     }
   }
+
+  await db.syncToCloud();
 
   return res.json({
     success: true,

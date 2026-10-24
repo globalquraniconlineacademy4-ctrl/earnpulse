@@ -516,6 +516,11 @@
 
   document.getElementById('configForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]') || document.querySelector('.save-btn');
+    const oldText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = 'সংরক্ষণ হচ্ছে...';
+
     try {
       const res = await fetch(`${API_BASE}/admin/config`, {
         method: 'POST',
@@ -528,10 +533,13 @@
         })
       });
       const d = await res.json();
-      alert(d.msg || 'সেটিংস সেভ হয়েছে');
+      alert(d.msg || 'সেটিংস সফলভাবে সেভ হয়েছে!');
       loadAdminData();
     } catch (e) {
-      alert('সেভ ব্যর্থ হয়েছে');
+      alert('সেভ ব্যর্থ হয়েছে! ইন্টারনেট সংযোগ চেক করুন।');
+    } finally {
+      btn.disabled = false;
+      btn.innerText = oldText;
     }
   });
 

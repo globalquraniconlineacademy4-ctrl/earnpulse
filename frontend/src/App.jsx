@@ -257,6 +257,7 @@ export default function App() {
   const [withdrawAccount, setWithdrawAccount] = useState('');
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [withdrawMsg, setWithdrawMsg] = useState('');
+  const [minWithdrawAmount, setMinWithdrawAmount] = useState(100);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
   const [showWithdrawHistoryModal, setShowWithdrawHistoryModal] = useState(false);
   const [withdrawStatusFilter, setWithdrawStatusFilter] = useState('all');
@@ -490,6 +491,9 @@ export default function App() {
       if (data && data.success && data.user) {
         setUser(data.user);
         localStorage.setItem('user', JSON.stringify(data.user));
+        if (data.config && data.config.min_withdraw_amount) {
+          setMinWithdrawAmount(parseFloat(data.config.min_withdraw_amount) || 100);
+        }
         if (data.linkedNumbers) {
           setLinkedNumbers(data.linkedNumbers);
           localStorage.setItem('cached_linked_numbers', JSON.stringify(data.linkedNumbers));
@@ -500,6 +504,25 @@ export default function App() {
       // DO NOT LOG OUT ON NETWORK DISCONNECT OR SERVER COLD START!
     }
   };
+
+  // Fetch Public Site Configuration (Live min withdraw amount, site settings)
+  const fetchSystemConfig = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/config`);
+      const data = await res.json();
+      if (data && data.success && data.config) {
+        if (data.config.min_withdraw_amount) {
+          setMinWithdrawAmount(parseFloat(data.config.min_withdraw_amount) || 100);
+        }
+      }
+    } catch (e) {
+      console.warn('fetchSystemConfig error:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchSystemConfig();
+  }, []);
 
   useEffect(() => {
     if (token) fetchUserData();
@@ -682,6 +705,12 @@ export default function App() {
   // Withdraw Submit
   const handleWithdraw = async (e) => {
     e.preventDefault();
+    const parsedAmount = parseFloat(withdrawAmount);
+    if (isNaN(parsedAmount) || parsedAmount < minWithdrawAmount) {
+      setWithdrawMsg(lang === 'bn' ? `সর্বনিম্ন উত্তোলনের পরিমাণ ৳${minWithdrawAmount}` : `Minimum withdrawal amount is ৳${minWithdrawAmount}`);
+      return;
+    }
+
     setWithdrawLoading(true);
     setWithdrawMsg('');
 
@@ -2587,6 +2616,9 @@ export default function App() {
               });
               const d = await res.json();
               alert(d.msg || 'সংরক্ষণ সম্পন্ন');
+              if (adminConfigs.min_withdraw_amount) {
+                setMinWithdrawAmount(parseFloat(adminConfigs.min_withdraw_amount));
+              }
               setAdminSaving(false);
             }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
@@ -3021,12 +3053,12 @@ export default function App() {
 
               <div>
                 <label style={{ fontSize: '12px', color: '#475569', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
-                  {lang === 'bn' ? 'টাকার পরিমাণ (মিনিমাম ৳২০০)' : 'Amount (Minimum ৳200)'}
+                  {lang === 'bn' ? `টাকার পরিমাণ (মিনিমাম ৳${minWithdrawAmount})` : `Amount (Minimum ৳${minWithdrawAmount})`}
                 </label>
                 <input
                   type="number"
-                  placeholder="200"
-                  min="200"
+                  placeholder={String(minWithdrawAmount)}
+                  min={String(minWithdrawAmount)}
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   required
