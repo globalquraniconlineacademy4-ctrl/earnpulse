@@ -2569,14 +2569,43 @@ export default function App() {
         {/* ------------------------------------------------------------- */}
       </div>
 
-      {/* 3. BOTTOM NAVIGATION BAR (Home, Tasks, WhatsApp, Mine) */}
-      <div style={{ height: '70px' }} />
+      {/* 3. BOTTOM NAVIGATION BAR (Luxury 3D Obsidian & Vibrant Jewel Style) */}
+      <div style={{ height: '76px' }} />
       <div className="bottom-bar">
         {[
-          { id: 'home', label: t.home, icon: Home },
-          { id: 'tasks', label: t.tasks, icon: CheckSquare },
-          { id: 'whatsapp', label: t.whatsapp, icon: MessageCircle },
-          { id: 'my', label: t.my, icon: User }
+          { 
+            id: 'home', 
+            label: t.home, 
+            icon: Home,
+            activeGrad: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            activeShadow: '0 4px 14px rgba(16, 185, 129, 0.45)',
+            activeColor: '#059669'
+          },
+          { 
+            id: 'tasks', 
+            label: t.tasks, 
+            icon: CheckSquare,
+            activeGrad: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+            activeShadow: '0 4px 14px rgba(59, 130, 246, 0.45)',
+            activeColor: '#1d4ed8'
+          },
+          { 
+            id: 'whatsapp', 
+            label: t.whatsapp, 
+            icon: MessageCircle,
+            activeGrad: 'linear-gradient(135deg, #22c55e 0%, #15803d 100%)',
+            activeShadow: '0 4px 14px rgba(34, 197, 94, 0.45)',
+            activeColor: '#15803d',
+            hasOnline: linkedNumbers && linkedNumbers.some(n => n.status === 'online')
+          },
+          { 
+            id: 'my', 
+            label: t.my, 
+            icon: User,
+            activeGrad: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+            activeShadow: '0 4px 14px rgba(245, 158, 11, 0.45)',
+            activeColor: '#b45309'
+          }
         ].map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -2585,15 +2614,86 @@ export default function App() {
               key={item.id}
               onClick={() => navigateToTab(item.id)}
               style={{
-                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                gap: '4px', background: 'none', border: 'none', cursor: 'pointer',
-                color: isActive ? '#15803d' : '#94a3b8'
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px 0',
+                outline: 'none',
+                userSelect: 'none',
+                WebkitTapHighlightColor: 'transparent',
+                transition: 'transform 0.15s ease'
               }}
             >
-              <Icon size={20} />
-              <span style={{ fontSize: '10px', fontWeight: isActive ? 'bold' : 'normal' }}>
+              {/* 3D Icon Jewel Pod */}
+              <div style={{
+                position: 'relative',
+                width: '38px',
+                height: '32px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: isActive ? item.activeGrad : '#f1f5f9',
+                boxShadow: isActive 
+                  ? `${item.activeShadow}, inset 0 1px 1px rgba(255, 255, 255, 0.5)` 
+                  : 'inset 0 1px 2px rgba(255, 255, 255, 0.8), 0 2px 5px rgba(0, 0, 0, 0.04)',
+                border: isActive ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid rgba(226, 232, 240, 0.8)',
+                transform: isActive ? 'translateY(-2px)' : 'translateY(0)',
+                transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
+              }}>
+                <Icon 
+                  size={19} 
+                  color={isActive ? '#ffffff' : '#64748b'} 
+                  strokeWidth={isActive ? 2.5 : 2}
+                  style={{
+                    filter: isActive ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' : 'none',
+                    transition: 'color 0.15s ease'
+                  }}
+                />
+                {/* Active Pulsing Dot for Online WhatsApp */}
+                {item.id === 'whatsapp' && item.hasOnline && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-2px',
+                    right: '-2px',
+                    width: '9px',
+                    height: '9px',
+                    borderRadius: '50%',
+                    background: '#22c55e',
+                    border: '2px solid #ffffff',
+                    boxShadow: '0 0 6px #22c55e'
+                  }} />
+                )}
+              </div>
+
+              {/* Label */}
+              <span style={{
+                fontSize: '11px',
+                fontWeight: isActive ? '800' : '600',
+                color: isActive ? item.activeColor : '#64748b',
+                marginTop: '3px',
+                letterSpacing: '-0.2px',
+                transition: 'color 0.15s ease'
+              }}>
                 {item.label}
               </span>
+
+              {/* 3D Micro Indicator Pill */}
+              <div style={{
+                width: isActive ? '12px' : '0px',
+                height: '2.5px',
+                borderRadius: '4px',
+                background: isActive ? item.activeGrad : 'transparent',
+                marginTop: '2px',
+                boxShadow: isActive ? item.activeShadow : 'none',
+                opacity: isActive ? 1 : 0,
+                transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
+              }} />
             </button>
           );
         })}
