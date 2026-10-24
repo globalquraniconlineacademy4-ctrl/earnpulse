@@ -17,7 +17,7 @@
       "password_hash": "$2a$10$aNGNMpc7Rts086ezvfo10uCoSapM9trOcRnD9hspVqxXu4M4p.IP.",
       "invite_code": "ADMIN1",
       "referred_by_id": null,
-      "balance": 500,
+      "balance": 0,
       "total_earned": 0,
       "total_withdrawn": 0,
       "role": "admin",
@@ -30,8 +30,8 @@
       "password_hash": "$2a$10$aNGNMpc7Rts086ezvfo10uCoSapM9trOcRnD9hspVqxXu4M4p.IP.",
       "invite_code": "4E2YOO",
       "referred_by_id": 1792860663310,
-      "balance": 650,
-      "total_earned": 150,
+      "balance": 0,
+      "total_earned": 0,
       "total_withdrawn": 0,
       "role": "user",
       "created_at": "2026-10-24T07:14:49.886Z",
@@ -44,8 +44,8 @@
       "password_hash": "$2a$10$aNGNMpc7Rts086ezvfo10uCoSapM9trOcRnD9hspVqxXu4M4p.IP.",
       "invite_code": "871205",
       "referred_by_id": null,
-      "balance": 22.5,
-      "total_earned": 22.5,
+      "balance": 0,
+      "total_earned": 0,
       "total_withdrawn": 0,
       "role": "user",
       "created_at": "2026-10-24T16:51:03.310Z",
@@ -80,51 +80,6 @@
       "updated_at": "2026-10-24T20:07:54.829Z"
     }
   ],
-  "earnings_log": [
-    {
-      "id": 1792872454602,
-      "user_id": 1792826089886,
-      "type": "whatsapp_online",
-      "amount": 80,
-      "gross_amount": 100,
-      "payout_percentage": 80,
-      "admin_profit": 20,
-      "description": "হোয়াটসঅ্যাপ রানিং আয় (80% পে-আউট)",
-      "created_at": "2026-10-24T20:07:34.602Z"
-    },
-    {
-      "id": 1792872454603,
-      "user_id": 1792860663310,
-      "type": "referral_bonus",
-      "tier": 1,
-      "amount": 12,
-      "source_user_id": 1792826089886,
-      "source_username": "01913003313",
-      "description": "১ম স্তর রেফারেল কমিশন (01913003313 এর আয় থেকে ১৫%)",
-      "created_at": "2026-10-24T20:07:34.602Z"
-    },
-    {
-      "id": 1792872474829,
-      "user_id": 1792826089886,
-      "type": "whatsapp_online",
-      "amount": 70,
-      "gross_amount": 100,
-      "payout_percentage": 70,
-      "admin_profit": 30,
-      "description": "হোয়াটসঅ্যাপ রানিং আয় (70% পে-আউট)",
-      "created_at": "2026-10-24T20:07:54.829Z"
-    },
-    {
-      "id": 1792872474831,
-      "user_id": 1792860663310,
-      "type": "referral_bonus",
-      "tier": 1,
-      "amount": 10.5,
-      "source_user_id": 1792826089886,
-      "source_username": "01913003313",
-      "description": "১ম স্তর রেফারেল কমিশন (01913003313 এর আয় থেকে ১৫%)",
-      "created_at": "2026-10-24T20:07:54.830Z"
-    }
-  ],
+  "earnings_log": [],
   "withdrawals": []
 }
