@@ -77,10 +77,32 @@ function WhatsAppCountdownTimer({ loginDate, createTime, status }) {
 }
 
 export default function App() {
-  const [token, setToken] = useState(localStorage.getItem('token') || '');
-  const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('home'); // 'home', 'tasks', 'whatsapp', 'my', 'checkin', 'admin'
-  const [linkedNumbers, setLinkedNumbers] = useState([]);
+  const [token, setToken] = useState(() => localStorage.getItem('token') || '');
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const hash = window.location.hash.replace('#', '').split('-')[0];
+      if (['home', 'tasks', 'whatsapp', 'my', 'checkin', 'admin'].includes(hash)) {
+        return hash;
+      }
+    } catch (e) {}
+    return 'home';
+  });
+  const [linkedNumbers, setLinkedNumbers] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cached_linked_numbers');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [referrals, setReferrals] = useState([]);
 
   // Multi-Language System (English & বাংলা)
@@ -266,22 +288,147 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch User Info
+  // -------------------------------------------------------------
+  // Mobile Back Button Navigation & History Management
+  // -------------------------------------------------------------
+  const activeTabRef = React.useRef(activeTab);
+  activeTabRef.current = activeTab;
+
+  const modalsRef = React.useRef({});
+  modalsRef.current = {
+    showNoticeModal,
+    showWithdrawModal,
+    showWithdrawHistoryModal,
+    showShareModal,
+    showTransactionsModal,
+    showTeamModal,
+    showChangePwdModal,
+    showVideoModal,
+    showLangModal,
+    selectedTutorialImg
+  };
+
+  const lastBackPressTimeRef = React.useRef(0);
+  const [exitToast, setExitToast] = useState(false);
+
+  // Smooth Tab Navigation with History Tracking
+  const navigateToTab = (newTab, push = true) => {
+    if (activeTabRef.current === newTab) return;
+    setActiveTab(newTab);
+    activeTabRef.current = newTab;
+    if (push) {
+      window.history.pushState({ type: 'tab', tab: newTab }, '', '#' + newTab);
+    }
+  };
+
+  // Check if any modal is currently visible
+  const isAnyModalOpen = Boolean(
+    showNoticeModal || showWithdrawModal || showWithdrawHistoryModal || 
+    showShareModal || showTransactionsModal || showTeamModal || 
+    showChangePwdModal || showVideoModal || showLangModal || selectedTutorialImg
+  );
+  const wasModalOpenRef = React.useRef(false);
+
+  // Automatically manage history entries when any modal opens / closes
+  useEffect(() => {
+    if (isAnyModalOpen && !wasModalOpenRef.current) {
+      window.history.pushState({ type: 'modal', tab: activeTabRef.current }, '', '#' + activeTabRef.current + '-modal');
+      wasModalOpenRef.current = true;
+    } else if (!isAnyModalOpen && wasModalOpenRef.current) {
+      wasModalOpenRef.current = false;
+      if (window.history.state && window.history.state.type === 'modal') {
+        window.history.back();
+      }
+    }
+  }, [isAnyModalOpen]);
+
+  // Close all open modals helper (used on back button popstate)
+  const closeAllOpenModals = () => {
+    const m = modalsRef.current;
+    let hadModal = false;
+    if (m.showNoticeModal) { setShowNoticeModal(false); hadModal = true; }
+    if (m.showWithdrawModal) { setShowWithdrawModal(false); hadModal = true; }
+    if (m.showWithdrawHistoryModal) { setShowWithdrawHistoryModal(false); hadModal = true; }
+    if (m.showShareModal) { setShowShareModal(false); hadModal = true; }
+    if (m.showTransactionsModal) { setShowTransactionsModal(false); hadModal = true; }
+    if (m.showTeamModal) { setShowTeamModal(false); hadModal = true; }
+    if (m.showChangePwdModal) { setShowChangePwdModal(false); hadModal = true; }
+    if (m.showVideoModal) { setShowVideoModal(false); hadModal = true; }
+    if (m.showLangModal) { setShowLangModal(false); hadModal = true; }
+    if (m.selectedTutorialImg) { setSelectedTutorialImg(null); hadModal = true; }
+    wasModalOpenRef.current = false;
+    return hadModal;
+  };
+
+  // Hardware/Gesture Back Button Listener (popstate)
+  useEffect(() => {
+    if (!token) return;
+
+    // Ensure base history entry
+    if (!window.history.state || window.history.state.tab !== activeTabRef.current) {
+      window.history.replaceState({ type: 'tab', tab: activeTabRef.current }, '', '#' + activeTabRef.current);
+    }
+
+    const handlePopState = () => {
+      // 1. If any modal is open: Close that modal and stay on the current tab!
+      if (closeAllOpenModals()) {
+        return;
+      }
+
+      // 2. If no modal is open and user is on ANY sub-tab (e.g. 'my', 'whatsapp', 'tasks', 'checkin', 'admin'):
+      // Return smoothly to 'home' tab instead of exiting the site or logging out!
+      if (activeTabRef.current !== 'home') {
+        setActiveTab('home');
+        activeTabRef.current = 'home';
+        window.history.replaceState({ type: 'tab', tab: 'home' }, '', '#home');
+        return;
+      }
+
+      // 3. If already on 'home' tab: Protect against accidental app exit
+      const now = Date.now();
+      if (now - lastBackPressTimeRef.current < 2500) {
+        // Double press within 2.5s: allow exit
+        return;
+      } else {
+        // Single press: notify user and keep them safely inside the app
+        lastBackPressTimeRef.current = now;
+        window.history.pushState({ type: 'tab', tab: 'home' }, '', '#home');
+        setExitToast(true);
+        setTimeout(() => setExitToast(false), 2200);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [token]);
+
+  // Fetch User Info (Persistent & Resilient)
   const fetchUserData = async () => {
     if (!token) return;
     try {
       const res = await fetch(`${API_BASE}/user/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
-      if (data && data.success) {
-        setUser(data.user);
-        setLinkedNumbers(data.linkedNumbers || []);
-      } else {
+      
+      // ONLY log out if the server explicitly rejects the token as invalid/expired (HTTP 401 or 403)
+      if (res.status === 401 || res.status === 403) {
+        console.warn('Session expired (401/403). Logging out.');
         handleLogout();
+        return;
+      }
+
+      const data = await res.json();
+      if (data && data.success && data.user) {
+        setUser(data.user);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        if (data.linkedNumbers) {
+          setLinkedNumbers(data.linkedNumbers);
+          localStorage.setItem('cached_linked_numbers', JSON.stringify(data.linkedNumbers));
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error('fetchUserData error (keeping session active):', err);
+      // DO NOT LOG OUT ON NETWORK DISCONNECT OR SERVER COLD START!
     }
   };
 
@@ -370,8 +517,12 @@ export default function App() {
 
       if (data && data.success) {
         localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
         setToken(data.token);
         setUser(data.user);
+        setActiveTab('home');
+        activeTabRef.current = 'home';
+        window.history.replaceState({ type: 'tab', tab: 'home' }, '', '#home');
       } else {
         if (isRegister && data?.code === 'USER_ALREADY_EXISTS') {
           setAuthError(data.msg);
@@ -393,15 +544,20 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('cached_linked_numbers');
     setToken('');
     setUser(null);
+    setActiveTab('home');
+    activeTabRef.current = 'home';
+    window.history.replaceState(null, '', window.location.pathname);
   };
 
   // Rebind WhatsApp Account Handler
   const handleRebind = (phoneNumber) => {
     let clean = String(phoneNumber).replace(/^\+?880/, '').replace(/^0/, '').trim();
     setInputPhone(clean);
-    setActiveTab('whatsapp');
+    navigateToTab('whatsapp');
     setActivePairingCode('');
     setIsWaitingConnection(false);
     setConnectionSuccess(false);
@@ -554,7 +710,28 @@ export default function App() {
   // -------------------------------------------------------------------------
   // 1. AUTH SCREEN (১০০% আসল স্ক্রিনশট ৩ ও ৪ এর ডিজাইন অনুযায়ী)
   // -------------------------------------------------------------------------
-  if (!token || !user) {
+  // If user has token but user profile is loading:
+  if (token && !user) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        minHeight: '100vh', background: '#f8fafc', fontFamily: 'sans-serif'
+      }}>
+        <div style={{
+          width: '38px', height: '38px', border: '3px solid #e2e8f0',
+          borderTop: '3px solid #00c675', borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite'
+        }} />
+        <p style={{ marginTop: '16px', fontSize: '14px', color: '#64748b', fontWeight: '500' }}>
+          {lang === 'bn' ? 'অ্যাকাউন্ট লোড হচ্ছে...' : 'Loading account...'}
+        </p>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  // Only render login / register screen when genuinely logged out:
+  if (!token) {
     return (
       <div style={{
         padding: '20px 20px 30px', display: 'flex', flexDirection: 'column',
@@ -1059,7 +1236,7 @@ export default function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {/* Task 1: Connect WhatsApp */}
                 <div 
-                  onClick={() => setActiveTab('whatsapp')}
+                  onClick={() => navigateToTab('whatsapp')}
                   style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
                 >
                   <img
@@ -1079,7 +1256,7 @@ export default function App() {
 
                 {/* Task 2: Invite Friends */}
                 <div 
-                  onClick={() => setActiveTab('tasks')}
+                  onClick={() => navigateToTab('tasks')}
                   style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
                 >
                   <img
@@ -1099,7 +1276,7 @@ export default function App() {
 
                 {/* Task 3: 24h Online Task */}
                 <div 
-                  onClick={() => setActiveTab('whatsapp')}
+                  onClick={() => navigateToTab('whatsapp')}
                   style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
                 >
                   <img
@@ -1118,7 +1295,7 @@ export default function App() {
             </div>
 
             {/* Daily Check-In Widget */}
-            <div className="app-card" onClick={() => setActiveTab('checkin')} style={{ cursor: 'pointer' }}>
+            <div className="app-card" onClick={() => navigateToTab('checkin')} style={{ cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }}>
                   <span>📅</span>
@@ -1147,7 +1324,7 @@ export default function App() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* Card 1 */}
               <div 
-                onClick={() => setActiveTab('whatsapp')}
+                onClick={() => navigateToTab('whatsapp')}
                 style={{
                   position: 'relative', borderRadius: '18px', overflow: 'hidden',
                   boxShadow: '0 4px 15px rgba(0,0,0,0.04)', cursor: 'pointer',
@@ -1175,7 +1352,7 @@ export default function App() {
 
               {/* Card 2 */}
               <div 
-                onClick={() => setActiveTab('tasks')}
+                onClick={() => navigateToTab('tasks')}
                 style={{
                   position: 'relative', borderRadius: '18px', overflow: 'hidden',
                   boxShadow: '0 4px 15px rgba(0,0,0,0.04)', cursor: 'pointer',
@@ -1203,7 +1380,7 @@ export default function App() {
 
               {/* Card 3 */}
               <div 
-                onClick={() => setActiveTab('whatsapp')}
+                onClick={() => navigateToTab('whatsapp')}
                 style={{
                   position: 'relative', borderRadius: '18px', overflow: 'hidden',
                   boxShadow: '0 4px 15px rgba(0,0,0,0.04)', cursor: 'pointer',
@@ -2132,7 +2309,7 @@ export default function App() {
             {/* Top Back Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
               <button
-                onClick={() => setActiveTab('home')}
+                onClick={() => navigateToTab('home')}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: '#334155', padding: '4px', display: 'flex', alignItems: 'center'
@@ -2385,7 +2562,7 @@ export default function App() {
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => navigateToTab(item.id)}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
                 gap: '4px', background: 'none', border: 'none', cursor: 'pointer',
@@ -2400,6 +2577,29 @@ export default function App() {
           );
         })}
       </div>
+
+      {/* Floating Exit Notification Toast */}
+      {exitToast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(15, 23, 42, 0.92)',
+          color: '#ffffff',
+          padding: '10px 20px',
+          borderRadius: '30px',
+          fontSize: '13px',
+          fontWeight: '600',
+          zIndex: 99999,
+          boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+          animation: 'fadeInOut 2.2s ease forwards'
+        }}>
+          {lang === 'bn' ? 'অ্যাপ থেকে বের হতে আবার ব্যাক চাপুন' : 'Press back again to exit'}
+        </div>
+      )}
 
       {/* 4. LANGUAGE SELECTION MODAL */}
       {showLangModal && (
