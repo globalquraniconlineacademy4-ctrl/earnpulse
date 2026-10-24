@@ -361,6 +361,16 @@
           <label>সর্বনিম্ন উত্তোলন পরিমাণ (টাকা)</label>
           <input type="number" id="minWithdraw" value="100">
         </div>
+        <div class="form-group" style="grid-column: 1 / -1; margin-top: 2px;">
+          <label style="display: flex; justify-content: space-between; align-items: center;">
+            <span>অ্যান্ড্রয়েড অ্যাপ (.APK) ডাউনলোড লিংক</span>
+            <span style="font-size: 11px; color: #10b981; font-weight: 700;">Direct APK Link</span>
+          </label>
+          <input type="text" id="appDownloadUrl" placeholder="/downloads/EarnPulse.apk বা ড্রাইভ/হোস্টিং লিংক" style="font-family: monospace; font-size: 13px;">
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+            💡 মেম্বাররা মূল সাইটের উপরে "APP" বাটনে চাপ দেওয়া মাত্র এই লিংক থেকে সরাসরি অ্যাপ ডাউনলোড শুরু হবে।
+          </div>
+        </div>
       </div>
       <button type="submit" class="save-btn">💾 সেটিংস সংরক্ষণ করুন</button>
     </form>
@@ -543,6 +553,9 @@
         if (document.getElementById('minWithdraw')) {
           document.getElementById('minWithdraw').value = d.configs.min_withdraw_amount || 100;
         }
+        if (document.getElementById('appDownloadUrl')) {
+          document.getElementById('appDownloadUrl').value = d.configs.app_download_url || '/downloads/EarnPulse.apk';
+        }
       }
 
       // Withdrawals Table
@@ -668,7 +681,8 @@
         body: JSON.stringify({
           configs: {
             user_reward_ratio: rVal,
-            min_withdraw_amount: minVal
+            min_withdraw_amount: minVal,
+            app_download_url: (document.getElementById('appDownloadUrl')?.value || '').trim() || '/downloads/EarnPulse.apk'
           }
         })
       });
