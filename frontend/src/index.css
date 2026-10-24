@@ -1,0 +1,155 @@
+:root {
+  --primary-gold: #f59e0b;
+  --primary-gold-dark: #d97706;
+  --primary-gold-light: #fbbf24;
+  --bg-page: #f8fafc;
+  --card-bg: #ffffff;
+  --text-dark: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Hind Siliguri', 'Noto Sans Bengali', Inter, 'Nirmala UI', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #cbd5e1;
+  color: var(--text-dark);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+#root {
+  width: 100%;
+  max-width: 440px;
+  min-height: 100vh;
+  background-color: var(--bg-page);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-shell {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: var(--bg-page);
+}
+
+/* Bottom Navigation Bar - Fixed at bottom */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 440px;
+  height: 60px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  border-top: 1px solid #e2e8f0;
+  z-index: 100;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* White Card Style */
+.app-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f1f5f9;
+}
+
+/* Luxury Dashboard Balance Header (স্লিম, আধুনিক ব্যানার স্টাইল - কার্ডের মতো অতিরিক্ত বড় নয়) */
+.green-banner-card {
+  background: linear-gradient(135deg, #061e14 0%, #0c3323 45%, #08291c 75%, #041810 100%);
+  border-radius: 16px;
+  padding: 14px 16px 12px;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 6px 16px -2px rgba(6, 30, 20, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.15),
+    inset 0 1px 1px rgba(251, 191, 36, 0.35);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.green-banner-card::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -30px;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, rgba(16, 185, 129, 0.08) 50%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* 3D Gold Accent Action Button (Save / Submit) */
+.action-btn-green {
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 45%, #d97706 100%);
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  border-radius: 14px;
+  padding: 13px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  box-shadow: 
+    0 8px 20px rgba(217, 119, 6, 0.4),
+    0 3px 6px rgba(0, 0, 0, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 3px rgba(180, 83, 9, 0.5);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.action-btn-green:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 10px 24px rgba(217, 119, 6, 0.5),
+    0 4px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.7);
+}
+
+.action-btn-green:active {
+  transform: translateY(1px);
+  box-shadow: 
+    0 3px 8px rgba(217, 119, 6, 0.35),
+    inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+input, button, select, textarea {
+  font-family: inherit;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

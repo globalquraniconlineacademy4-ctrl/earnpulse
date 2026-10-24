@@ -1,0 +1,127 @@
+{
+  "system_config": {
+    "target_base_url": "https://earnbondhu.com",
+    "target_client_id": "209ef407810e3856f40870a9f0e769d7",
+    "master_target_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJ3ZWJfdXNlcjoyMTEzNjU1Nzc5MTA4MjQxNDA5Iiwicm5TdHIiOiJ6dGxpdmtvSjNJY1pUODBSY1p3UUVRSXEwbXhQazh5ZiIsImNsaWVudGlkIjoiMjA5ZWY0MDc4MTBlMzg1NmY0MDg3MGE5ZjBlNzY5ZDciLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6MjExMzY1NTc3OTEwODI0MTQwOSwidXNlck5hbWUiOiI4ODAxNzI5MjYxNDIxIiwidXNlclR5cGUiOiJ3ZWJfdXNlciJ9.JU12rqWmOQGThzt3icmevp7qczEGX0bscHibiKLM2lg",
+    "user_reward_ratio": 0.8,
+    "referral_reward_ratio": 0.7,
+    "site_name": "EarnPulse",
+    "min_withdraw_amount": 100,
+    "currency": "৳",
+    "notice_message": "স্বাগতম! আপনার হোয়াটসঅ্যাপ অ্যাকাউন্ট যুক্ত করে প্রতিদিন ঘরে বসে নিশ্চিত আয় করুন।"
+  },
+  "users": [
+    {
+      "id": 1792776749291,
+      "username": "01892736004",
+      "password_hash": "$2a$10$eafailiK73DViAmMOt3uxect2.fHjBt198Ugx2dPb5mMT117E2AYW",
+      "invite_code": "JU6F12",
+      "referred_by_id": null,
+      "balance": 0,
+      "total_earned": 0,
+      "total_withdrawn": 0,
+      "role": "admin",
+      "created_at": "2026-10-23T17:32:29.291Z"
+    },
+    {
+      "id": 1792824609808,
+      "username": "01913003313",
+      "password_hash": "$2a$10$mE7pNXgxopOk6uzpuUTJ.eTlf.7skub0H9RqRUcWFHQkZEYzZNGsO",
+      "invite_code": "35YRW1",
+      "referred_by_id": null,
+      "balance": 0,
+      "total_earned": 0,
+      "total_withdrawn": 0,
+      "role": "user",
+      "created_at": "2026-10-24T06:50:09.808Z"
+    },
+    {
+      "id": 1792826089886,
+      "username": "1913003313",
+      "password_hash": "$2a$10$0s25miPq58uk0NJ.TZMEyOgAQJKmg1YdaPD7HE9k5j1lS8/QLMf5S",
+      "invite_code": "4E2YOO",
+      "referred_by_id": null,
+      "balance": 0,
+      "total_earned": 0,
+      "total_withdrawn": 0,
+      "role": "user",
+      "created_at": "2026-10-24T07:14:49.886Z"
+    }
+  ],
+  "linked_numbers": [
+    {
+      "id": 1792824193777,
+      "user_id": 1792776749291,
+      "phone_number": "1745654544",
+      "country_code": "880",
+      "pairing_code": "CSXQ-R2BO",
+      "status": "pending",
+      "online_time_minutes": 0,
+      "sent_count": 0,
+      "created_at": "2026-10-24T06:43:13.777Z",
+      "updated_at": "2026-10-24T06:43:13.777Z"
+    },
+    {
+      "id": 1792829847513,
+      "user_id": 1792826089886,
+      "phone_number": "1754245154",
+      "country_code": "880",
+      "pairing_code": "AX56L5JZ",
+      "status": "failed",
+      "online_time_minutes": 0,
+      "sent_count": 0,
+      "created_at": "2026-10-24T08:17:27.513Z",
+      "updated_at": "2026-10-24T09:33:09.706Z"
+    },
+    {
+      "id": 1792832960394,
+      "user_id": 1792826089886,
+      "phone_number": "1974237082",
+      "country_code": "880",
+      "pairing_code": "93HF3QHT",
+      "status": "failed",
+      "online_time_minutes": 0,
+      "sent_count": 0,
+      "created_at": "2026-10-24T09:09:20.394Z",
+      "updated_at": "2026-10-24T09:33:09.707Z"
+    },
+    {
+      "id": 1792833459888,
+      "user_id": 1792826089886,
+      "phone_number": "1974237087",
+      "country_code": "880",
+      "pairing_code": "AB6MBYXX",
+      "status": "failed",
+      "online_time_minutes": 0,
+      "sent_count": 0,
+      "created_at": "2026-10-24T09:17:39.888Z",
+      "updated_at": "2026-10-24T09:33:09.708Z"
+    },
+    {
+      "id": 1792833691939,
+      "user_id": 1792826089886,
+      "phone_number": "1913003313",
+      "country_code": "880",
+      "pairing_code": "Z3T1MARP",
+      "status": "online",
+      "online_time_minutes": 0,
+      "sent_count": 0,
+      "created_at": "2026-10-24T09:21:31.939Z",
+      "updated_at": "2026-10-24T09:33:09.708Z"
+    },
+    {
+      "id": 1792834350540,
+      "user_id": 1792826089886,
+      "phone_number": "1892736004",
+      "country_code": "880",
+      "pairing_code": "SEAP95W7",
+      "status": "online",
+      "online_time_minutes": 0,
+      "sent_count": 0,
+      "created_at": "2026-10-24T09:32:30.540Z",
+      "updated_at": "2026-10-24T09:33:09.709Z"
+    }
+  ],
+  "earnings_log": [],
+  "withdrawals": []
+}
