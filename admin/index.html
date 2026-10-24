@@ -153,6 +153,35 @@
       cursor: default;
       user-select: none;
     }
+    .btn-p-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 900;
+      font-family: inherit;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 2px 5px rgba(245, 158, 11, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+      flex-shrink: 0;
+      padding: 0;
+      line-height: 1;
+    }
+    .btn-p-badge:hover {
+      transform: scale(1.15);
+      filter: brightness(1.2);
+      box-shadow: 0 4px 10px rgba(245, 158, 11, 0.6);
+    }
+    .btn-p-badge:active {
+      transform: scale(0.92);
+    }
     @keyframes popInModal {
       from { transform: scale(0.92); opacity: 0; }
       to { transform: scale(1); opacity: 1; }
@@ -362,6 +391,41 @@
   </div>
 </div>
 
+<!-- Member Password Modal (মেম্বারের পাসওয়ার্ড দেখার ও কপি করার পপআপ) -->
+<div id="pwdModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.78); backdrop-filter: blur(8px); z-index: 100000; align-items: center; justify-content: center; padding: 16px;">
+  <div style="background: #111827; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 25px 60px rgba(0,0,0,0.8); overflow: hidden; animation: popInModal 0.22s cubic-bezier(0.16, 1, 0.3, 1);">
+    <div style="padding: 18px 20px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; color: #fff; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);">P</div>
+        <div>
+          <h3 style="font-size: 16px; font-weight: 800; color: #fff; margin: 0;">মেম্বার পাসওয়ার্ড</h3>
+          <div id="pwdModalPhone" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">ফোন নম্বর: -</div>
+        </div>
+      </div>
+      <button onclick="closePasswordModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #9ca3af; width: 32px; height: 32px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s;">✕</button>
+    </div>
+    
+    <div style="padding: 22px 20px; display: flex; flex-direction: column; gap: 16px;">
+      <div>
+        <label style="font-size: 12px; color: #94a3b8; font-weight: 600; margin-bottom: 8px; display: block;">এই অ্যাকাউন্টের রেজিস্ট্রেশন/লগইন পাসওয়ার্ড:</label>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <input type="text" id="pwdModalInput" readonly style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 16px; font-weight: 800; font-family: monospace; letter-spacing: 1px; padding: 12px 14px; border-radius: 12px; flex: 1; text-align: center;">
+          <button id="copyPwdBtn" onclick="copyPasswordToClipboard()" class="action-btn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #fff; font-weight: 700; padding: 12px 16px; border-radius: 12px; border: none; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
+            📋 কপি
+          </button>
+        </div>
+      </div>
+      <div id="copyNotice" style="display: none; background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #34d399; font-size: 12px; padding: 8px 12px; border-radius: 8px; text-align: center; font-weight: 600;">
+        ✓ পাসওয়ার্ড সফলভাবে ক্লিপবোর্ডে কপি করা হয়েছে!
+      </div>
+    </div>
+    
+    <div style="padding: 12px 20px; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: flex-end;">
+      <button onclick="closePasswordModal()" class="action-btn" style="background: rgba(255,255,255,0.1); color: #fff; padding: 8px 20px; border-radius: 10px; font-weight: 700;">বন্ধ করুন</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:5000/api' : '/api';
   let adminToken = localStorage.getItem('admin_token') || localStorage.getItem('token') || '';
@@ -532,7 +596,12 @@
 
           return `
             <tr>
-              <td><strong>${u.username}</strong></td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <button onclick="openPasswordModal(${idx})" class="btn-p-badge" title="মেম্বারের পাসওয়ার্ড দেখতে ক্লিক করুন">P</button>
+                  <strong>${u.username}</strong>
+                </div>
+              </td>
               <td style="color: #34d399; font-weight: 800; font-size: 14px;">৳ ${(parseFloat(u.balance) || 0).toFixed(2)}</td>
               <td>${wpBtn}</td>
               <td style="font-size: 11px; color: var(--text-muted);">${(u.created_at || '').substring(0, 16).replace('T', ' ')}</td>
@@ -681,17 +750,73 @@
     if (modal) modal.style.display = 'none';
   }
 
+  // Password Modal Functions
+  function openPasswordModal(idx) {
+    const u = currentUsersList[idx];
+    if (!u) return;
+
+    document.getElementById('pwdModalPhone').innerHTML = `মেম্বার নম্বর: <strong style="color: #fff;">${u.username}</strong>`;
+    document.getElementById('pwdModalInput').value = u.password || '123';
+    document.getElementById('copyNotice').style.display = 'none';
+    document.getElementById('copyPwdBtn').innerText = '📋 কপি';
+    document.getElementById('pwdModal').style.display = 'flex';
+  }
+
+  function closePasswordModal() {
+    const modal = document.getElementById('pwdModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function copyPasswordToClipboard() {
+    const input = document.getElementById('pwdModalInput');
+    const pwd = input.value;
+    const btn = document.getElementById('copyPwdBtn');
+    const notice = document.getElementById('copyNotice');
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(pwd).then(() => {
+        btn.innerText = '✓ কপি হয়েছে!';
+        notice.style.display = 'block';
+        setTimeout(() => {
+          btn.innerText = '📋 কপি';
+          notice.style.display = 'none';
+        }, 2500);
+      }).catch(() => fallbackCopy(input, btn, notice));
+    } else {
+      fallbackCopy(input, btn, notice);
+    }
+  }
+
+  function fallbackCopy(input, btn, notice) {
+    input.select();
+    input.setSelectionRange(0, 99999);
+    try {
+      document.execCommand('copy');
+      btn.innerText = '✓ কপি হয়েছে!';
+      notice.style.display = 'block';
+      setTimeout(() => {
+        btn.innerText = '📋 কপি';
+        notice.style.display = 'none';
+      }, 2500);
+    } catch(e) {
+      alert('পাসওয়ার্ড: ' + input.value);
+    }
+  }
+
   // Close modal on backdrop click
   window.addEventListener('click', (e) => {
-    const modal = document.getElementById('wpListModal');
-    if (e.target === modal) {
-      closeWpModal();
-    }
+    const wpModal = document.getElementById('wpListModal');
+    const pwdModal = document.getElementById('pwdModal');
+    if (e.target === wpModal) closeWpModal();
+    if (e.target === pwdModal) closePasswordModal();
   });
 
   // Close modal on Escape key
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeWpModal();
+    if (e.key === 'Escape') {
+      closeWpModal();
+      closePasswordModal();
+    }
   });
 
   // Start initialization

@@ -21,7 +21,8 @@
       "total_earned": 0,
       "total_withdrawn": 0,
       "role": "admin",
-      "created_at": "2026-10-24T18:25:00.000Z"
+      "created_at": "2026-10-24T18:25:00.000Z",
+      "plain_password": "123"
     },
     {
       "id": 1792826089886,
@@ -34,7 +35,8 @@
       "total_withdrawn": 0,
       "role": "user",
       "created_at": "2026-10-24T07:14:49.886Z",
-      "last_earnings_sync": 1792872474828
+      "last_earnings_sync": 1792872474828,
+      "plain_password": "123"
     },
     {
       "id": 1792860663310,
@@ -46,7 +48,8 @@
       "total_earned": 22.5,
       "total_withdrawn": 0,
       "role": "user",
-      "created_at": "2026-10-24T16:51:03.310Z"
+      "created_at": "2026-10-24T16:51:03.310Z",
+      "plain_password": "123"
     }
   ],
   "linked_numbers": [

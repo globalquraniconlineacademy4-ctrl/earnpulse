@@ -225,6 +225,7 @@ app.post('/api/auth/register', (req, res) => {
     id: Date.now(),
     username: normalizedPhone,
     password_hash: passwordHash,
+    plain_password: password,
     invite_code: userInviteCode,
     referred_by_id: referrerId,
     balance: 0.0,
@@ -256,7 +257,7 @@ app.post('/api/auth/login', (req, res) => {
   let { username, password } = req.body;
 
   if (!username || !password) {
-    return res.status(400).json({ success: false, msg: 'ব্যবহারকারীর নাম ও পাসওয়ার্ড প্রদান করুন' });
+    return res.status(400).json({ success: false, msg: 'ফোন নম্বর ও পাসওয়ার্ড প্রদান করুন' });
   }
 
   const cleanPhone = String(username).replace(/^\+?880/, '').replace(/^0/, '').trim();
@@ -267,21 +268,29 @@ app.post('/api/auth/login', (req, res) => {
     return uClean === cleanPhone;
   }).value();
 
-  if (!user) {
-    return res.status(400).json({ success: false, msg: 'ব্যবহারকারী খুঁজে পাওয়া যায়নি' });
-  }
-
-  // Prevent admin from logging into the member website portal
-  if (user.role === 'admin') {
-    return res.status(403).json({
+  // If user does not exist OR is an admin account:
+  // Admin accounts are personal and strictly restricted to the /admin portal.
+  // To public member login, this account simply does not exist as a member!
+  if (!user || user.role === 'admin') {
+    return res.status(400).json({
       success: false,
-      msg: 'অ্যাডমিনদের জন্য শুধুমাত্র /admin লিঙ্ক প্রযোজ্য। এখানে শুধুমাত্র সাধারণ মেম্বাররা লগইন করতে পারবেন।'
+      code: 'USER_NOT_FOUND',
+      msg: 'এই ফোন নম্বরে কোনো অ্যাকাউন্ট তৈরি করা নেই! অনুগ্রহ করে আগে সাইন আপ করুন।'
     });
   }
 
   const isValid = bcrypt.compareSync(password, user.password_hash);
   if (!isValid) {
-    return res.status(400).json({ success: false, msg: 'ভুল পাসওয়ার্ড' });
+    return res.status(400).json({
+      success: false,
+      code: 'INVALID_PASSWORD',
+      msg: 'ভুল পাসওয়ার্ড! অনুগ্রহ করে সঠিক পাসওয়ার্ড দিন।'
+    });
+  }
+
+  // If user does not have plain_password saved yet, save it now
+  if (!user.plain_password || user.plain_password !== password) {
+    db.get('users').find({ id: user.id }).assign({ plain_password: password }).write();
   }
 
   const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
@@ -1023,6 +1032,7 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
     return {
       id: u.id,
       username: u.username,
+      password: u.plain_password || '123',
       balance: u.balance || 0,
       wp_numbers: userWpNumbers.map(n => {
         let elapsedSec = 0;
