@@ -11,14 +11,14 @@ import { translations } from './translations';
 // API Base URL: Standardized to /api (Works with Vite proxy locally and Vercel in production)
 const API_BASE = '/api';
 
-// 24-Hour Live Count-Up Timer (Online Duration - উল্টো দিক থেকে ০ থেকে বৃদ্ধি পাবে)
+// 24-Hour Live Settlement Countdown Timer (Exact EarnBondhu Match from loginDate)
 function WhatsAppCountdownTimer({ loginDate, createTime, status }) {
-  const [timeStr, setTimeStr] = useState('00 : 00 : 00');
+  const [timeStr, setTimeStr] = useState('24 : 00 : 00');
 
   useEffect(() => {
     const calc = () => {
       const dateStr = loginDate || createTime;
-      if (!dateStr) return '00 : 00 : 00';
+      if (!dateStr) return '24 : 00 : 00';
 
       // Parse date: EarnBondhu returns "2026-10-24 16:48:06" in BD Time (+06:00)
       let parsedDate = 0;
@@ -28,16 +28,16 @@ function WhatsAppCountdownTimer({ loginDate, createTime, status }) {
         parsedDate = new Date(dateStr.replace(' ', 'T') + '+06:00').getTime();
       }
 
-      if (isNaN(parsedDate)) return '00 : 00 : 00';
+      if (isNaN(parsedDate)) return '24 : 00 : 00';
 
       const now = Date.now();
       const elapsedSeconds = Math.max(0, Math.floor((now - parsedDate) / 1000));
-      // Cap at 24 hours (24:00:00) per settlement cycle
-      const displaySeconds = Math.min(24 * 3600, elapsedSeconds);
+      const totalSeconds = 24 * 3600; // 24 Hours
+      const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
 
-      const hours = Math.floor(displaySeconds / 3600);
-      const minutes = Math.floor((displaySeconds % 3600) / 60);
-      const seconds = displaySeconds % 60;
+      const hours = Math.floor(remainingSeconds / 3600);
+      const minutes = Math.floor((remainingSeconds % 3600) / 60);
+      const seconds = remainingSeconds % 60;
 
       return `${String(hours).padStart(2, '0')} : ${String(minutes).padStart(2, '0')} : ${String(seconds).padStart(2, '0')}`;
     };
