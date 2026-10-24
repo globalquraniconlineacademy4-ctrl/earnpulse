@@ -8,7 +8,7 @@
   <style>
     :root {
       --bg: #090d16;
-      --card-bg: rgba(17, 24, 39, 0.7);
+      --card-bg: rgba(17, 24, 39, 0.75);
       --border: rgba(255, 255, 255, 0.08);
       --primary: #10b981;
       --gold: #f59e0b;
@@ -16,16 +16,35 @@
       --text-muted: #9ca3af;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif; }
-    body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px 16px; background-image: radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.06) 0%, transparent 40%); }
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      min-height: 100vh; 
+      padding: 24px 16px; 
+      background-image: radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.06) 0%, transparent 40%); 
+    }
     .container { max-width: 1050px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
     
     /* Top Header */
-    .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; backdrop-filter: blur(12px); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      padding: 16px 20px; 
+      background: var(--card-bg); 
+      border: 1px solid var(--border); 
+      border-radius: 18px; 
+      backdrop-filter: blur(12px); 
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
+    }
     .brand { display: flex; align-items: center; gap: 12px; }
-    .brand img { width: 36px; height: 36px; border-radius: 10px; }
+    .brand img { width: 38px; height: 38px; border-radius: 10px; }
     .brand h1 { font-size: 20px; font-weight: 800; background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
     .badge-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #10b981; background: rgba(16, 185, 129, 0.12); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.25); font-weight: 600; }
-    
+    .btn-logout { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+    .btn-logout:hover { background: #ef4444; color: #fff; }
+
     /* Stats Cards */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
     .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 18px; backdrop-filter: blur(12px); position: relative; overflow: hidden; }
@@ -63,11 +82,65 @@
     input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
     .save-btn { width: 100%; padding: 13px; border-radius: 12px; border: none; font-size: 14px; font-weight: 700; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; cursor: pointer; }
     .save-btn:hover { filter: brightness(1.1); }
+
+    /* Admin Login Overlay */
+    #loginModal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(9, 13, 22, 0.95);
+      backdrop-filter: blur(16px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 380px;
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 28px 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      text-align: center;
+    }
+    .login-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      margin-bottom: 14px;
+      background: #15803d;
+      padding: 6px;
+    }
   </style>
 </head>
 <body>
 
-<div class="container">
+<!-- Admin Login Screen (Only shown when not logged in) -->
+<div id="loginModal" style="display: none;">
+  <div class="login-card">
+    <img src="/brand/earnpulse-logo.png" alt="EarnPulse" class="login-logo" onerror="this.src='/favicon.svg'">
+    <h2 style="font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 6px;">EarnPulse অ্যাডমিন লগইন</h2>
+    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 22px;">প্রশাসনিক প্যানেলে প্রবেশ করতে আপনার নম্বর ও পাসওয়ার্ড দিন</p>
+
+    <div id="loginError" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; font-size: 12px; padding: 10px; border-radius: 10px; margin-bottom: 16px;"></div>
+
+    <form id="adminLoginForm" style="text-align: left; display: flex; flex-direction: column; gap: 14px;">
+      <div>
+        <label>অ্যাডমিন ফোন নম্বর</label>
+        <input type="text" id="adminUser" placeholder="01910344086" value="01910344086" required>
+      </div>
+      <div>
+        <label>পাসওয়ার্ড</label>
+        <input type="password" id="adminPass" placeholder="পাসওয়ার্ড দিন" value="123" required>
+      </div>
+      <button type="submit" id="loginBtn" class="save-btn" style="margin-top: 6px;">🔒 লগইন করুন</button>
+    </form>
+  </div>
+</div>
+
+<div class="container" id="adminDashboard" style="display: none;">
   <!-- Top Header -->
   <div class="header">
     <div class="brand">
@@ -77,8 +150,12 @@
         <div style="font-size: 12px; color: var(--text-muted);">পূর্ণাঙ্গ ম্যানেজমেন্ট ও প্রফিট কন্ট্রোল প্যানেল</div>
       </div>
     </div>
-    <div class="badge-status">
-      <span style="font-size: 8px;">●</span> EarnBondhu লাইভ কানেক্টেড
+    <div class="header-actions">
+      <div class="badge-status">
+        <span style="font-size: 8px;">●</span> EarnBondhu লাইভ কানেক্টেড
+      </div>
+      <button onclick="loadAdminData()" class="action-btn" style="background: rgba(255,255,255,0.08); color: #fff;">🔄 রিফ্রেশ</button>
+      <button onclick="adminLogout()" class="btn-logout">🚪 লগআউট</button>
     </div>
   </div>
 
@@ -174,18 +251,14 @@
     </div>
   </div>
 
-  <!-- Section 4: System Config (কনফিগারেশন) -->
+  <!-- Section 4: System Config (কনফিগারেশন - EarnBondhu Token Box Removed) -->
   <div class="section-card">
     <div class="section-title" style="margin-bottom: 16px;">⚙️ প্ল্যাটফর্ম সেটিংস ও রেশিও কন্ট্রোল</div>
     <form id="configForm">
-      <div class="form-group">
-        <label>EarnBondhu মাস্টার টোকেন (Bearer Token)</label>
-        <input type="text" id="targetToken" placeholder="Master token...">
-      </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
         <div class="form-group">
           <label>মেম্বার পেআউট রেশিও (০.৮০ = ৮০% মেম্বার, ২০% আপনার লাভ)</label>
-          <input type="number" step="0.01" id="rewardRatio" value="0.80" readonly style="opacity: 0.8;">
+          <input type="number" step="0.01" id="rewardRatio" value="0.80">
         </div>
         <div class="form-group">
           <label>সর্বনিম্ন উত্তোলন পরিমাণ (টাকা)</label>
@@ -199,54 +272,145 @@
 
 <script>
   const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:5000/api' : '/api';
-  const token = localStorage.getItem('token');
+  let adminToken = localStorage.getItem('admin_token') || localStorage.getItem('token') || '';
+
+  function checkAuthAndInit() {
+    if (!adminToken) {
+      document.getElementById('loginModal').style.display = 'flex';
+      document.getElementById('adminDashboard').style.display = 'none';
+    } else {
+      document.getElementById('loginModal').style.display = 'none';
+      document.getElementById('adminDashboard').style.display = 'flex';
+      loadAdminData();
+    }
+  }
+
+  // Handle Admin Login Submit
+  document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('adminUser').value.trim();
+    const password = document.getElementById('adminPass').value;
+    const errBox = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+
+    errBox.style.display = 'none';
+    btn.disabled = true;
+    btn.innerText = 'যাচাই করা হচ্ছে...';
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+
+      if (data && data.success && data.token) {
+        if (data.user && data.user.role !== 'admin') {
+          errBox.innerText = 'দুঃখিত, এই অ্যাকাউন্টটির কোনো অ্যাডমিন পারমিশন নেই!';
+          errBox.style.display = 'block';
+          btn.disabled = false;
+          btn.innerText = '🔒 লগইন করুন';
+          return;
+        }
+
+        adminToken = data.token;
+        localStorage.setItem('admin_token', data.token);
+        localStorage.setItem('token', data.token);
+        if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+
+        document.getElementById('loginModal').style.display = 'none';
+        document.getElementById('adminDashboard').style.display = 'flex';
+        loadAdminData();
+      } else {
+        errBox.innerText = data.msg || 'ভুল নম্বর বা পাসওয়ার্ড!';
+        errBox.style.display = 'block';
+      }
+    } catch (err) {
+      errBox.innerText = 'সার্ভার সংযোগে সমস্যা হয়েছে!';
+      errBox.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.innerText = '🔒 লগইন করুন';
+    }
+  });
+
+  function adminLogout() {
+    if (!confirm('আপনি কি অ্যাডমিন ড্যাশবোর্ড থেকে লগআউট করতে চান?')) return;
+    localStorage.removeItem('admin_token');
+    adminToken = '';
+    checkAuthAndInit();
+  }
 
   async function loadAdminData() {
+    if (!adminToken) return;
+
     try {
       const res = await fetch(`${API_BASE}/admin/overview`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${adminToken}` }
       });
-      const d = await res.json();
-      if (!d || !d.success) {
-        if (d.msg) console.log(d.msg);
+
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem('admin_token');
+        adminToken = '';
+        checkAuthAndInit();
         return;
       }
 
+      const d = await res.json();
+      if (!d || !d.success) return;
+
       // Stats
       document.getElementById('totalUsers').innerText = d.stats.totalUsers || 0;
-      document.getElementById('totalLinked').innerText = d.stats.totalLinked || 0;
+      document.getElementById('totalLinked').innerText = (d.stats.activeWA !== undefined ? d.stats.activeWA : d.stats.totalLinked) || 0;
       document.getElementById('pendingWithdraw').innerText = d.stats.pendingWithdrawals || 0;
-      document.getElementById('totalPaid').innerText = '৳ ' + (d.stats.totalPaidOut || 0).toFixed(2);
+      document.getElementById('totalPaid').innerText = '৳ ' + (parseFloat(d.stats.totalPaidOut) || 0).toFixed(2);
 
       // Configs
       if (d.configs) {
-        document.getElementById('targetToken').value = d.configs.master_target_token || '';
-        document.getElementById('minWithdraw').value = d.configs.min_withdraw_amount || 100;
+        if (document.getElementById('rewardRatio')) {
+          document.getElementById('rewardRatio').value = d.configs.user_reward_ratio || 0.80;
+        }
+        if (document.getElementById('minWithdraw')) {
+          document.getElementById('minWithdraw').value = d.configs.min_withdraw_amount || 100;
+        }
       }
 
       // Withdrawals Table
       const wTable = document.getElementById('withdrawalsTable');
       if (d.recentWithdrawals && d.recentWithdrawals.length > 0) {
-        wTable.innerHTML = d.recentWithdrawals.map(w => `
-          <tr>
-            <td><strong>${w.username || 'User'}</strong></td>
-            <td style="font-weight: 700; color: #fbbf24;">৳ ${parseFloat(w.amount || 0).toFixed(2)}</td>
-            <td style="text-transform: capitalize;">${w.method}</td>
-            <td><code>${w.account_number}</code></td>
-            <td style="font-size: 11px; color: var(--text-muted);">${(w.created_at || '').substring(0, 16).replace('T', ' ')}</td>
-            <td>
-              <span class="pill ${w.status === 'approved' ? 'pill-green' : (w.status === 'rejected' ? 'pill-red' : 'pill-yellow')}">
-                ${w.status === 'approved' ? 'অনুমোদিত' : (w.status === 'rejected' ? 'বাতিল' : 'অপেক্ষমান')}
-              </span>
-            </td>
-            <td>
-              ${w.status === 'pending' ? `
-                <button onclick="updateWithdraw(${w.id}, 'approved')" class="action-btn btn-approve">অনুমোদন</button>
-                <button onclick="updateWithdraw(${w.id}, 'rejected')" class="action-btn btn-reject">বাতিল</button>
-              ` : '<span style="color: var(--text-muted);">-</span>'}
-            </td>
-          </tr>
-        `).join('');
+        wTable.innerHTML = d.recentWithdrawals.map(w => {
+          let badgeClass = 'pill-yellow';
+          let statusText = 'অপেক্ষমান';
+          if (w.status === 'approved') {
+            badgeClass = 'pill-green';
+            statusText = 'অনুমোদিত';
+          } else if (w.status === 'rejected') {
+            badgeClass = 'pill-red';
+            statusText = 'বাতিল';
+          }
+
+          return `
+            <tr>
+              <td><strong>${w.username || 'User'}</strong></td>
+              <td style="font-weight: 700; color: #fbbf24;">৳ ${parseFloat(w.amount || 0).toFixed(2)}</td>
+              <td style="text-transform: uppercase; font-weight: 600;">${w.method}</td>
+              <td><code>${w.account_number}</code></td>
+              <td style="font-size: 11px; color: var(--text-muted);">${(w.created_at || '').substring(0, 16).replace('T', ' ')}</td>
+              <td>
+                <span class="pill ${badgeClass}">
+                  ${statusText}
+                </span>
+              </td>
+              <td>
+                ${w.status === 'pending' ? `
+                  <button onclick="updateWithdraw(${w.id}, 'approved')" class="action-btn btn-approve">✓ অনুমোদন</button>
+                  <button onclick="updateWithdraw(${w.id}, 'rejected')" class="action-btn btn-reject">✕ বাতিল</button>
+                ` : '<span style="color: var(--text-muted); font-size: 12px;">সম্পন্ন</span>'}
+              </td>
+            </tr>
+          `;
+        }).join('');
       } else {
         wTable.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো উইথড্রয়াল রিকোয়েস্ট নেই</td></tr>';
       }
@@ -256,9 +420,13 @@
       if (d.numbersList && d.numbersList.length > 0) {
         waTable.innerHTML = d.numbersList.map(n => `
           <tr>
-            <td><strong>+${n.country_code} ${n.phone_number}</strong></td>
-            <td><span class="pill ${n.status === 'online' ? 'pill-green' : 'pill-yellow'}">${n.status === 'online' ? '● সক্রিয়' : 'অপেক্ষমান'}</span></td>
-            <td>${n.online_time_minutes || 0} মিনিট</td>
+            <td><strong>+${n.country_code || '880'} ${n.phone_number}</strong></td>
+            <td>
+              <span class="pill ${n.status === 'online' ? 'pill-green' : 'pill-red'}">
+                ${n.status === 'online' ? '● সচল (Online)' : 'অফলাইন'}
+              </span>
+            </td>
+            <td style="font-family: monospace; font-weight: 600;">${n.online_duration_str || '00:00:00'}</td>
             <td>${n.sent_count || 0} টি</td>
             <td style="font-size: 11px; color: var(--text-muted);">${(n.created_at || '').substring(0, 16).replace('T', ' ')}</td>
           </tr>
@@ -275,7 +443,7 @@
             <td><strong>${u.username}</strong></td>
             <td style="color: #34d399; font-weight: 700;">৳ ${(u.balance || 0).toFixed(2)}</td>
             <td>৳ ${(u.total_earned || 0).toFixed(2)}</td>
-            <td><span class="pill ${u.role === 'admin' ? 'pill-yellow' : 'pill-green'}">${u.role}</span></td>
+            <td><span class="pill ${u.role === 'admin' ? 'pill-yellow' : 'pill-green'}">${u.role === 'admin' ? '👑 Admin' : '👤 Member'}</span></td>
             <td style="font-size: 11px; color: var(--text-muted);">${(u.created_at || '').substring(0, 16).replace('T', ' ')}</td>
           </tr>
         `).join('');
@@ -284,16 +452,22 @@
       }
 
     } catch (e) {
-      console.error(e);
+      console.error('loadAdminData error:', e);
     }
   }
 
   async function updateWithdraw(id, status) {
-    if (!confirm(`আপনি কি এই উইথড্রয়ালটি ${status === 'approved' ? 'অনুমোদন' : 'বাতিল'} করতে চান?`)) return;
+    const isApprove = status === 'approved';
+    const msg = isApprove 
+      ? 'আপনি কি এই উইথড্রয়ালটি অনুমোদন (Approve) করতে চান?' 
+      : 'আপনি কি এই উইথড্রয়ালটি বাতিল (Reject) করে মেম্বারকে টাকা রিফান্ড করতে চান?';
+    
+    if (!confirm(msg)) return;
+
     try {
       const res = await fetch(`${API_BASE}/admin/withdraw/${id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
         body: JSON.stringify({ status })
       });
       const d = await res.json();
@@ -309,11 +483,11 @@
     try {
       const res = await fetch(`${API_BASE}/admin/config`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
         body: JSON.stringify({
           configs: {
-            master_target_token: document.getElementById('targetToken').value,
-            min_withdraw_amount: document.getElementById('minWithdraw').value
+            user_reward_ratio: parseFloat(document.getElementById('rewardRatio').value) || 0.80,
+            min_withdraw_amount: parseFloat(document.getElementById('minWithdraw').value) || 100
           }
         })
       });
@@ -325,7 +499,15 @@
     }
   });
 
-  loadAdminData();
+  // Start initialization
+  checkAuthAndInit();
+
+  // Auto Refresh Every 15 Seconds
+  setInterval(() => {
+    if (adminToken && document.getElementById('adminDashboard').style.display !== 'none') {
+      loadAdminData();
+    }
+  }, 15000);
 </script>
 </body>
 </html>

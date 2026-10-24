@@ -2563,8 +2563,16 @@ export default function App() {
                   <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0f172a' }}>{adminStats.totalUsers}</div>
                 </div>
                 <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>সক্রিয় WA</div>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#16a34a' }}>{adminStats.activeWA !== undefined ? adminStats.activeWA : adminStats.totalLinked}</div>
+                </div>
+                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '11px', color: '#64748b' }}>পেন্ডিং উইথড্র</div>
                   <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#d97706' }}>{adminStats.pendingWithdrawals}</div>
+                </div>
+                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>মোট পেআউট</div>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0284c7' }}>৳{(adminStats.totalPaidOut || 0).toFixed(2)}</div>
                 </div>
               </div>
             )}
@@ -2578,22 +2586,9 @@ export default function App() {
                 body: JSON.stringify({ configs: adminConfigs })
               });
               const d = await res.json();
-              alert(d.msg);
+              alert(d.msg || 'সংরক্ষণ সম্পন্ন');
               setAdminSaving(false);
             }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <label style={{ fontSize: '12px', color: '#334155', fontWeight: '600', display: 'block', marginBottom: '4px' }}>
-                  মাস্টার প্ল্যাটফর্ম কানেক্টর টোকেন (Master Bearer Token)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Bearer token paste here..."
-                  value={adminConfigs.master_target_token || ''}
-                  onChange={(e) => setAdminConfigs({ ...adminConfigs, master_target_token: e.target.value })}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px' }}
-                />
-              </div>
-
               <div>
                 <label style={{ fontSize: '12px', color: '#334155', fontWeight: '600', display: 'block', marginBottom: '4px' }}>
                   ইউজার রিওয়ার্ড রেশিও (যেমন: 0.80 = ৮০% ইউজারকে দেওয়া, ২০% আপনার লাভ)
@@ -2609,26 +2604,12 @@ export default function App() {
 
               <div>
                 <label style={{ fontSize: '12px', color: '#334155', fontWeight: '600', display: 'block', marginBottom: '4px' }}>
-                  স্তর ১ রেফারেল বোনাস রেশিও (ডিফল্ট: 0.15 = ১৫%)
+                  সর্বনিম্ন উত্তোলন পরিমাণ (টাকা)
                 </label>
                 <input
                   type="number"
-                  step="0.01"
-                  value={adminConfigs.referral_l1_ratio || 0.15}
-                  onChange={(e) => setAdminConfigs({ ...adminConfigs, referral_l1_ratio: parseFloat(e.target.value) })}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', color: '#334155', fontWeight: '600', display: 'block', marginBottom: '4px' }}>
-                  স্তর ২ রেফারেল বোনাস রেশিও (ডিফল্ট: 0.05 = ৫%)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={adminConfigs.referral_l2_ratio || 0.05}
-                  onChange={(e) => setAdminConfigs({ ...adminConfigs, referral_l2_ratio: parseFloat(e.target.value) })}
+                  value={adminConfigs.min_withdraw_amount || 100}
+                  onChange={(e) => setAdminConfigs({ ...adminConfigs, min_withdraw_amount: parseFloat(e.target.value) })}
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px' }}
                 />
               </div>
@@ -2642,6 +2623,89 @@ export default function App() {
                 {adminSaving ? 'সংরক্ষণ হচ্ছে...' : 'সেটিংস সংরক্ষণ করুন'}
               </button>
             </form>
+
+            {/* In-App Withdrawals Approval List */}
+            <div style={{ marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }}>
+                  💸 উত্তোলন রিকোয়েস্ট ও অনুমোদন
+                </h3>
+                <button
+                  onClick={fetchAdminData}
+                  style={{ background: 'none', border: 'none', color: '#16a34a', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  🔄 রিফ্রেশ
+                </button>
+              </div>
+
+              {(!adminWithdrawals || adminWithdrawals.length === 0) ? (
+                <div style={{ textAlign: 'center', padding: '16px', color: '#64748b', fontSize: '12px', background: '#f8fafc', borderRadius: '8px' }}>
+                  কোনো উইথড্রয়াল রিকোয়েস্ট নেই
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {adminWithdrawals.map(w => (
+                    <div key={w.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{w.username || 'User'}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                            <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{w.method}</span> • {w.account_number}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: '800', fontSize: '15px', color: '#b45309' }}>৳{parseFloat(w.amount || 0).toFixed(2)}</div>
+                          <span style={{
+                            display: 'inline-block', marginTop: '3px', fontSize: '10px', padding: '2px 8px', borderRadius: '12px', fontWeight: '700',
+                            background: w.status === 'approved' ? '#dcfce7' : (w.status === 'rejected' ? '#fee2e2' : '#fef3c7'),
+                            color: w.status === 'approved' ? '#15803d' : (w.status === 'rejected' ? '#b91c1c' : '#b45309')
+                          }}>
+                            {w.status === 'approved' ? 'অনুমোদিত' : (w.status === 'rejected' ? 'বাতিল' : 'অপেক্ষমান')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {w.status === 'pending' && (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`৳${w.amount} উত্তোলন অনুমোদন করতে চান?`)) return;
+                              const res = await fetch(`${API_BASE}/admin/withdraw/${w.id}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                body: JSON.stringify({ status: 'approved' })
+                              });
+                              const d = await res.json();
+                              alert(d.msg || 'অনুমোদিত');
+                              fetchAdminData();
+                            }}
+                            style={{ flex: 1, padding: '7px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                          >
+                            ✓ অনুমোদন
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`৳${w.amount} উত্তোলন বাতিল করতে চান? টাকা মেম্বারকে ফেরত দেওয়া হবে।`)) return;
+                              const res = await fetch(`${API_BASE}/admin/withdraw/${w.id}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                body: JSON.stringify({ status: 'rejected' })
+                              });
+                              const d = await res.json();
+                              alert(d.msg || 'বাতিল করা হয়েছে');
+                              fetchAdminData();
+                            }}
+                            style={{ flex: 1, padding: '7px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                          >
+                            ✕ বাতিল
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

@@ -794,15 +794,16 @@ app.post('/api/user/change-password', authenticateToken, (req, res) => {
 // -------------------------------------------------------------
 app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
   const totalUsers = db.get('users').size().value();
+  const activeWA = db.get('linked_numbers').filter({ status: 'online' }).size().value();
   const totalLinked = db.get('linked_numbers').size().value();
   const pendingWithdrawals = db.get('withdrawals').filter({ status: 'pending' }).size().value();
-  const withdrawalsList = db.get('withdrawals').value();
+  const withdrawalsList = db.get('withdrawals').value() || [];
   const totalPaidOut = withdrawalsList
     .filter(w => w.status === 'approved')
-    .reduce((sum, w) => sum + (w.amount || 0), 0);
+    .reduce((sum, w) => sum + (parseFloat(w.amount) || 0), 0);
 
   const configs = db.get('system_config').value();
-  const recentWithdrawals = db.get('withdrawals').orderBy(['id'], ['desc']).take(30).value();
+  const recentWithdrawals = db.get('withdrawals').orderBy(['id'], ['desc']).take(50).value();
   const usersList = db.get('users').orderBy(['id'], ['desc']).take(50).value().map(u => ({
     id: u.id,
     username: u.username,
@@ -811,13 +812,35 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
     total_earned: u.total_earned || 0,
     created_at: u.created_at
   }));
-  const numbersList = db.get('linked_numbers').orderBy(['id'], ['desc']).take(50).value();
+
+  const numbersList = db.get('linked_numbers').orderBy(['id'], ['desc']).take(50).value().map(n => {
+    let elapsedSec = 0;
+    if (n.status === 'online') {
+      const dStr = n.login_date || n.create_time;
+      if (dStr) {
+        const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
+        if (!isNaN(p)) elapsedSec = Math.max(0, Math.floor((Date.now() - p) / 1000));
+      }
+    } else if (n.status === 'offline') {
+      elapsedSec = n.frozen_elapsed_seconds || (n.online_time_ms ? Math.floor(n.online_time_ms / 1000) : 0);
+    }
+    const h = Math.floor(elapsedSec / 3600);
+    const m = Math.floor((elapsedSec % 3600) / 60);
+    const s = elapsedSec % 60;
+    const durationStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return {
+      ...n,
+      online_duration_str: durationStr,
+      online_duration_sec: elapsedSec
+    };
+  });
 
   return res.json({
     success: true,
     stats: {
       totalUsers,
       totalLinked,
+      activeWA,
       pendingWithdrawals,
       totalPaidOut
     },
@@ -853,27 +876,48 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, (req, res) 
     return res.status(404).json({ success: false, msg: 'উত্তোলন রিকোয়েস্ট পাওয়া যায়নি' });
   }
 
+  if (withdraw.status !== 'pending') {
+    return res.status(400).json({ success: false, msg: `এই রিকোয়েস্টটি ইতোমধ্যেই ${withdraw.status === 'approved' ? 'অনুমোদিত' : 'বাতিল'} করা হয়েছে` });
+  }
+
   // Update status
   db.get('withdrawals')
     .find({ id })
-    .assign({ status, admin_note: adminNote || '' })
+    .assign({
+      status,
+      admin_note: adminNote || '',
+      processed_at: new Date().toISOString()
+    })
     .write();
 
   // If rejected, refund balance to user
-  if (status === 'rejected' && withdraw.status === 'pending') {
+  if (status === 'rejected') {
     const user = db.get('users').find({ id: withdraw.user_id }).value();
     if (user) {
       db.get('users')
         .find({ id: withdraw.user_id })
         .assign({
-          balance: user.balance + withdraw.amount,
+          balance: (user.balance || 0) + withdraw.amount,
           total_withdrawn: Math.max(0, (user.total_withdrawn || 0) - withdraw.amount)
         })
         .write();
+
+      // Log transaction for refund
+      db.get('earnings_log').push({
+        id: Date.now(),
+        user_id: withdraw.user_id,
+        type: 'withdraw_refund',
+        amount: withdraw.amount,
+        description: `উত্তোলন বাতিলজনিত রিফান্ড (আইডি #${withdraw.id})`,
+        created_at: new Date().toISOString()
+      }).write();
     }
   }
 
-  return res.json({ success: true, msg: `উত্তোলন সফলভাবে ${status === 'approved' ? 'অনুমোদন' : 'বাতিল'} করা হয়েছে` });
+  return res.json({
+    success: true,
+    msg: `উত্তোলন সফলভাবে ${status === 'approved' ? 'অনুমোদন' : 'বাতিল'} করা হয়েছে!`
+  });
 });
 
 // Start Server
