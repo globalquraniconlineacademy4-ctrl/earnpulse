@@ -793,7 +793,9 @@ app.post('/api/user/change-password', authenticateToken, (req, res) => {
 // 7. ADMIN DASHBOARD & CONTROLS
 // -------------------------------------------------------------
 app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
-  const totalUsers = db.get('users').size().value();
+  // Only count real members (excluding admin accounts)
+  const memberUsers = db.get('users').filter(u => u.role !== 'admin').value() || [];
+  const totalUsers = memberUsers.length;
   const activeWA = db.get('linked_numbers').filter({ status: 'online' }).size().value();
   const totalLinked = db.get('linked_numbers').size().value();
   const pendingWithdrawals = db.get('withdrawals').filter({ status: 'pending' }).size().value();
@@ -804,14 +806,19 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
 
   const configs = db.get('system_config').value();
   const recentWithdrawals = db.get('withdrawals').orderBy(['id'], ['desc']).take(50).value();
-  const usersList = db.get('users').orderBy(['id'], ['desc']).take(50).value().map(u => ({
-    id: u.id,
-    username: u.username,
-    role: u.role,
-    balance: u.balance || 0,
-    total_earned: u.total_earned || 0,
-    created_at: u.created_at
-  }));
+  // List only members
+  const usersList = db.get('users')
+    .filter(u => u.role !== 'admin')
+    .orderBy(['id'], ['desc'])
+    .take(50)
+    .value()
+    .map(u => ({
+      id: u.id,
+      username: u.username,
+      balance: u.balance || 0,
+      total_earned: u.total_earned || 0,
+      created_at: u.created_at
+    }));
 
   const numbersList = db.get('linked_numbers').orderBy(['id'], ['desc']).take(50).value().map(n => {
     let elapsedSec = 0;

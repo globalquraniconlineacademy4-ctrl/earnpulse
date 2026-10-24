@@ -240,12 +240,11 @@
             <th>ফোন নম্বর</th>
             <th>ব্যালেন্স</th>
             <th>মোট আয়</th>
-            <th>রোল</th>
             <th>জয়েনিং তারিখ</th>
           </tr>
         </thead>
         <tbody id="usersTable">
-          <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">লোড হচ্ছে...</td></tr>
+          <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">লোড হচ্ছে...</td></tr>
         </tbody>
       </table>
     </div>
@@ -435,7 +434,7 @@
         waTable.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো হোয়াটসঅ্যাপ যুক্ত নেই</td></tr>';
       }
 
-      // Users Table
+      // Users Table (Only real registered members)
       const uTable = document.getElementById('usersTable');
       if (d.usersList && d.usersList.length > 0) {
         uTable.innerHTML = d.usersList.map(u => `
@@ -443,12 +442,11 @@
             <td><strong>${u.username}</strong></td>
             <td style="color: #34d399; font-weight: 700;">৳ ${(u.balance || 0).toFixed(2)}</td>
             <td>৳ ${(u.total_earned || 0).toFixed(2)}</td>
-            <td><span class="pill ${u.role === 'admin' ? 'pill-yellow' : 'pill-green'}">${u.role === 'admin' ? '👑 Admin' : '👤 Member'}</span></td>
             <td style="font-size: 11px; color: var(--text-muted);">${(u.created_at || '').substring(0, 16).replace('T', ' ')}</td>
           </tr>
         `).join('');
       } else {
-        uTable.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো মেম্বার নেই</td></tr>';
+        uTable.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো মেম্বার নেই</td></tr>';
       }
 
     } catch (e) {
