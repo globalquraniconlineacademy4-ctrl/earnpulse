@@ -16,7 +16,7 @@ app.use(express.json());
 
 // Normalize routes: support both /api/... and direct calls on Vercel
 app.use((req, res, next) => {
-  if (!req.url.startsWith('/api') && !req.url.startsWith('/admin') && req.url !== '/' && !req.url.startsWith('/assets')) {
+  if (!req.url.startsWith('/api') && !req.url.startsWith('/admin') && !req.url.startsWith('/downloads') && !req.url.endsWith('.apk') && req.url !== '/' && !req.url.startsWith('/assets')) {
     req.url = '/api' + req.url;
   }
   next();
@@ -45,6 +45,19 @@ if (fs.existsSync(adminDir)) {
     res.sendFile(path.join(adminDir, 'index.html'));
   });
 }
+
+// Serve APK downloads
+const downloadsDir = path.join(__dirname, '../frontend/public/downloads');
+if (fs.existsSync(downloadsDir)) {
+  app.use('/downloads', express.static(downloadsDir));
+}
+app.get('/EarnPulse.apk', (req, res) => {
+  const apkPath = path.join(__dirname, '../frontend/public/downloads/EarnPulse.apk');
+  if (fs.existsSync(apkPath)) {
+    return res.download(apkPath, 'EarnPulse.apk');
+  }
+  res.status(404).json({ success: false, msg: 'APK ফাইলটি পাওয়া যায়নি' });
+});
 
 // Helper: Authentication Middleware
 function authenticateToken(req, res, next) {
