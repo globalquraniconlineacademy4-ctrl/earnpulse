@@ -12,11 +12,67 @@ import { translations } from './translations';
 const API_BASE = '/api';
 
 // 24-Hour Live Elapsed Active Timer (Main Site Synced: 00:00:01 থেকে বাড়বে, যেমন মেইন সাইটে ১৫ ঘণ্টা বাকি থাকলে এখানে ৯ ঘণ্টা দেখাবে)
-function WhatsAppCountdownTimer({ loginDate, createTime, status }) {
+function WhatsAppCountdownTimer({
+  loginDate,
+  createTime,
+  status,
+  frozenElapsedSeconds,
+  onlineTimeMs,
+  offlineAt,
+  updatedAt
+}) {
+  const isOnline = status === 'online';
   const [timeStr, setTimeStr] = useState('00 : 00 : 00');
 
   useEffect(() => {
     const calc = () => {
+      // 1. If offline, time MUST FREEZE/STOP at disconnection time!
+      if (!isOnline) {
+        if (frozenElapsedSeconds !== undefined && frozenElapsedSeconds !== null && frozenElapsedSeconds > 0) {
+          const displaySeconds = Math.min(24 * 3600, frozenElapsedSeconds);
+          const hours = Math.floor(displaySeconds / 3600);
+          const minutes = Math.floor((displaySeconds % 3600) / 60);
+          const seconds = displaySeconds % 60;
+          return `${String(hours).padStart(2, '0')} : ${String(minutes).padStart(2, '0')} : ${String(seconds).padStart(2, '0')}`;
+        }
+
+        if (onlineTimeMs && onlineTimeMs > 0) {
+          const displaySeconds = Math.min(24 * 3600, Math.floor(onlineTimeMs / 1000));
+          const hours = Math.floor(displaySeconds / 3600);
+          const minutes = Math.floor((displaySeconds % 3600) / 60);
+          const seconds = displaySeconds % 60;
+          return `${String(hours).padStart(2, '0')} : ${String(minutes).padStart(2, '0')} : ${String(seconds).padStart(2, '0')}`;
+        }
+
+        // Fallback for offline when no precalculated frozen seconds: use offlineAt or updatedAt (NEVER Date.now())
+        const dateStr = loginDate || createTime;
+        if (!dateStr) return '00 : 00 : 00';
+
+        let parsedDate = 0;
+        if (dateStr.includes('T')) {
+          parsedDate = new Date(dateStr).getTime();
+        } else {
+          parsedDate = new Date(dateStr.replace(' ', 'T') + '+06:00').getTime();
+        }
+
+        const stopTimeStr = offlineAt || updatedAt;
+        let parsedStop = 0;
+        if (stopTimeStr) {
+          parsedStop = stopTimeStr.includes('T') ? new Date(stopTimeStr).getTime() : new Date(stopTimeStr.replace(' ', 'T') + '+06:00').getTime();
+        }
+
+        if (!isNaN(parsedDate) && !isNaN(parsedStop) && parsedStop > parsedDate) {
+          const displaySeconds = Math.min(24 * 3600, Math.floor((parsedStop - parsedDate) / 1000));
+          const hours = Math.floor(displaySeconds / 3600);
+          const minutes = Math.floor((displaySeconds % 3600) / 60);
+          const seconds = displaySeconds % 60;
+          return `${String(hours).padStart(2, '0')} : ${String(minutes).padStart(2, '0')} : ${String(seconds).padStart(2, '0')}`;
+        }
+
+        return '00 : 00 : 00';
+      }
+
+      // 2. If online: Live count-up from loginDate to current time (matching reverse of main site countdown)
       const dateStr = loginDate || createTime;
       if (!dateStr) return '00 : 00 : 00';
 
@@ -45,23 +101,25 @@ function WhatsAppCountdownTimer({ loginDate, createTime, status }) {
 
     setTimeStr(calc());
 
-    if (status !== 'online') {
-      return; // Offline stops ticking
+    // If offline: STOP / FREEZE! Do not start interval!
+    if (!isOnline) {
+      return;
     }
 
+    // If online: tick live every 1 second
     const interval = setInterval(() => {
       setTimeStr(calc());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [loginDate, createTime, status]);
+  }, [loginDate, createTime, status, frozenElapsedSeconds, onlineTimeMs, offlineAt, updatedAt, isOnline]);
 
   return (
     <div style={{
-      background: '#18191c',
-      color: '#ffffff',
+      background: isOnline ? '#18191c' : '#23262d',
+      color: isOnline ? '#ffffff' : '#cbd5e1',
       padding: '4px 10px',
-      borderRadius: '5px',
+      borderRadius: '6px',
       fontFamily: "'Courier New', Courier, monospace",
       fontSize: '13px',
       fontWeight: '700',
@@ -69,10 +127,20 @@ function WhatsAppCountdownTimer({ loginDate, createTime, status }) {
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      minWidth: '95px',
-      boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+      gap: '6px',
+      minWidth: '100px',
+      boxShadow: isOnline ? '0 2px 6px rgba(34, 197, 94, 0.15)' : '0 2px 5px rgba(0,0,0,0.2)',
+      border: isOnline ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(239, 68, 68, 0.35)'
     }}>
-      {timeStr}
+      <span style={{
+        width: '6px',
+        height: '6px',
+        borderRadius: '50%',
+        background: isOnline ? '#22c55e' : '#ef4444',
+        display: 'inline-block',
+        boxShadow: isOnline ? '0 0 6px #22c55e' : 'none'
+      }} />
+      <span>{timeStr}</span>
     </div>
   );
 }
@@ -437,12 +505,13 @@ export default function App() {
     if (token) fetchUserData();
   }, [token]);
 
-  // Periodic Live Background Sync for WhatsApp List & Balance
+  // Periodic Live Background Sync for WhatsApp List & Balance (4s on whatsapp tab for instant live state)
   useEffect(() => {
     if (!token) return;
+    const intervalMs = activeTab === 'whatsapp' ? 4000 : 8000;
     const syncInterval = setInterval(() => {
       fetchUserData();
-    }, 8000);
+    }, intervalMs);
     return () => clearInterval(syncInterval);
   }, [token, activeTab]);
 
@@ -2115,6 +2184,10 @@ export default function App() {
                             loginDate={n.login_date}
                             createTime={n.create_time}
                             status={n.status}
+                            frozenElapsedSeconds={n.frozen_elapsed_seconds}
+                            onlineTimeMs={n.online_time_ms}
+                            offlineAt={n.offline_at}
+                            updatedAt={n.updated_at}
                           />
 
                           {!isOnline && (

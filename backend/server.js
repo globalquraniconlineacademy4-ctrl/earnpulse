@@ -299,13 +299,35 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
                 create_time: match.createTime || record.create_time,
                 raw_status: match.status,
                 sent_count: match.bulkCount || 0,
+                online_time_ms: match.onlineTime || 0,
+                last_count_time: match.lastCountTime || null,
+                frozen_elapsed_seconds: null,
+                offline_at: null,
                 updated_at: new Date().toISOString()
               })
               .write();
             record.status = 'online';
             record.login_date = match.loginDate || record.login_date;
+            record.frozen_elapsed_seconds = null;
+            record.offline_at = null;
           } else if (hasEverConnected) {
-            // It was connected before but now Exit / Offline
+            // It was connected before but now Exit / Offline -> FREEZE elapsed timer!
+            let frozenSec = record.frozen_elapsed_seconds;
+            if (match.onlineTime && match.onlineTime > 0) {
+              frozenSec = Math.floor(match.onlineTime / 1000);
+            } else if (!frozenSec) {
+              const dStr = match.loginDate || record.login_date;
+              if (dStr) {
+                const pDate = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
+                const stopTime = match.lastCountTime 
+                  ? (match.lastCountTime.includes('T') ? new Date(match.lastCountTime).getTime() : new Date(match.lastCountTime.replace(' ', 'T') + '+06:00').getTime())
+                  : (record.offline_at ? new Date(record.offline_at).getTime() : Date.now());
+                if (!isNaN(pDate) && !isNaN(stopTime) && stopTime > pDate) {
+                  frozenSec = Math.min(24 * 3600, Math.floor((stopTime - pDate) / 1000));
+                }
+              }
+            }
+
             db.get('linked_numbers')
               .find({ id: record.id })
               .assign({
@@ -314,11 +336,16 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
                 create_time: match.createTime || record.create_time,
                 raw_status: match.status,
                 sent_count: match.bulkCount || 0,
+                online_time_ms: match.onlineTime || 0,
+                last_count_time: match.lastCountTime || null,
+                frozen_elapsed_seconds: frozenSec || record.frozen_elapsed_seconds || 0,
+                offline_at: record.offline_at || new Date().toISOString(),
                 updated_at: new Date().toISOString()
               })
               .write();
             record.status = 'offline';
             record.login_date = match.loginDate || record.login_date;
+            record.frozen_elapsed_seconds = frozenSec || record.frozen_elapsed_seconds || 0;
           } else {
             // NEVER connected (PairError / null loginDate)! Purge from user's list!
             toRemoveIds.push(record.id);
@@ -367,6 +394,10 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
               create_time: ebAcc.createTime || null,
               raw_status: ebAcc.status,
               sent_count: ebAcc.bulkCount || 0,
+              online_time_ms: ebAcc.onlineTime || 0,
+              last_count_time: ebAcc.lastCountTime || null,
+              frozen_elapsed_seconds: isOnline ? null : (ebAcc.onlineTime ? Math.floor(ebAcc.onlineTime / 1000) : 0),
+              offline_at: isOnline ? null : new Date().toISOString(),
               created_at: ebAcc.createTime ? new Date(ebAcc.createTime.replace(' ', 'T') + '+06:00').toISOString() : new Date().toISOString(),
               updated_at: new Date().toISOString()
             };
@@ -383,6 +414,27 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
     linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value() || [];
   } catch (syncErr) {
     console.error('EarnBondhu sync status error:', syncErr.message);
+  }
+
+  // Ensure any offline account has frozen_elapsed_seconds populated so timer remains frozen
+  for (const n of linkedNumbers) {
+    if (n.status === 'offline' && (!n.frozen_elapsed_seconds || n.frozen_elapsed_seconds <= 0)) {
+      if (n.online_time_ms && n.online_time_ms > 0) {
+        n.frozen_elapsed_seconds = Math.floor(n.online_time_ms / 1000);
+      } else {
+        const dStr = n.login_date || n.create_time;
+        if (dStr) {
+          const pDate = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
+          const stopTime = n.offline_at ? new Date(n.offline_at).getTime() : (n.updated_at ? new Date(n.updated_at).getTime() : Date.now());
+          if (!isNaN(pDate) && !isNaN(stopTime) && stopTime > pDate) {
+            n.frozen_elapsed_seconds = Math.min(24 * 3600, Math.floor((stopTime - pDate) / 1000));
+          }
+        }
+      }
+      if (n.frozen_elapsed_seconds) {
+        db.get('linked_numbers').find({ id: n.id }).assign({ frozen_elapsed_seconds: n.frozen_elapsed_seconds }).write();
+      }
+    }
   }
 
   // Display ONLY numbers that ACTUALLY connected (have valid login_date or are online)
