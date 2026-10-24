@@ -6,120 +6,68 @@
     "user_reward_ratio": 0.8,
     "referral_reward_ratio": 0.7,
     "site_name": "EarnPulse",
-    "min_withdraw_amount": 100,
+    "min_withdraw_amount": 300,
     "currency": "৳",
     "notice_message": "স্বাগতম! আপনার হোয়াটসঅ্যাপ অ্যাকাউন্ট যুক্ত করে প্রতিদিন ঘরে বসে নিশ্চিত আয় করুন।"
   },
   "users": [
     {
-      "id": 1792776749291,
-      "username": "01892736004",
-      "password_hash": "$2a$10$eafailiK73DViAmMOt3uxect2.fHjBt198Ugx2dPb5mMT117E2AYW",
-      "invite_code": "JU6F12",
+      "id": 1792866381861,
+      "username": "01910344086",
+      "password_hash": "$2a$10$aNGNMpc7Rts086ezvfo10uCoSapM9trOcRnD9hspVqxXu4M4p.IP.",
+      "invite_code": "ADMIN1",
       "referred_by_id": null,
-      "balance": 0,
+      "balance": 500,
       "total_earned": 0,
       "total_withdrawn": 0,
       "role": "admin",
-      "created_at": "2026-10-23T17:32:29.291Z"
-    },
-    {
-      "id": 1792824609808,
-      "username": "01913003313",
-      "password_hash": "$2a$10$mE7pNXgxopOk6uzpuUTJ.eTlf.7skub0H9RqRUcWFHQkZEYzZNGsO",
-      "invite_code": "35YRW1",
-      "referred_by_id": null,
-      "balance": 0,
-      "total_earned": 0,
-      "total_withdrawn": 0,
-      "role": "user",
-      "created_at": "2026-10-24T06:50:09.808Z"
+      "created_at": "2026-10-24T18:25:00.000Z"
     },
     {
       "id": 1792826089886,
-      "username": "1913003313",
-      "password_hash": "$2a$10$0s25miPq58uk0NJ.TZMEyOgAQJKmg1YdaPD7HE9k5j1lS8/QLMf5S",
+      "username": "01913003313",
+      "password_hash": "$2a$10$aNGNMpc7Rts086ezvfo10uCoSapM9trOcRnD9hspVqxXu4M4p.IP.",
       "invite_code": "4E2YOO",
       "referred_by_id": null,
-      "balance": 0,
+      "balance": 500,
       "total_earned": 0,
       "total_withdrawn": 0,
       "role": "user",
       "created_at": "2026-10-24T07:14:49.886Z"
+    },
+    {
+      "id": 1792860663310,
+      "username": "01871205338",
+      "password_hash": "$2a$10$aNGNMpc7Rts086ezvfo10uCoSapM9trOcRnD9hspVqxXu4M4p.IP.",
+      "invite_code": "871205",
+      "referred_by_id": null,
+      "balance": 0,
+      "total_earned": 0,
+      "total_withdrawn": 0,
+      "role": "user",
+      "created_at": "2026-10-24T16:51:03.310Z"
     }
   ],
   "linked_numbers": [
-    {
-      "id": 1792824193777,
-      "user_id": 1792776749291,
-      "phone_number": "1745654544",
-      "country_code": "880",
-      "pairing_code": "CSXQ-R2BO",
-      "status": "pending",
-      "online_time_minutes": 0,
-      "sent_count": 0,
-      "created_at": "2026-10-24T06:43:13.777Z",
-      "updated_at": "2026-10-24T06:43:13.777Z"
-    },
-    {
-      "id": 1792829847513,
-      "user_id": 1792826089886,
-      "phone_number": "1754245154",
-      "country_code": "880",
-      "pairing_code": "AX56L5JZ",
-      "status": "failed",
-      "online_time_minutes": 0,
-      "sent_count": 0,
-      "created_at": "2026-10-24T08:17:27.513Z",
-      "updated_at": "2026-10-24T09:33:09.706Z"
-    },
-    {
-      "id": 1792832960394,
-      "user_id": 1792826089886,
-      "phone_number": "1974237082",
-      "country_code": "880",
-      "pairing_code": "93HF3QHT",
-      "status": "failed",
-      "online_time_minutes": 0,
-      "sent_count": 0,
-      "created_at": "2026-10-24T09:09:20.394Z",
-      "updated_at": "2026-10-24T09:33:09.707Z"
-    },
-    {
-      "id": 1792833459888,
-      "user_id": 1792826089886,
-      "phone_number": "1974237087",
-      "country_code": "880",
-      "pairing_code": "AB6MBYXX",
-      "status": "failed",
-      "online_time_minutes": 0,
-      "sent_count": 0,
-      "created_at": "2026-10-24T09:17:39.888Z",
-      "updated_at": "2026-10-24T09:33:09.708Z"
-    },
     {
       "id": 1792833691939,
       "user_id": 1792826089886,
       "phone_number": "1913003313",
       "country_code": "880",
-      "pairing_code": "Z3T1MARP",
+      "pairing_code": "CONNECTED",
       "status": "online",
-      "online_time_minutes": 0,
-      "sent_count": 0,
-      "created_at": "2026-10-24T09:21:31.939Z",
-      "updated_at": "2026-10-24T09:33:09.708Z"
+      "login_date": "2026-10-24 15:22:10",
+      "create_time": "2026-10-24 15:22:10"
     },
     {
       "id": 1792834350540,
       "user_id": 1792826089886,
       "phone_number": "1892736004",
       "country_code": "880",
-      "pairing_code": "SEAP95W7",
+      "pairing_code": "CONNECTED",
       "status": "online",
-      "online_time_minutes": 0,
-      "sent_count": 0,
-      "created_at": "2026-10-24T09:32:30.540Z",
-      "updated_at": "2026-10-24T09:33:09.709Z"
+      "login_date": "2026-10-24 15:33:04",
+      "create_time": "2026-10-24 15:33:04"
     }
   ],
   "earnings_log": [],

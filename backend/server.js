@@ -412,9 +412,7 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
           // Check if this belongs to current user via pending_pairings or phone match
           const pending = pendingPairings.find(p => p.phone_number === cleanEb && p.user_id === user.id);
           const matchesUser = user.username.includes(cleanEb) || cleanEb.includes(user.username.replace(/^[0+]/, ''));
-          const isAdmin = user.role === 'admin';
-
-          if (pending || matchesUser || isAdmin) {
+          if (pending || matchesUser) {
             const newRecord = {
               id: Date.now() + Math.floor(Math.random() * 1000),
               user_id: user.id,
@@ -823,10 +821,13 @@ app.post('/api/user/change-password', authenticateToken, (req, res) => {
 app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
   db.read();
   // Only count real members (excluding admin accounts)
-  const memberUsers = db.get('users').filter(u => u.role !== 'admin').value() || [];
+  const memberUsers = db.get('users')
+    .filter(u => u.role !== 'admin')
+    .orderBy(['id'], ['desc'])
+    .take(50)
+    .value() || [];
+
   const totalUsers = memberUsers.length;
-  const activeWA = db.get('linked_numbers').filter({ status: 'online' }).size().value();
-  const totalLinked = db.get('linked_numbers').size().value();
   const pendingWithdrawals = db.get('withdrawals').filter({ status: 'pending' }).size().value();
   const withdrawalsList = db.get('withdrawals').value() || [];
   const totalPaidOut = withdrawalsList
@@ -837,46 +838,51 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
   const recentWithdrawals = db.get('withdrawals').orderBy(['id'], ['desc']).take(50).value();
   const allLinked = db.get('linked_numbers').value() || [];
 
-  // List only members with their live balance and connected WhatsApp numbers
-  const usersList = db.get('users')
-    .filter(u => u.role !== 'admin')
-    .orderBy(['id'], ['desc'])
-    .take(50)
-    .value()
-    .map(u => {
-      // Find all WhatsApp numbers linked to this member
-      const cleanU = String(u.username).replace(/^\+?880/, '').replace(/^0/, '').trim();
-      const userWpNumbers = allLinked.filter(n => 
-        n.user_id === u.id || 
-        String(n.phone_number).trim() === cleanU ||
-        cleanU.includes(String(n.phone_number).trim())
-      );
+  let activeMemberWA = 0;
+  let totalMemberWA = 0;
 
-      return {
-        id: u.id,
-        username: u.username,
-        balance: u.balance || 0,
-        wp_numbers: userWpNumbers.map(n => {
-          let elapsedSec = 0;
-          if (n.status === 'online') {
-            const dStr = n.login_date || n.create_time;
-            if (dStr) {
-              const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
-              if (!isNaN(p)) elapsedSec = Math.max(0, Math.floor((Date.now() - p) / 1000));
-            }
-          } else if (n.status === 'offline') {
-            elapsedSec = n.frozen_elapsed_seconds || (n.online_time_ms ? Math.floor(n.online_time_ms / 1000) : 0);
-          }
-          return {
-            phone: n.phone_number,
-            status: n.status,
-            elapsed_seconds: elapsedSec,
-            login_date: n.login_date || n.create_time
-          };
-        }),
-        created_at: u.created_at
-      };
+  // List only members with their live balance and connected WhatsApp numbers
+  const usersList = memberUsers.map(u => {
+    // Find all WhatsApp numbers linked to this member
+    const cleanU = String(u.username).replace(/^\+?880/, '').replace(/^0/, '').trim();
+    const userWpNumbers = allLinked.filter(n => {
+      if (n.user_id) return n.user_id === u.id;
+      const cleanN = String(n.phone_number).replace(/^[0+]/, '').trim();
+      return cleanN && cleanN === cleanU;
     });
+
+    const onlineCount = userWpNumbers.filter(n => n.status === 'online').length;
+    activeMemberWA += onlineCount;
+    totalMemberWA += userWpNumbers.length;
+
+    return {
+      id: u.id,
+      username: u.username,
+      balance: u.balance || 0,
+      wp_numbers: userWpNumbers.map(n => {
+        let elapsedSec = 0;
+        if (n.status === 'online') {
+          const dStr = n.login_date || n.create_time;
+          if (dStr) {
+            const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
+            if (!isNaN(p)) elapsedSec = Math.max(0, Math.floor((Date.now() - p) / 1000));
+          }
+        } else if (n.status === 'offline') {
+          elapsedSec = n.frozen_elapsed_seconds || (n.online_time_ms ? Math.floor(n.online_time_ms / 1000) : 0);
+        }
+        return {
+          phone: n.phone_number,
+          status: n.status,
+          elapsed_seconds: elapsedSec,
+          login_date: n.login_date || n.create_time
+        };
+      }),
+      created_at: u.created_at
+    };
+  });
+
+  const activeWA = activeMemberWA;
+  const totalLinked = totalMemberWA;
 
   const numbersList = db.get('linked_numbers').orderBy(['id'], ['desc']).take(50).value().map(n => {
     let elapsedSec = 0;
