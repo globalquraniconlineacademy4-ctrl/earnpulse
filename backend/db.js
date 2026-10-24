@@ -41,7 +41,7 @@ db.defaults({
 // -------------------------------------------------------------
 // CLOUD DATABASE INTEGRATION (MongoDB Atlas 24/7 Persistent Storage)
 // -------------------------------------------------------------
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://globalquraniconlineacademy4_db_user:v8Oy3zKN3GM2GcuH@cluster0.1fsdmme.mongodb.net/earnpulse?retryWrites=true&w=majority';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://globalquraniconlineacademy4_db_user:v80y3zKN3GM2GcuH@cluster0.1fsdmme.mongodb.net/earnpulse?retryWrites=true&w=majority';
 let mongoDb = null;
 
 async function getMongoDb() {
