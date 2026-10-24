@@ -45,12 +45,47 @@
     .btn-logout { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
     .btn-logout:hover { background: #ef4444; color: #fff; }
 
-    /* Stats Cards */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-    .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 18px; backdrop-filter: blur(12px); position: relative; overflow: hidden; }
-    .stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); }
-    .stat-title { font-size: 13px; color: var(--text-muted); font-weight: 500; }
-    .stat-val { font-size: 26px; font-weight: 800; color: #fff; margin-top: 6px; }
+    /* Stats Cards - Compact 2x2 Grid (Takes minimal space, elegant) */
+    .stats-grid { 
+      display: grid; 
+      grid-template-columns: repeat(2, 1fr); 
+      gap: 10px; 
+    }
+    @media (min-width: 768px) {
+      .stats-grid { 
+        grid-template-columns: repeat(4, 1fr); 
+        gap: 12px; 
+      }
+    }
+    .stat-card { 
+      background: rgba(17, 24, 39, 0.7); 
+      border: 1px solid rgba(255, 255, 255, 0.08); 
+      border-radius: 14px; 
+      padding: 12px 14px; 
+      backdrop-filter: blur(12px); 
+      position: relative; 
+      overflow: hidden; 
+    }
+    .stat-card::after { 
+      content: ''; 
+      position: absolute; 
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      height: 2px; 
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); 
+    }
+    .stat-title { 
+      font-size: 12px; 
+      color: var(--text-muted); 
+      font-weight: 500; 
+    }
+    .stat-val { 
+      font-size: 20px; 
+      font-weight: 800; 
+      color: #fff; 
+      margin-top: 4px; 
+    }
     
     /* Section Card */
     .section-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; padding: 22px; backdrop-filter: blur(12px); }
@@ -207,23 +242,23 @@
     </div>
   </div>
 
-  <!-- Stats Grid -->
+  <!-- Stats Grid (Compact 2x2 Layout) -->
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-title">মোট নিবন্ধিত মেম্বার</div>
+      <div class="stat-title">মোট ইউজার</div>
       <div class="stat-val" id="totalUsers">0</div>
     </div>
     <div class="stat-card">
-      <div class="stat-title">সক্রিয় হোয়াটসঅ্যাপ (Active WA)</div>
+      <div class="stat-title">সক্রিয় WA</div>
       <div class="stat-val" style="color: #34d399;" id="totalLinked">0</div>
     </div>
     <div class="stat-card">
-      <div class="stat-title">পেন্ডিং উত্তোলন (Pending Withdraw)</div>
+      <div class="stat-title">পেন্ডিং উইথড্র</div>
       <div class="stat-val" style="color: #fbbf24;" id="pendingWithdraw">0</div>
     </div>
     <div class="stat-card">
-      <div class="stat-title">মোট পেআউট সম্পন্ন (Total Paid)</div>
-      <div class="stat-val" style="color: #38bdf8;" id="totalPaid">৳ 0.00</div>
+      <div class="stat-title">মোট পেআউট</div>
+      <div class="stat-val" style="color: #38bdf8;" id="totalPaid">৳0.00</div>
     </div>
   </div>
 
@@ -349,7 +384,7 @@
     btn.innerText = 'যাচাই করা হচ্ছে...';
 
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      const res = await fetch(`${API_BASE}/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })

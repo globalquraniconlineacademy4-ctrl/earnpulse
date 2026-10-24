@@ -158,7 +158,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
     try {
       const hash = window.location.hash.replace('#', '').split('-')[0];
-      if (['home', 'tasks', 'whatsapp', 'my', 'checkin', 'admin'].includes(hash)) {
+      if (['home', 'tasks', 'whatsapp', 'my', 'checkin'].includes(hash)) {
         return hash;
       }
     } catch (e) {}
@@ -307,11 +307,6 @@ export default function App() {
 
   const [copied, setCopied] = useState(false);
 
-  // Admin Configuration State
-  const [adminStats, setAdminStats] = useState(null);
-  const [adminConfigs, setAdminConfigs] = useState({});
-  const [adminWithdrawals, setAdminWithdrawals] = useState([]);
-  const [adminSaving, setAdminSaving] = useState(false);
 
   // Live Random Withdraw Ticker State (200 থেকে 10000 টাকার মধ্যে প্রতি ৩.৫ সেকেন্ড পর পর পরিবর্তন)
   const [tickerNotification, setTickerNotification] = useState({
@@ -742,23 +737,7 @@ export default function App() {
     }
   };
 
-  // Admin Data Fetch
-  const fetchAdminData = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/admin/overview`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (data && data.success) {
-        setAdminStats(data.stats);
-        setAdminConfigs(data.configs || {});
-        setAdminWithdrawals(data.recentWithdrawals || []);
-      }
-    } catch (err) {}
-  };
-
   useEffect(() => {
-    if (activeTab === 'admin') fetchAdminData();
     if ((activeTab === 'tasks' || showTeamModal) && token) {
       fetch(`${API_BASE}/referrals`, { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
@@ -2378,12 +2357,6 @@ export default function App() {
                     setShowChangePwdModal(true);
                   } 
                 },
-                ...(user?.role === 'admin' ? [{
-                  title: lang === 'bn' ? 'অ্যাডমিন ড্যাশবোর্ড' : 'Admin Dashboard',
-                  icon: '👑',
-                  action: () => navigateToTab('admin'),
-                  isAdmin: true
-                }] : [])
               ].map((item, idx, arr) => (
                 <div
                   key={idx}
@@ -2394,11 +2367,11 @@ export default function App() {
                     cursor: 'pointer'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: item.isAdmin ? '#b45309' : '#1e293b', fontWeight: item.isAdmin ? '700' : '500' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#1e293b', fontWeight: '500' }}>
                     <span>{item.icon}</span>
                     <span>{item.title}</span>
                   </div>
-                  <ChevronRight size={16} color={item.isAdmin ? '#d97706' : '#94a3b8'} />
+                  <ChevronRight size={16} color="#94a3b8" />
                 </div>
               ))}
             </div>
@@ -2567,180 +2540,6 @@ export default function App() {
         {/* ------------------------------------------------------------- */}
         {/* TAB 6: ADMIN CONTROL PANEL                                   */}
         {/* ------------------------------------------------------------- */}
-        {activeTab === 'admin' && user?.role === 'admin' && (
-          <div className="app-card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <button
-                onClick={() => navigateToTab('my')}
-                style={{
-                  background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px',
-                  padding: '6px 12px', fontSize: '12px', fontWeight: 'bold',
-                  color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
-                }}
-              >
-                ← {lang === 'bn' ? 'ফিরে যান' : 'Back'}
-              </button>
-              <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>
-                {lang === 'bn' ? 'অ্যাডমিন কন্ট্রোল প্যানেল' : 'Admin Control Panel'}
-              </h2>
-            </div>
-
-            {adminStats && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
-                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>মোট ইউজার</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0f172a' }}>{adminStats.totalUsers}</div>
-                </div>
-                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>সক্রিয় WA</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#16a34a' }}>{adminStats.activeWA !== undefined ? adminStats.activeWA : adminStats.totalLinked}</div>
-                </div>
-                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>পেন্ডিং উইথড্র</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#d97706' }}>{adminStats.pendingWithdrawals}</div>
-                </div>
-                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>মোট পেআউট</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0284c7' }}>৳{(adminStats.totalPaidOut || 0).toFixed(2)}</div>
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              setAdminSaving(true);
-              const res = await fetch(`${API_BASE}/admin/config`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ configs: adminConfigs })
-              });
-              const d = await res.json();
-              alert(d.msg || 'সংরক্ষণ সম্পন্ন');
-              if (adminConfigs.min_withdraw_amount) {
-                setMinWithdrawAmount(parseFloat(adminConfigs.min_withdraw_amount));
-              }
-              setAdminSaving(false);
-            }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <label style={{ fontSize: '12px', color: '#334155', fontWeight: '600', display: 'block', marginBottom: '4px' }}>
-                  ইউজার রিওয়ার্ড রেশিও (যেমন: 0.80 = ৮০% ইউজারকে দেওয়া, ২০% আপনার লাভ)
-                </label>
-                <input
-                  type="number"
-                  step="0.05"
-                  value={adminConfigs.user_reward_ratio || 0.80}
-                  onChange={(e) => setAdminConfigs({ ...adminConfigs, user_reward_ratio: parseFloat(e.target.value) })}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', color: '#334155', fontWeight: '600', display: 'block', marginBottom: '4px' }}>
-                  সর্বনিম্ন উত্তোলন পরিমাণ (টাকা)
-                </label>
-                <input
-                  type="number"
-                  value={adminConfigs.min_withdraw_amount || 100}
-                  onChange={(e) => setAdminConfigs({ ...adminConfigs, min_withdraw_amount: parseFloat(e.target.value) })}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px' }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={adminSaving}
-                className="action-btn-green"
-                style={{ width: '100%', marginTop: '6px' }}
-              >
-                {adminSaving ? 'সংরক্ষণ হচ্ছে...' : 'সেটিংস সংরক্ষণ করুন'}
-              </button>
-            </form>
-
-            {/* In-App Withdrawals Approval List */}
-            <div style={{ marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }}>
-                  💸 উত্তোলন রিকোয়েস্ট ও অনুমোদন
-                </h3>
-                <button
-                  onClick={fetchAdminData}
-                  style={{ background: 'none', border: 'none', color: '#16a34a', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-                >
-                  🔄 রিফ্রেশ
-                </button>
-              </div>
-
-              {(!adminWithdrawals || adminWithdrawals.length === 0) ? (
-                <div style={{ textAlign: 'center', padding: '16px', color: '#64748b', fontSize: '12px', background: '#f8fafc', borderRadius: '8px' }}>
-                  কোনো উইথড্রয়াল রিকোয়েস্ট নেই
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {adminWithdrawals.map(w => (
-                    <div key={w.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{w.username || 'User'}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                            <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{w.method}</span> • {w.account_number}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: '800', fontSize: '15px', color: '#b45309' }}>৳{parseFloat(w.amount || 0).toFixed(2)}</div>
-                          <span style={{
-                            display: 'inline-block', marginTop: '3px', fontSize: '10px', padding: '2px 8px', borderRadius: '12px', fontWeight: '700',
-                            background: w.status === 'approved' ? '#dcfce7' : (w.status === 'rejected' ? '#fee2e2' : '#fef3c7'),
-                            color: w.status === 'approved' ? '#15803d' : (w.status === 'rejected' ? '#b91c1c' : '#b45309')
-                          }}>
-                            {w.status === 'approved' ? 'অনুমোদিত' : (w.status === 'rejected' ? 'বাতিল' : 'অপেক্ষমান')}
-                          </span>
-                        </div>
-                      </div>
-
-                      {w.status === 'pending' && (
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
-                          <button
-                            onClick={async () => {
-                              if (!confirm(`৳${w.amount} উত্তোলন অনুমোদন করতে চান?`)) return;
-                              const res = await fetch(`${API_BASE}/admin/withdraw/${w.id}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                                body: JSON.stringify({ status: 'approved' })
-                              });
-                              const d = await res.json();
-                              alert(d.msg || 'অনুমোদিত');
-                              fetchAdminData();
-                            }}
-                            style={{ flex: 1, padding: '7px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-                          >
-                            ✓ অনুমোদন
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (!confirm(`৳${w.amount} উত্তোলন বাতিল করতে চান? টাকা মেম্বারকে ফেরত দেওয়া হবে।`)) return;
-                              const res = await fetch(`${API_BASE}/admin/withdraw/${w.id}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                                body: JSON.stringify({ status: 'rejected' })
-                              });
-                              const d = await res.json();
-                              alert(d.msg || 'বাতিল করা হয়েছে');
-                              fetchAdminData();
-                            }}
-                            style={{ flex: 1, padding: '7px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-                          >
-                            ✕ বাতিল
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
       </div>
 
       {/* 3. BOTTOM NAVIGATION BAR (Home, Tasks, WhatsApp, Mine) */}

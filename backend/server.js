@@ -269,6 +269,14 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(400).json({ success: false, msg: 'ব্যবহারকারী খুঁজে পাওয়া যায়নি' });
   }
 
+  // Prevent admin from logging into the member website portal
+  if (user.role === 'admin') {
+    return res.status(403).json({
+      success: false,
+      msg: 'অ্যাডমিনদের জন্য শুধুমাত্র /admin লিঙ্ক প্রযোজ্য। এখানে শুধুমাত্র সাধারণ মেম্বাররা লগইন করতে পারবেন।'
+    });
+  }
+
   const isValid = bcrypt.compareSync(password, user.password_hash);
   if (!isValid) {
     return res.status(400).json({ success: false, msg: 'ভুল পাসওয়ার্ড' });
@@ -288,6 +296,46 @@ app.post('/api/auth/login', (req, res) => {
       balance: user.balance,
       totalEarned: user.total_earned,
       totalWithdrawn: user.total_withdrawn
+    }
+  });
+});
+
+// -------------------------------------------------------------
+// 1.5. DEDICATED ADMIN LOGIN (STRICTLY FOR /admin PORTAL)
+// -------------------------------------------------------------
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ success: false, msg: 'অ্যাডমিন ফোন নম্বর ও পাসওয়ার্ড প্রদান করুন' });
+  }
+
+  const cleanPhone = String(username).replace(/^\+?880/, '').replace(/^0/, '').trim();
+  
+  const user = db.get('users').find(u => {
+    const uClean = String(u.username).replace(/^\+?880/, '').replace(/^0/, '').trim();
+    return uClean === cleanPhone;
+  }).value();
+
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({ success: false, msg: 'দুঃখিত, এই অ্যাকাউন্টটির কোনো অ্যাডমিন পারমিশন নেই!' });
+  }
+
+  const isValid = bcrypt.compareSync(password, user.password_hash);
+  if (!isValid) {
+    return res.status(400).json({ success: false, msg: 'ভুল পাসওয়ার্ড!' });
+  }
+
+  const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+
+  return res.json({
+    success: true,
+    msg: 'অ্যাডমিন লগইন সফল হয়েছে',
+    token,
+    user: {
+      id: user.id,
+      username: user.username,
+      role: user.role
     }
   });
 });
