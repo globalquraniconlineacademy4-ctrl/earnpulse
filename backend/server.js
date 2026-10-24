@@ -14,6 +14,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'earnpulse_ultra_secure_secret_key_
 app.use(cors());
 app.use(express.json());
 
+// Normalize routes: support both /api/... and direct calls on Vercel
+app.use((req, res, next) => {
+  if (!req.url.startsWith('/api') && !req.url.startsWith('/admin') && req.url !== '/' && !req.url.startsWith('/assets')) {
+    req.url = '/api' + req.url;
+  }
+  next();
+});
+
 // Serve Admin Panel Statically
 const adminDir = fs.existsSync(path.join(__dirname, '../admin')) 
   ? path.join(__dirname, '../admin') 
@@ -187,13 +195,21 @@ app.post('/api/auth/register', (req, res) => {
 });
 
 app.post('/api/auth/login', (req, res) => {
-  const { username, password } = req.body;
+  let { username, password } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({ success: false, msg: 'ব্যবহারকারীর নাম ও পাসওয়ার্ড প্রদান করুন' });
   }
 
-  const user = db.get('users').find({ username }).value();
+  username = String(username).trim();
+  const cleanPhone = username.replace(/^0/, '');
+  
+  // Find user by exact username, or with/without leading 0
+  let user = db.get('users').find({ username }).value();
+  if (!user) {
+    user = db.get('users').find(u => u.username === cleanPhone || u.username === '0' + cleanPhone).value();
+  }
+
   if (!user) {
     return res.status(400).json({ success: false, msg: 'ব্যবহারকারী খুঁজে পাওয়া যায়নি' });
   }

@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 import { translations } from './translations';
 
-const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+// API Base URL: Standardized to /api (Works with Vite proxy locally and Vercel in production)
+const API_BASE = '/api';
 
 // 24-Hour Live Countdown Timer (Exact EarnBondhu Match)
 function WhatsAppCountdownTimer({ loginDate, createTime, status }) {
@@ -354,12 +355,19 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: authPhone,
+          username: String(authPhone).trim(),
           password: authPassword,
           inviteCode: authInviteCode
         })
       });
-      const data = await res.json();
+
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        console.error('Non-JSON response:', jsonErr);
+      }
+
       if (data && data.success) {
         localStorage.setItem('token', data.token);
         setToken(data.token);
@@ -372,10 +380,11 @@ export default function App() {
             setIsRegister(false);
           }, 2000);
         } else {
-          setAuthError(data?.msg || (lang === 'bn' ? 'অনুরোধ ব্যর্থ হয়েছে' : 'Request failed'));
+          setAuthError(data?.msg || (lang === 'bn' ? 'অনুরোধ ব্যর্থ হয়েছে (ভুল নম্বর বা পাসওয়ার্ড)' : 'Request failed (incorrect credentials)'));
         }
       }
     } catch (err) {
+      console.error('Auth fetch error:', err);
       setAuthError(lang === 'bn' ? 'সার্ভারে সংযোগ করা সম্ভব হচ্ছে না' : 'Cannot connect to server');
     } finally {
       setAuthLoading(false);
