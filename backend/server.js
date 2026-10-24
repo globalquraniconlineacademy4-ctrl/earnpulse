@@ -834,10 +834,24 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
         id: u.id,
         username: u.username,
         balance: u.balance || 0,
-        wp_numbers: userWpNumbers.map(n => ({
-          phone: n.phone_number,
-          status: n.status
-        })),
+        wp_numbers: userWpNumbers.map(n => {
+          let elapsedSec = 0;
+          if (n.status === 'online') {
+            const dStr = n.login_date || n.create_time;
+            if (dStr) {
+              const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
+              if (!isNaN(p)) elapsedSec = Math.max(0, Math.floor((Date.now() - p) / 1000));
+            }
+          } else if (n.status === 'offline') {
+            elapsedSec = n.frozen_elapsed_seconds || (n.online_time_ms ? Math.floor(n.online_time_ms / 1000) : 0);
+          }
+          return {
+            phone: n.phone_number,
+            status: n.status,
+            elapsed_seconds: elapsedSec,
+            login_date: n.login_date || n.create_time
+          };
+        }),
         created_at: u.created_at
       };
     });

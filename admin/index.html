@@ -75,6 +75,54 @@
     .btn-reject { background: #ef4444; color: #fff; }
     .btn-reject:hover { background: #dc2626; }
     
+    /* 3D Connected Button & Badges */
+    .btn-3d-connected {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(52, 211, 153, 0.5);
+      box-shadow: 0 4px 0 #047857, 0 6px 14px rgba(16, 185, 129, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      letter-spacing: 0.3px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+    .btn-3d-connected:hover {
+      background: linear-gradient(180deg, #34d399 0%, #059669 100%);
+      box-shadow: 0 5px 0 #047857, 0 8px 18px rgba(16, 185, 129, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+      transform: translateY(-1px);
+    }
+    .btn-3d-connected:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #047857, 0 2px 5px rgba(16, 185, 129, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    }
+    .btn-3d-zero {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
+      color: #9ca3af;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 3px 0 #111827, inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      cursor: default;
+      user-select: none;
+    }
+    @keyframes popInModal {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    
     /* Inputs */
     .form-group { margin-bottom: 16px; }
     label { font-size: 13px; font-weight: 600; color: #cbd5e1; display: block; margin-bottom: 6px; }
@@ -246,9 +294,34 @@
   </div>
 </div>
 
+<!-- WhatsApp Detail Modal (মেম্বারের সংযুক্ত হোয়াটসঅ্যাপ পপআপ তালিকা) -->
+<div id="wpListModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.78); backdrop-filter: blur(8px); z-index: 100000; align-items: center; justify-content: center; padding: 16px;">
+  <div style="background: #111827; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px; width: 100%; max-width: 440px; box-shadow: 0 25px 60px rgba(0,0,0,0.8); overflow: hidden; animation: popInModal 0.22s cubic-bezier(0.16, 1, 0.3, 1);">
+    <div style="padding: 18px 20px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+          <span>📱</span> সংযুক্ত WhatsApp তালিকা
+        </h3>
+        <div id="modalMemberSub" style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">মেম্বার নম্বর: -</div>
+      </div>
+      <button onclick="closeWpModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #9ca3af; width: 32px; height: 32px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s;">✕</button>
+    </div>
+    
+    <div id="modalWpListBody" style="padding: 16px 20px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+      <!-- Populated dynamically via JS -->
+    </div>
+    
+    <div style="padding: 14px 20px; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center;">
+      <div id="modalSummaryText" style="font-size: 12px; color: var(--text-muted);"></div>
+      <button onclick="closeWpModal()" class="action-btn" style="background: rgba(255,255,255,0.1); color: #fff; padding: 8px 18px; border-radius: 10px; font-weight: 700;">বন্ধ করুন</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:5000/api' : '/api';
   let adminToken = localStorage.getItem('admin_token') || localStorage.getItem('token') || '';
+  let currentUsersList = [];
 
   function checkAuthAndInit() {
     if (!adminToken) {
@@ -392,22 +465,20 @@
       }
 
       // Users Table (Only real registered members with live balance and connected WhatsApp)
+      currentUsersList = d.usersList || [];
       const uTable = document.getElementById('usersTable');
       if (d.usersList && d.usersList.length > 0) {
-        uTable.innerHTML = d.usersList.map(u => {
-          const wpDisplay = (u.wp_numbers && u.wp_numbers.length > 0)
-            ? u.wp_numbers.map(n => `
-                <span class="pill ${n.status === 'online' ? 'pill-green' : 'pill-red'}" style="margin: 2px 4px 2px 0; font-family: monospace; font-size: 11px;">
-                  ${n.status === 'online' ? '🟢' : '🔴'} ${n.phone}
-                </span>
-              `).join('')
-            : '<span style="color: var(--text-muted); font-size: 11px;">কানেক্ট নেই</span>';
+        uTable.innerHTML = d.usersList.map((u, idx) => {
+          const wpCount = (u.wp_numbers && Array.isArray(u.wp_numbers)) ? u.wp_numbers.length : 0;
+          const wpBtn = wpCount > 0 
+            ? `<button onclick="openWpModal(${idx})" class="btn-3d-connected" title="সংযুক্ত হোয়াটসঅ্যাপ তালিকা দেখতে ক্লিক করুন">🟢 Connected ${wpCount}</button>`
+            : `<span class="btn-3d-zero">⚪ 0 Connected</span>`;
 
           return `
             <tr>
               <td><strong>${u.username}</strong></td>
               <td style="color: #34d399; font-weight: 800; font-size: 14px;">৳ ${(parseFloat(u.balance) || 0).toFixed(2)}</td>
-              <td>${wpDisplay}</td>
+              <td>${wpBtn}</td>
               <td style="font-size: 11px; color: var(--text-muted);">${(u.created_at || '').substring(0, 16).replace('T', ' ')}</td>
             </tr>
           `;
@@ -462,6 +533,86 @@
     } catch (e) {
       alert('সেভ ব্যর্থ হয়েছে');
     }
+  });
+
+  function formatElapsed(seconds) {
+    if (!seconds || seconds <= 0) return '00:00:00';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+  }
+
+  function openWpModal(userIndex) {
+    const u = currentUsersList[userIndex];
+    if (!u) return;
+
+    const modal = document.getElementById('wpListModal');
+    const sub = document.getElementById('modalMemberSub');
+    const listBody = document.getElementById('modalWpListBody');
+    const summaryText = document.getElementById('modalSummaryText');
+
+    const wpNums = u.wp_numbers || [];
+    const activeCount = wpNums.filter(n => n.status === 'online').length;
+
+    sub.innerHTML = `মেম্বার নম্বর: <strong style="color: #fff;">${u.username}</strong> &bull; মোট সংযুক্ত: <strong style="color: #34d399;">${wpNums.length} টি</strong>`;
+    if (summaryText) {
+      summaryText.innerHTML = `সক্রিয় হোয়াটসঅ্যাপ: <strong style="color: #34d399;">${activeCount}</strong> / ${wpNums.length}`;
+    }
+
+    if (wpNums.length === 0) {
+      listBody.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 24px; font-size: 13px;">কোনো হোয়াটসঅ্যাপ কানেক্ট করা নেই</div>';
+    } else {
+      listBody.innerHTML = wpNums.map((n, i) => {
+        const rawPhone = String(n.phone || '');
+        const cleanPhone = rawPhone.startsWith('0') ? rawPhone : ('0' + rawPhone);
+        const isOnline = n.status === 'online';
+        const elapsed = n.elapsed_seconds ? formatElapsed(n.elapsed_seconds) : null;
+
+        return `
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; transition: 0.15s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 38px; height: 38px; border-radius: 10px; background: ${isOnline ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; border: 1px solid ${isOnline ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                ${isOnline ? '🟢' : '🔴'}
+              </div>
+              <div>
+                <div style="font-family: monospace; font-size: 14px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px;">
+                  ${cleanPhone}
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">
+                  হোয়াটসঅ্যাপ #${i + 1} ${elapsed ? `&bull; লাইভ সময়: <span style="font-family: monospace; color: ${isOnline ? '#34d399' : '#9ca3af'}; font-weight: 600;">${elapsed}</span>` : ''}
+                </div>
+              </div>
+            </div>
+            <div>
+              <span class="pill ${isOnline ? 'pill-green' : 'pill-red'}" style="font-size: 11px; padding: 5px 12px; font-weight: 800; border-radius: 20px;">
+                ${isOnline ? '🟢 Online' : '🔴 Offline'}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  function closeWpModal() {
+    const modal = document.getElementById('wpListModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  // Close modal on backdrop click
+  window.addEventListener('click', (e) => {
+    const modal = document.getElementById('wpListModal');
+    if (e.target === modal) {
+      closeWpModal();
+    }
+  });
+
+  // Close modal on Escape key
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeWpModal();
   });
 
   // Start initialization
