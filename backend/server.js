@@ -269,7 +269,7 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   if (!user) return res.status(404).json({ success: false, msg: 'User not found' });
 
   // Sync real WhatsApp account status from EarnBondhu
-  let linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value();
+  let linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value() || [];
   
   // Real check with target server
   try {
@@ -277,6 +277,7 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
     const rows = ebAccounts.rows || [];
 
     // 1. Sync existing linked numbers with EarnBondhu status & loginDate
+    const toRemoveIds = [];
     for (const record of linkedNumbers) {
       const cleanPhone = String(record.phone_number).replace(/^[0+]/, '').trim();
       const match = rows.find(r => 
@@ -285,77 +286,115 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
       );
 
       if (match) {
-        const isActuallyOnline = String(match.status).toLowerCase() === 'online';
-        const newStatus = isActuallyOnline ? 'online' : 'offline';
+        const isOnline = String(match.status).toLowerCase() === 'online';
+        const hasEverConnected = Boolean(match.loginDate || record.login_date);
 
-        db.get('linked_numbers')
-          .find({ id: record.id })
-          .assign({
-            status: newStatus,
-            login_date: match.loginDate || record.login_date || null,
-            create_time: match.createTime || record.create_time || null,
-            raw_status: match.status,
-            sent_count: match.bulkCount || 0,
-            updated_at: new Date().toISOString()
-          })
-          .write();
-        
-        record.status = newStatus;
-        record.login_date = match.loginDate || record.login_date || null;
-        record.create_time = match.createTime || record.create_time || null;
-        record.raw_status = match.status;
-        record.sent_count = match.bulkCount || 0;
+        if (isOnline) {
+          db.get('linked_numbers')
+            .find({ id: record.id })
+            .assign({
+              status: 'online',
+              login_date: match.loginDate || record.login_date,
+              create_time: match.createTime || record.create_time,
+              raw_status: match.status,
+              sent_count: match.bulkCount || 0,
+              updated_at: new Date().toISOString()
+            })
+            .write();
+          record.status = 'online';
+          record.login_date = match.loginDate || record.login_date;
+        } else if (hasEverConnected) {
+          // It was connected before (e.g. Exit / Offline)
+          db.get('linked_numbers')
+            .find({ id: record.id })
+            .assign({
+              status: 'offline',
+              login_date: match.loginDate || record.login_date,
+              create_time: match.createTime || record.create_time,
+              raw_status: match.status,
+              sent_count: match.bulkCount || 0,
+              updated_at: new Date().toISOString()
+            })
+            .write();
+          record.status = 'offline';
+          record.login_date = match.loginDate || record.login_date;
+        } else {
+          // NEVER connected (PairError / null loginDate)! Purge from user's list!
+          toRemoveIds.push(record.id);
+        }
       } else {
-        // If not found on EarnBondhu
-        const ageMs = Date.now() - new Date(record.created_at || Date.now()).getTime();
-        if (ageMs > 5 * 60 * 1000 && record.status === 'online') {
+        // Not on EarnBondhu! If it never connected, purge it!
+        if (!record.login_date) {
+          toRemoveIds.push(record.id);
+        } else {
           db.get('linked_numbers').find({ id: record.id }).assign({ status: 'offline' }).write();
           record.status = 'offline';
         }
       }
     }
 
-    // 2. Auto-import any accounts on EarnBondhu that aren't yet in linked_numbers
-    // (Especially for admin or user whose phone matches)
+    if (toRemoveIds.length > 0) {
+      for (const id of toRemoveIds) {
+        db.get('linked_numbers').remove({ id }).write();
+      }
+    }
+
+    // 2. Check pending pairings or EarnBondhu accounts that actually connected
+    const pendingPairings = db.get('pending_pairings').value() || [];
     for (const ebAcc of rows) {
       if (!ebAcc.phoneNumber && !ebAcc.pn) continue;
       const cleanEb = String(ebAcc.phoneNumber || ebAcc.pn).replace(/^\+?880/, '').trim();
       if (!cleanEb) continue;
 
+      const isOnline = String(ebAcc.status).toLowerCase() === 'online';
+      const hasEverConnected = Boolean(ebAcc.loginDate);
+
+      // ONLY process accounts that actually connected on WhatsApp!
+      if (!isOnline && !hasEverConnected) continue;
+
       const alreadyExists = db.get('linked_numbers').find(l => 
-        String(l.phone_number).trim() === cleanEb ||
-        String(l.phone_number).includes(cleanEb) ||
-        cleanEb.includes(String(l.phone_number).trim())
+        String(l.phone_number).trim() === cleanEb
       ).value();
 
-      if (!alreadyExists && (user.role === 'admin' || user.username.includes(cleanEb))) {
-        const isOnline = String(ebAcc.status).toLowerCase() === 'online';
-        const newRecord = {
-          id: Date.now() + Math.floor(Math.random() * 1000),
-          user_id: user.id,
-          phone_number: cleanEb,
-          country_code: ebAcc.countryCode || '880',
-          pairing_code: 'AUTO-SYNC',
-          status: isOnline ? 'online' : 'offline',
-          login_date: ebAcc.loginDate || null,
-          create_time: ebAcc.createTime || null,
-          raw_status: ebAcc.status,
-          sent_count: ebAcc.bulkCount || 0,
-          created_at: ebAcc.createTime ? new Date(ebAcc.createTime.replace(' ', 'T') + '+06:00').toISOString() : new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        db.get('linked_numbers').push(newRecord).write();
+      if (!alreadyExists) {
+        // Check if this belongs to current user via pending_pairings or phone match
+        const pending = pendingPairings.find(p => p.phone_number === cleanEb && p.user_id === user.id);
+        const matchesUser = user.username.includes(cleanEb) || cleanEb.includes(user.username.replace(/^[0+]/, ''));
+        const isAdmin = user.role === 'admin';
+
+        if (pending || matchesUser || isAdmin) {
+          const newRecord = {
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            user_id: user.id,
+            phone_number: cleanEb,
+            country_code: ebAcc.countryCode || '880',
+            pairing_code: pending ? pending.pairing_code : 'AUTO-SYNC',
+            status: isOnline ? 'online' : 'offline',
+            login_date: ebAcc.loginDate || null,
+            create_time: ebAcc.createTime || null,
+            raw_status: ebAcc.status,
+            sent_count: ebAcc.bulkCount || 0,
+            created_at: ebAcc.createTime ? new Date(ebAcc.createTime.replace(' ', 'T') + '+06:00').toISOString() : new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          db.get('linked_numbers').push(newRecord).write();
+          if (pending) {
+            db.get('pending_pairings').remove({ phone_number: cleanEb }).write();
+          }
+        }
       }
     }
 
     // Re-read user's linked numbers after sync
-    linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value();
+    linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value() || [];
   } catch (syncErr) {
     console.error('EarnBondhu sync status error:', syncErr.message);
   }
 
-  // Display numbers that are online or offline (exclude failed pairing attempts)
-  const displayNumbers = linkedNumbers.filter(n => n.status === 'online' || n.status === 'offline');
+  // Display ONLY numbers that ACTUALLY connected (have valid login_date or are online)
+  const displayNumbers = linkedNumbers.filter(n => 
+    (n.status === 'online' || n.status === 'offline') && Boolean(n.login_date)
+  );
 
   const referralCount = db.get('users').filter({ referred_by_id: req.user.id }).size().value();
   const config = db.get('system_config').value();
@@ -398,25 +437,23 @@ app.post('/api/whatsapp/get-pairing-code', authenticateToken, async (req, res) =
   const bridgeRes = await bridge.fetchPairingCode(countryCode, phoneNumber);
 
   if (bridgeRes.success) {
-    const newRecord = {
-      id: Date.now(),
+    if (!db.get('pending_pairings').value()) {
+      db.set('pending_pairings', []).write();
+    }
+    // Remove previous pending attempts for this phone number
+    db.get('pending_pairings').remove({ phone_number: phoneNumber }).write();
+    db.get('pending_pairings').push({
       user_id: req.user.id,
       phone_number: phoneNumber,
       country_code: countryCode,
       pairing_code: bridgeRes.pairingCode,
-      status: 'pending', // Pending until WhatsApp code is entered and verified
-      online_time_minutes: 0,
-      sent_count: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    db.get('linked_numbers').push(newRecord).write();
+      created_at: Date.now()
+    }).write();
 
     return res.json({
       success: true,
       pairingCode: bridgeRes.pairingCode,
-      record: newRecord,
+      phoneNumber,
       msg: 'পেয়ারিং কোড তৈরি হয়েছে! আপনার হোয়াটসঅ্যাপে লিংক করুন।'
     });
   } else {

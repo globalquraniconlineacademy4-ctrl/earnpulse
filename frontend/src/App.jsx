@@ -448,7 +448,9 @@ export default function App() {
   // Real-time WhatsApp connection listener (স্বয়ংক্রিয় লাইভ চেকার)
   useEffect(() => {
     let interval = null;
-    if (isWaitingConnection && token) {
+    const cleanInput = inputPhone ? String(inputPhone).replace(/^[0+]/, '').trim() : '';
+
+    if (isWaitingConnection && cleanInput.length >= 8 && token) {
       interval = setInterval(async () => {
         try {
           const res = await fetch(`${API_BASE}/user/me`, {
@@ -460,11 +462,12 @@ export default function App() {
             const onlineList = data.linkedNumbers || [];
             setLinkedNumbers(onlineList);
             
-            // Check if user's input phone is now online
-            const cleanInput = inputPhone.replace(/^[0+]/, '').trim();
+            // Check if user's input phone is ACTUALLY ONLINE and verified with login_date
             const matched = onlineList.find(n => 
-              String(n.phone_number).trim() === cleanInput ||
-              String(n.phone_number).includes(cleanInput)
+              (String(n.phone_number).trim() === cleanInput ||
+               String(n.phone_number).endsWith(cleanInput) ||
+               cleanInput.endsWith(String(n.phone_number).trim())) &&
+              n.status === 'online' && Boolean(n.login_date)
             );
 
             if (matched) {
@@ -472,6 +475,10 @@ export default function App() {
               setConnectionSuccess(true);
               setActivePairingCode('');
               setInputPhone('');
+              // Automatically hide success notification after 7 seconds
+              setTimeout(() => {
+                setConnectionSuccess(false);
+              }, 7000);
             }
           }
         } catch (e) {}
