@@ -2505,20 +2505,29 @@ export default function App() {
                     <div
                       key={idx}
                       style={{
-                        padding: '6px 2px', borderRadius: '8px', textAlign: 'center',
-                        background: isToday ? '#dcfce7' : '#f8fafc',
+                        padding: '6px 2px', borderRadius: '8px', textAlign: 'center', position: 'relative',
+                        background: (isToday && checkInStatus.isCheckedInToday) ? '#dcfce7' : (isToday ? '#ecfdf5' : '#f8fafc'),
                         border: isToday ? '1.5px solid #22c55e' : '1px solid #f1f5f9'
                       }}
                     >
                       <div style={{ fontSize: '11px', color: '#475569', fontWeight: isToday ? 'bold' : 'normal' }}>
                         {d}
                       </div>
-                      <div style={{ marginTop: '2px', display: 'flex', justifyContent: 'center' }}>
+                      <div style={{ marginTop: '2px', display: 'flex', justifyContent: 'center', position: 'relative' }}>
                         <img
                           src="/images/checkin/perfect_star_coin.png"
                           alt="coin"
                           style={{ width: '22px', height: '22px', objectFit: 'contain' }}
                         />
+                        {isToday && checkInStatus.isCheckedInToday && (
+                          <div style={{
+                            position: 'absolute', top: '-4px', right: '-4px', background: '#16a34a',
+                            color: '#fff', fontSize: '9px', fontWeight: 'bold', width: '14px', height: '14px',
+                            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            ✓
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -2528,20 +2537,47 @@ export default function App() {
               {/* Check-In Action Button */}
               <button
                 onClick={handleDoCheckIn}
-                disabled={checkInStatus.isCheckedInToday}
+                disabled={checkInStatus.isCheckedInToday || checkInStatus.isExpired || !checkInStatus.canCheckIn}
                 style={{
-                  width: '100%', height: '46px', marginTop: '20px', borderRadius: '12px',
-                  background: checkInStatus.isCheckedInToday ? '#e2e8f0' : (checkInStatus.canCheckIn ? '#15803d' : '#e2e8f0'),
-                  color: checkInStatus.isCheckedInToday ? '#94a3b8' : (checkInStatus.canCheckIn ? '#ffffff' : '#64748b'),
-                  fontWeight: 'bold', fontSize: '15px', border: 'none', cursor: 'pointer',
-                  boxShadow: checkInStatus.canCheckIn ? '0 4px 12px rgba(21, 128, 61, 0.25)' : 'none'
+                  width: '100%', height: '48px', marginTop: '20px', borderRadius: '12px',
+                  background: checkInStatus.isExpired 
+                    ? '#cbd5e1' 
+                    : (checkInStatus.isCheckedInToday 
+                        ? '#e2e8f0' 
+                        : (checkInStatus.canCheckIn ? 'linear-gradient(135deg, #16a34a, #15803d)' : '#e2e8f0')),
+                  color: (checkInStatus.isExpired || checkInStatus.isCheckedInToday) ? '#64748b' : (checkInStatus.canCheckIn ? '#ffffff' : '#64748b'),
+                  fontWeight: 'bold', fontSize: '15px', border: 'none', cursor: checkInStatus.canCheckIn ? 'pointer' : 'not-allowed',
+                  boxShadow: checkInStatus.canCheckIn ? '0 4px 14px rgba(22, 163, 74, 0.35)' : 'none',
+                  transition: 'all 0.2s ease'
                 }}
               >
-                {checkInStatus.isCheckedInToday ? t.checkInDone : t.checkInBtn}
+                {checkInStatus.isExpired 
+                  ? (lang === 'bn' ? '৭ দিনের অফার সম্পন্ন' : '7 Days Completed') 
+                  : (checkInStatus.isCheckedInToday 
+                      ? (lang === 'bn' ? 'আজকের চেক-ইন সম্পন্ন (৳১০ প্রাপ্ত)' : 'Checked in today (10 Tk)') 
+                      : (checkInStatus.canCheckIn 
+                          ? (lang === 'bn' ? 'চেক-ইন করুন (৳১০ সংগ্রহ করুন)' : 'Claim Check-in (10 Tk)') 
+                          : (lang === 'bn' ? 'চেক-ইন করুন' : 'Check In')))}
               </button>
 
-              <div style={{ textAlign: 'center', fontSize: '12px', color: '#64748b', marginTop: '10px' }}>
-                {t.onlineTimeLow}: {checkInStatus.onlineHours}/{checkInStatus.requiredHours || 6} {t.hours}
+              <div style={{ textAlign: 'center', fontSize: '12px', marginTop: '12px', lineHeight: 1.5 }}>
+                {checkInStatus.isExpired ? (
+                  <span style={{ color: '#64748b', fontWeight: 'bold' }}>
+                    {lang === 'bn' ? '🎉 আপনি প্রথম ৭ দিনের সব চেক-ইন বোনাস সম্পন্ন করেছেন!' : 'All 7 days check-in completed!'}
+                  </span>
+                ) : checkInStatus.isCheckedInToday ? (
+                  <span style={{ color: '#16a34a', fontWeight: 'bold' }}>
+                    {lang === 'bn' ? `✅ আজকের চেক-ইন সম্পন্ন হয়েছে! (${checkInStatus.checkinCount || 1}/৭ দিন) - আগামীকাল আবার আসুন` : 'Checked in today! Come back tomorrow.'}
+                  </span>
+                ) : checkInStatus.isHoursQualified ? (
+                  <span style={{ color: '#16a34a', fontWeight: 'bold' }}>
+                    {lang === 'bn' ? `✅ হোয়াটসঅ্যাপ ৬ ঘণ্টা অনলাইন সম্পন্ন! (${checkInStatus.onlineHours}/৬ ঘণ্টা) - এখনই ১০ টাকা সংগ্রহ করুন` : 'WhatsApp 6h reached! Click to claim.'}
+                  </span>
+                ) : (
+                  <span style={{ color: '#b91c1c', fontWeight: '600' }}>
+                    {lang === 'bn' ? `⏳ হোয়াটসঅ্যাপ ৬ ঘণ্টা পূর্ণ হতে বাকি: ${checkInStatus.onlineHours || 0}/৬ ঘণ্টা` : `WhatsApp online remaining: ${checkInStatus.onlineHours || 0}/6 hours`}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -2549,12 +2585,22 @@ export default function App() {
             <div className="app-card" style={{ padding: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '16px', fontWeight: 'bold', color: '#15803d', marginBottom: '10px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#15803d' }} />
-                <span>{t.rules}</span>
+                <span>{lang === 'bn' ? 'চেক-ইন নিয়মাবলী' : 'Check-In Rules'}</span>
               </div>
               <div style={{ fontSize: '13px', color: '#334155', lineHeight: 1.8 }}>
-                {t.rule1}<br/>
-                {t.rule2}<br/>
-                {t.rule3}
+                {lang === 'bn' ? (
+                  <>
+                    ১. এই অফারটি নতুন মেম্বারদের প্রথম <b>৭ দিনের জন্য</b> প্রযোজ্য (প্রতিদিন ১০ টাকা, মোট ৭০ টাকা)।<br/>
+                    ২. দিনে <b>শুধুমাত্র ১ বারই</b> চেক-ইন করা যাবে (একবার বোনাস নিলে ওই দিন শেষ)।<br/>
+                    ৩. চেক-ইন করতে মেম্বারের হোয়াটসঅ্যাপ ওই তারিখে <b>কমপক্ষে ৬ ঘণ্টা অনলাইনে</b> থাকতে হবে।
+                  </>
+                ) : (
+                  <>
+                    1. Valid only for the first <b>7 days</b> for new members (10 Tk daily, total 70 Tk).<br/>
+                    2. Allowed strictly <b>once per day</b>.<br/>
+                    3. WhatsApp must be <b>online for at least 6 hours</b> on that day to claim.
+                  </>
+                )}
               </div>
             </div>
           </div>

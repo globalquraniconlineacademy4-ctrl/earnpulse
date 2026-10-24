@@ -84,91 +84,132 @@ function requireAdmin(req, res, next) {
 // -------------------------------------------------------------
 // CHECK-IN API (৭ দিন প্রতিদিন ১০ টাকা = ৭০ টাকা)
 // -------------------------------------------------------------
+// 3. DAILY 7-DAY CHECK-IN REWARD ENGINE (নতুন মেম্বারদের প্রথম ৭ দিন, দিনে ১ বার, ৬ ঘণ্টা অনলাইনে ১০ টাকা)
+// -------------------------------------------------------------
 app.get('/api/checkin/status', authenticateToken, (req, res) => {
+  db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
-  const linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value();
+  if (!user) return res.status(404).json({ success: false, msg: 'ব্যবহারকারী পাওয়া যায়নি' });
 
-  // Calculate total online hours dynamically from active WhatsApp session duration
-  const totalOnlineMinutes = linkedNumbers.reduce((sum, n) => {
-    let mins = n.online_time_minutes || 0;
+  const history = user.checkin_history || [];
+  const checkinCount = history.length;
+  const isExpired = checkinCount >= 7;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isCheckedInToday = user.last_checkin_date === todayStr || history.includes(todayStr);
+
+  const linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value() || [];
+  let maxOnlineMinutes = 0;
+  linkedNumbers.forEach(n => {
+    let mins = 0;
     if (n.status === 'online') {
       const dStr = n.login_date || n.create_time;
       if (dStr) {
         const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
         if (!isNaN(p)) {
-          mins += Math.max(0, Math.floor((Date.now() - p) / (1000 * 60)));
+          mins = Math.max(0, Math.floor((Date.now() - p) / (1000 * 60)));
         }
       }
     } else if (n.status === 'offline') {
       if (n.frozen_elapsed_seconds) {
-        mins += Math.floor(n.frozen_elapsed_seconds / 60);
+        mins = Math.floor(n.frozen_elapsed_seconds / 60);
       } else if (n.online_time_ms) {
-        mins += Math.floor(n.online_time_ms / (1000 * 60));
+        mins = Math.floor(n.online_time_ms / (1000 * 60));
       }
     }
-    return sum + mins;
-  }, 0);
-  const onlineHours = (totalOnlineMinutes / 60);
+    if (mins > maxOnlineMinutes) maxOnlineMinutes = mins;
+  });
+  const onlineHours = parseFloat((maxOnlineMinutes / 60).toFixed(2));
+  const isHoursQualified = onlineHours >= 6.0;
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const lastCheckIn = user.last_checkin_date || null;
-  const isCheckedInToday = lastCheckIn === todayStr;
+  const canCheckIn = !isExpired && !isCheckedInToday && isHoursQualified;
 
   return res.json({
     success: true,
-    canCheckIn: onlineHours >= 6 && !isCheckedInToday,
+    canCheckIn,
+    isCheckedInToday,
+    isExpired,
+    checkinCount,
+    maxCheckinDays: 7,
     onlineHours: onlineHours.toFixed(2),
     requiredHours: 6,
-    isCheckedInToday,
-    checkInReward: 10.0
+    isHoursQualified,
+    checkInReward: 10.0,
+    history
   });
 });
 
-app.post('/api/checkin/do', authenticateToken, (req, res) => {
+app.post('/api/checkin/do', authenticateToken, async (req, res) => {
+  db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
-  const linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value();
+  if (!user) return res.status(404).json({ success: false, msg: 'ব্যবহারকারী পাওয়া যায়নি' });
 
-  const totalOnlineMinutes = linkedNumbers.reduce((sum, n) => {
-    let mins = n.online_time_minutes || 0;
+  const history = user.checkin_history || [];
+  const checkinCount = history.length;
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // ১. প্রথম ৭ দিনের কোটা শেষ কিনা যাচাই
+  if (checkinCount >= 7) {
+    return res.status(400).json({ 
+      success: false, 
+      msg: 'আপনি ইতিমধ্যে ৭ দিনের সব চেক-ইন বোনাস গ্রহণ করেছেন! এই অফারটি নতুন মেম্বারদের প্রথম ৭ দিনের জন্য প্রযোজ্য।' 
+    });
+  }
+
+  // ২. দিনে মাত্র একবারই করা যাবে - একই দিনে ২/৩ বার রোধ
+  if (user.last_checkin_date === todayStr || history.includes(todayStr)) {
+    return res.status(400).json({ 
+      success: false, 
+      msg: 'আজকের চেক-ইন আপনি ইতিমধ্যে সম্পন্ন করেছেন! দিনে শুধুমাত্র একবারই চেক-ইন করা যাবে।' 
+    });
+  }
+
+  // ৩. হোয়াটসঅ্যাপ কমপক্ষে ৬ ঘণ্টা অনলাইন আছে কিনা যাচাই
+  const linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value() || [];
+  let maxOnlineMinutes = 0;
+  linkedNumbers.forEach(n => {
+    let mins = 0;
     if (n.status === 'online') {
       const dStr = n.login_date || n.create_time;
       if (dStr) {
         const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
         if (!isNaN(p)) {
-          mins += Math.max(0, Math.floor((Date.now() - p) / (1000 * 60)));
+          mins = Math.max(0, Math.floor((Date.now() - p) / (1000 * 60)));
         }
       }
     } else if (n.status === 'offline') {
       if (n.frozen_elapsed_seconds) {
-        mins += Math.floor(n.frozen_elapsed_seconds / 60);
+        mins = Math.floor(n.frozen_elapsed_seconds / 60);
       } else if (n.online_time_ms) {
-        mins += Math.floor(n.online_time_ms / (1000 * 60));
+        mins = Math.floor(n.online_time_ms / (1000 * 60));
       }
     }
-    return sum + mins;
-  }, 0);
-  const onlineHours = (totalOnlineMinutes / 60);
+    if (mins > maxOnlineMinutes) maxOnlineMinutes = mins;
+  });
+  const onlineHours = parseFloat((maxOnlineMinutes / 60).toFixed(2));
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  if (user.last_checkin_date === todayStr) {
-    return res.status(400).json({ success: false, msg: 'আজকের চেক-ইন ইতোমধ্যে সম্পন্ন হয়েছে!' });
-  }
-
-  // Check 6 hours online rule as per original policy
-  if (onlineHours < 6) {
+  if (onlineHours < 6.0) {
     return res.status(400).json({ 
       success: false, 
-      msg: `চেক-ইন করতে WhatsApp কমপক্ষে ৬ ঘণ্টা অনলাইনে থাকতে হবে। আপনার অনলাইন সময়: ${onlineHours.toFixed(2)}/৬ ঘণ্টা` 
+      msg: `আজকে আপনার হোয়াটসঅ্যাপ এখনও ৬ ঘণ্টা অনলাইন পূর্ণ হয়নি! আপনার বর্তমান অনলাইন সময়: ${onlineHours}/৬ ঘণ্টা। ৬ ঘণ্টা পূর্ণ হলে ১০ টাকা বোনাস পাবেন।` 
     });
   }
 
+  // সব শর্ত পূরণ হয়েছে: মেম্বারকে ১০ টাকা দেওয়া হচ্ছে
   const reward = 10.0;
+  const newBal = parseFloat(((user.balance || 0) + reward).toFixed(2));
+  const newTotal = parseFloat(((user.total_earned || 0) + reward).toFixed(2));
+  const newHistory = [...history, todayStr];
+  const newCount = newHistory.length;
+
   db.get('users')
     .find({ id: req.user.id })
     .assign({
-      balance: (user.balance || 0) + reward,
-      total_earned: (user.total_earned || 0) + reward,
-      last_checkin_date: todayStr
+      balance: newBal,
+      total_earned: newTotal,
+      last_checkin_date: todayStr,
+      checkin_history: newHistory,
+      checkin_count: newCount
     })
     .write();
 
@@ -177,14 +218,19 @@ app.post('/api/checkin/do', authenticateToken, (req, res) => {
     user_id: req.user.id,
     type: 'daily_checkin',
     amount: reward,
-    description: 'দৈনিক চেক-ইন বোনাস',
+    description: `দৈনিক চেক-ইন বোনাস (${newCount}/৭ দিন)`,
     created_at: new Date().toISOString()
   }).write();
 
+  await db.syncToCloud();
+
   return res.json({
     success: true,
-    msg: 'অভিনন্দন! আপনার চেক-ইন সফল হয়েছে এবং ৳১০ ব্যালেন্সে যোগ হয়েছে।',
-    reward
+    reward,
+    newBalance: newBal,
+    checkinCount: newCount,
+    maxCheckinDays: 7,
+    msg: `অভিনন্দন! আপনি আজকের চেক-ইন বোনাস ৳${reward} পেয়েছেন! (মোট ${newCount}/৭ দিন সম্পন্ন)`
   });
 });
 
