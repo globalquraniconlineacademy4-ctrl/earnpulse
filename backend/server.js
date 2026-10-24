@@ -22,6 +22,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// Cloud Database Sync Middleware (MongoDB Atlas)
+let isCloudSyncedOnce = false;
+app.use(async (req, res, next) => {
+  if (process.env.MONGODB_URI && (!isCloudSyncedOnce || Math.random() < 0.1)) {
+    try {
+      if (db.syncFromCloud) await db.syncFromCloud();
+      isCloudSyncedOnce = true;
+    } catch (e) {}
+  }
+  next();
+});
+
 // Serve Admin Panel Statically
 const adminDir = fs.existsSync(path.join(__dirname, '../admin')) 
   ? path.join(__dirname, '../admin') 

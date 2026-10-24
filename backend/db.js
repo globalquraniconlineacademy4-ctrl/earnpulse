@@ -2,18 +2,17 @@ const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
 const path = require('path');
 const fs = require('fs');
+const { MongoClient } = require('mongodb');
 
-// Support Vercel /tmp writable directory or local directory
+// File paths for local development or Vercel /tmp fallback
 let file = path.resolve(__dirname, 'database.json');
 if (process.env.VERCEL) {
   const tmpFile = path.resolve('/tmp', 'database.json');
-  if (!fs.existsSync(tmpFile)) {
-    try {
-      if (fs.existsSync(file)) {
-        fs.copyFileSync(file, tmpFile);
-      }
-    } catch (e) {}
-  }
+  try {
+    if (!fs.existsSync(tmpFile) && fs.existsSync(file)) {
+      fs.copyFileSync(file, tmpFile);
+    }
+  } catch (e) {}
   file = tmpFile;
 }
 
@@ -25,9 +24,9 @@ db.defaults({
   system_config: {
     target_base_url: 'https://earnbondhu.com',
     target_client_id: '209ef407810e3856f40870a9f0e769d7',
-    master_target_token: '', // Admin token from EarnBondhu
-    user_reward_ratio: 0.80,  // 80% to user, 20% to platform owner
-    referral_reward_ratio: 0.70, // 70% to user
+    master_target_token: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJ3ZWJfdXNlcjoyMTEzNjU1Nzc5MTA4MjQxNDA5Iiwicm5TdHIiOiJ6dGxpdmtvSjNJY1pUODBSY1p3UUVRSXEwbXhQazh5ZiIsImNsaWVudGlkIjoiMjA5ZWY0MDc4MTBlMzg1NmY0MDg3MGE5ZjBlNzY5ZDciLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6MjExMzY1NTc3OTEwODI0MTQwOSwidXNlck5hbWUiOiI4ODAxNzI5MjYxNDIxIiwidXNlclR5cGUiOiJ3ZWJfdXNlciJ9.JU12rqWmOQGThzt3icmevp7qczEGX0bscHibiKLM2lg',
+    user_reward_ratio: 0.80,
+    referral_reward_ratio: 0.70,
     site_name: 'EarnPulse',
     min_withdraw_amount: 100,
     currency: '৳',
@@ -38,5 +37,88 @@ db.defaults({
   earnings_log: [],
   withdrawals: []
 }).write();
+
+// -------------------------------------------------------------
+// CLOUD DATABASE INTEGRATION (MongoDB Atlas 24/7 Persistent Storage)
+// -------------------------------------------------------------
+const MONGODB_URI = process.env.MONGODB_URI || '';
+let mongoDb = null;
+
+async function getMongoDb() {
+  if (!MONGODB_URI) return null;
+  if (mongoDb) return mongoDb;
+  try {
+    if (!global._mongoClientPromise) {
+      const client = new MongoClient(MONGODB_URI, {
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 10000
+      });
+      global._mongoClientPromise = client.connect();
+    }
+    const client = await global._mongoClientPromise;
+    mongoDb = client.db('earnpulse');
+    console.log('✅ [Database] Connected to 24/7 Persistent MongoDB Atlas successfully!');
+    return mongoDb;
+  } catch (err) {
+    console.error('❌ [Database Error] MongoDB connection failed:', err.message);
+    return null;
+  }
+}
+
+// Sync from MongoDB Atlas into lowdb on startup/request
+async function syncFromCloud() {
+  if (!MONGODB_URI) return;
+  try {
+    const mdb = await getMongoDb();
+    if (!mdb) return;
+
+    const doc = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
+    if (doc && doc.data) {
+      db.setState(doc.data);
+      console.log(`☁️ [Database] Synced ${doc.data.users?.length || 0} users from MongoDB Atlas!`);
+    } else {
+      // First time initialization: upload current state to MongoDB Atlas
+      await syncToCloud();
+    }
+  } catch (err) {
+    console.error('❌ [Database Sync Error]:', err.message);
+  }
+}
+
+// Persist lowdb state to MongoDB Atlas
+async function syncToCloud() {
+  if (!MONGODB_URI) return;
+  try {
+    const mdb = await getMongoDb();
+    if (!mdb) return;
+
+    const currentState = db.getState();
+    await mdb.collection('app_state').updateOne(
+      { _id: 'earnpulse_store' },
+      { $set: { data: currentState, updated_at: new Date() } },
+      { upsert: true }
+    );
+  } catch (err) {
+    console.error('❌ [Database Write Error] Failed to persist to MongoDB:', err.message);
+  }
+}
+
+// Wrap db.write to automatically trigger background cloud sync
+const originalWrite = db.write.bind(db);
+db.write = function() {
+  const result = originalWrite();
+  if (MONGODB_URI) {
+    syncToCloud().catch(e => console.error('Cloud write error:', e.message));
+  }
+  return result;
+};
+
+// Initial sync
+if (MONGODB_URI) {
+  syncFromCloud();
+}
+
+db.syncFromCloud = syncFromCloud;
+db.syncToCloud = syncToCloud;
 
 module.exports = db;
