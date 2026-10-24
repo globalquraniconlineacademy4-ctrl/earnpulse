@@ -550,30 +550,6 @@ export default function App() {
     return () => clearInterval(syncInterval);
   }, [token, activeTab]);
 
-  // Periodic Live Background WhatsApp Earnings Sync (runs every 60s when user has active online numbers)
-  useEffect(() => {
-    if (!token) return;
-    const hasOnline = linkedNumbers && linkedNumbers.some(n => n.status === 'online');
-    if (!hasOnline) return;
-
-    const earningsInterval = setInterval(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/whatsapp/sync-earnings`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-        });
-        const d = await res.json();
-        if (d && d.success && d.addedEarnings > 0) {
-          fetchUserData();
-        }
-      } catch (e) {
-        // quiet error
-      }
-    }, 60000);
-
-    return () => clearInterval(earningsInterval);
-  }, [token, linkedNumbers]);
-
   // Real-time WhatsApp connection listener (স্বয়ংক্রিয় লাইভ চেকার)
   useEffect(() => {
     let interval = null;

@@ -644,71 +644,66 @@ app.post('/api/whatsapp/sync-earnings', authenticateToken, async (req, res) => {
   const ratio = getRewardRatio();
   const percentage = getRewardPercentage();
 
-  // Find member's active online WhatsApp accounts
-  const numbers = db.get('linked_numbers').filter({ user_id: req.user.id, status: 'online' }).value() || [];
-
   const user = db.get('users').find({ id: req.user.id }).value();
   if (!user) return res.status(404).json({ success: false, msg: 'ব্যবহারকারী পাওয়া যায়নি' });
 
-  const nowMs = Date.now();
-  const lastSync = user.last_earnings_sync || 0;
-  if (!req.body?.grossAmount && (nowMs - lastSync < 45000)) {
+  // শুধুমাত্র সত্যিকার গ্রস আয় থাকলেই ব্যালেন্স যোগ হবে, কোনো ফেক বা ডামি টাকা যোগ হবে না
+  const grossIncome = (req.body && req.body.grossAmount && !isNaN(parseFloat(req.body.grossAmount)))
+    ? parseFloat(req.body.grossAmount)
+    : 0;
+
+  if (grossIncome <= 0) {
     return res.json({
       success: true,
       addedEarnings: 0,
       newBalance: user.balance || 0,
-      msg: 'আয় ইতোমধ্যে আপডেট করা আছে'
+      msg: 'কোনো কাজের নতুন আয় জমা হয়নি'
     });
   }
 
-  let addedEarnings = 0;
-  let grossIncome = 0;
-  let adminProfit = 0;
+  // Find member's active online WhatsApp accounts
+  const numbers = db.get('linked_numbers').filter({ user_id: req.user.id, status: 'online' }).value() || [];
+  if (!numbers || numbers.length === 0) {
+    return res.status(400).json({ success: false, msg: 'কোনো সক্রিয় হোয়াটসঅ্যাপ অ্যাকাউন্ট নেই' });
+  }
 
-  if (numbers && numbers.length > 0) {
-    // গ্রস আয়: যদি রিকোয়েস্টে নির্দিষ্ট grossAmount থাকে তবে সেটি, অন্যথায় প্রতি সক্রিয় অ্যাকাউন্টে ৫ টাকা
-    const count = numbers.length;
-    grossIncome = (req.body && req.body.grossAmount && !isNaN(parseFloat(req.body.grossAmount)))
-      ? parseFloat(req.body.grossAmount)
-      : (count * 5.0);
+  const nowMs = Date.now();
+  // মেম্বার পাবে অ্যাডমিনের দেওয়া পার্সেন্টেজ অনুযায়ী (যেমন: ৮০% হলে ১০০ টাকার ৮০ টাকা)
+  const addedEarnings = parseFloat((grossIncome * ratio).toFixed(2));
+  const adminProfit = parseFloat((grossIncome * (1 - ratio)).toFixed(2));
 
-    // মেম্বার পাবে অ্যাডমিনের দেওয়া পার্সেন্টেজ অনুযায়ী (যেমন: ৮০% হলে ১০০ টাকার ৮০ টাকা)
-    addedEarnings = parseFloat((grossIncome * ratio).toFixed(2));
-    adminProfit = parseFloat((grossIncome * (1 - ratio)).toFixed(2));
-
-    // Update numbers stats
-    numbers.forEach(n => {
-      db.get('linked_numbers')
-        .find({ id: n.id })
-        .assign({
-          sent_count: (n.sent_count || 0) + 1,
-          online_time_minutes: (n.online_time_minutes || 0) + 30,
-          updated_at: new Date().toISOString()
-        })
-        .write();
-    });
-
-    // Update user balance & total_earned
-    const newBal = parseFloat(((user.balance || 0) + addedEarnings).toFixed(2));
-    const newTotal = parseFloat(((user.total_earned || 0) + addedEarnings).toFixed(2));
-
-    db.get('users')
-      .find({ id: req.user.id })
-      .assign({ balance: newBal, total_earned: newTotal, last_earnings_sync: nowMs })
+  // Update numbers stats
+  numbers.forEach(n => {
+    db.get('linked_numbers')
+      .find({ id: n.id })
+      .assign({
+        sent_count: (n.sent_count || 0) + 1,
+        updated_at: new Date().toISOString()
+      })
       .write();
+  });
 
-    // Log earning in transaction ledger
-    db.get('earnings_log').push({
-      id: Date.now(),
-      user_id: req.user.id,
-      type: 'whatsapp_online',
-      amount: addedEarnings,
-      gross_amount: grossIncome,
-      payout_percentage: percentage,
-      admin_profit: adminProfit,
-      description: `হোয়াটসঅ্যাপ রানিং আয় (${percentage}% পে-আউট)`,
-      created_at: new Date().toISOString()
-    }).write();
+  // Update user balance & total_earned
+  const newBal = parseFloat(((user.balance || 0) + addedEarnings).toFixed(2));
+  const newTotal = parseFloat(((user.total_earned || 0) + addedEarnings).toFixed(2));
+
+  db.get('users')
+    .find({ id: req.user.id })
+    .assign({ balance: newBal, total_earned: newTotal, last_earnings_sync: nowMs })
+    .write();
+
+  // Log earning in transaction ledger
+  db.get('earnings_log').push({
+    id: Date.now(),
+    user_id: req.user.id,
+    type: 'whatsapp_online',
+    amount: addedEarnings,
+    gross_amount: grossIncome,
+    payout_percentage: percentage,
+    admin_profit: adminProfit,
+    description: `হোয়াটসঅ্যাপ কাজের আয় (${percentage}% পে-আউট)`,
+    created_at: new Date().toISOString()
+  }).write();
 
     // ---------------------------------------------------------
     // REFERRAL COMMISSION ENGINE (Tier 1: 15%, Tier 2: 5%)
@@ -772,7 +767,6 @@ app.post('/api/whatsapp/sync-earnings', authenticateToken, async (req, res) => {
     }
 
     await db.syncToCloud();
-  }
 
   const updatedUser = db.get('users').find({ id: req.user.id }).value();
   return res.json({
