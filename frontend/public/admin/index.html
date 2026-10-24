@@ -174,14 +174,14 @@
 
     <div id="loginError" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; font-size: 12px; padding: 10px; border-radius: 10px; margin-bottom: 16px;"></div>
 
-    <form id="adminLoginForm" style="text-align: left; display: flex; flex-direction: column; gap: 14px;">
+    <form id="adminLoginForm" autocomplete="off" style="text-align: left; display: flex; flex-direction: column; gap: 14px;">
       <div>
         <label>অ্যাডমিন ফোন নম্বর</label>
-        <input type="text" id="adminUser" placeholder="01910344086" value="01910344086" required>
+        <input type="text" id="adminUser" placeholder="01XXXXXXXXX" autocomplete="off" required>
       </div>
       <div>
         <label>পাসওয়ার্ড</label>
-        <input type="password" id="adminPass" placeholder="পাসওয়ার্ড দিন" value="123" required>
+        <input type="password" id="adminPass" placeholder="পাসওয়ার্ড দিন" autocomplete="new-password" required>
       </div>
       <button type="submit" id="loginBtn" class="save-btn" style="margin-top: 6px;">🔒 লগইন করুন</button>
     </form>
@@ -327,6 +327,8 @@
     if (!adminToken) {
       document.getElementById('loginModal').style.display = 'flex';
       document.getElementById('adminDashboard').style.display = 'none';
+      if (document.getElementById('adminUser')) document.getElementById('adminUser').value = '';
+      if (document.getElementById('adminPass')) document.getElementById('adminPass').value = '';
     } else {
       document.getElementById('loginModal').style.display = 'none';
       document.getElementById('adminDashboard').style.display = 'flex';
@@ -387,7 +389,10 @@
   function adminLogout() {
     if (!confirm('আপনি কি অ্যাডমিন ড্যাশবোর্ড থেকে লগআউট করতে চান?')) return;
     localStorage.removeItem('admin_token');
+    localStorage.removeItem('token');
     adminToken = '';
+    if (document.getElementById('adminUser')) document.getElementById('adminUser').value = '';
+    if (document.getElementById('adminPass')) document.getElementById('adminPass').value = '';
     checkAuthAndInit();
   }
 
