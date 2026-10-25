@@ -463,17 +463,13 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
           } else if (hasEverConnected) {
             // It was connected before but now Exit / Offline -> FREEZE elapsed timer!
             let frozenSec = record.frozen_elapsed_seconds;
-            if (match.onlineTime && match.onlineTime > 0) {
-              frozenSec = Math.floor(match.onlineTime / 1000);
-            } else if (!frozenSec) {
+            if (!frozenSec || frozenSec <= 0) {
               const dStr = match.loginDate || record.login_date;
               if (dStr) {
                 const pDate = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
-                const stopTime = match.lastCountTime 
-                  ? (match.lastCountTime.includes('T') ? new Date(match.lastCountTime).getTime() : new Date(match.lastCountTime.replace(' ', 'T') + '+06:00').getTime())
-                  : (record.offline_at ? new Date(record.offline_at).getTime() : Date.now());
+                const stopTime = record.offline_at ? new Date(record.offline_at).getTime() : Date.now();
                 if (!isNaN(pDate) && !isNaN(stopTime) && stopTime > pDate) {
-                  frozenSec = Math.min(24 * 3600, Math.floor((stopTime - pDate) / 1000));
+                  frozenSec = Math.floor((stopTime - pDate) / 1000);
                 }
               }
             }
