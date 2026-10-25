@@ -2124,16 +2124,25 @@ export default function App() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  {linkedNumbers.map((n, idx) => {
-                    const isOnline = String(n.status || '').toLowerCase() === 'online';
-                    return (
-                      <div key={`${n.id || idx}_${n.status}_${n.login_date || ''}`} style={{
-                        padding: '12px 0',
-                        borderBottom: idx === linkedNumbers.length - 1 ? 'none' : '1px solid #f1f5f9',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
+                  {[...linkedNumbers]
+                    .sort((a, b) => {
+                      const aOnline = String(a.status || '').toLowerCase() === 'online';
+                      const bOnline = String(b.status || '').toLowerCase() === 'online';
+                      if (aOnline === bOnline) {
+                        return (new Date(b.login_date || b.created_at || 0).getTime()) - (new Date(a.login_date || a.created_at || 0).getTime());
+                      }
+                      return aOnline ? -1 : 1;
+                    })
+                    .map((n, idx, arr) => {
+                      const isOnline = String(n.status || '').toLowerCase() === 'online';
+                      return (
+                        <div key={`${n.id || idx}_${n.status}_${n.login_date || ''}`} style={{
+                          padding: '12px 0',
+                          borderBottom: idx === arr.length - 1 ? 'none' : '1px solid #f1f5f9',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
                         {/* Left: WhatsApp Logo + Number + Online/OFFLINE */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{

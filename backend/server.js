@@ -637,10 +637,17 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
     await db.syncToCloud().catch(e => console.error('Cloud sync error in user/me frozen updates:', e.message));
   }
 
-  // Display numbers that are online or connected
-  const displayNumbers = linkedNumbers.filter(n => 
-    n.status === 'online' || Boolean(n.login_date) || Boolean(n.last_settle_time)
-  );
+  // Display numbers that are online or connected (Online on top, Offline below)
+  const displayNumbers = linkedNumbers
+    .filter(n => n.status === 'online' || Boolean(n.login_date) || Boolean(n.last_settle_time))
+    .sort((a, b) => {
+      const aOnline = String(a.status || '').toLowerCase() === 'online';
+      const bOnline = String(b.status || '').toLowerCase() === 'online';
+      if (aOnline === bOnline) {
+        return (new Date(b.login_date || b.created_at || 0).getTime()) - (new Date(a.login_date || a.created_at || 0).getTime());
+      }
+      return aOnline ? -1 : 1;
+    });
 
   const referralCount = db.get('users').filter({ referred_by_id: req.user.id }).size().value();
   const config = db.get('system_config').value();
