@@ -273,7 +273,7 @@ app.post('/api/checkin/do', authenticateToken, async (req, res) => {
 // -------------------------------------------------------------
 // 1. AUTHENTICATION & REGISTRATION
 // -------------------------------------------------------------
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   let { username, password, inviteCode } = req.body;
 
   if (!username || !password) {
@@ -331,7 +331,7 @@ app.post('/api/auth/register', (req, res) => {
   };
 
   db.get('users').push(newUser).write();
-  db.syncToCloud().catch(e => console.error('Cloud sync error on register:', e.message));
+  await db.syncToCloud();
   const token = jwt.sign({ id: newUser.id, username: normalizedPhone, role }, JWT_SECRET, { expiresIn: '30d' });
 
   return res.json({

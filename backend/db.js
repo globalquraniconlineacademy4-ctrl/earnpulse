@@ -97,16 +97,63 @@ async function syncToCloud() {
 
     const currentState = db.getState();
 
-    // 🛡️ DATA LOSS PREVENTION GUARD:
-    // কখনোই কোনো খালি বা অসম্পূর্ণ লোকাল ডাটা দিয়ে ক্লাউডের আসল মেম্বারদের অ্যাকাউন্ট মোছা যাবে না!
-    if (!hasSyncedFromCloud) {
-      const existing = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
-      if (existing && existing.data && (existing.data.users?.length || 0) > (currentState.users?.length || 0)) {
-        console.warn('🛡️ [Data Protection Guard] Blocked overwrite to protect member data! Restoring cloud state.');
-        db.setState(existing.data);
-        hasSyncedFromCloud = true;
-        return;
-      }
+    // 🛡️ UNBREAKABLE PERMANENT DATA PRESERVATION GUARD:
+    // কোনো মেম্বার অ্যাকাউন্ট বা ব্যালেন্স কখনোই মুছে ফেলা যাবে না!
+    // ক্লাউড ও লোকাল ডেটা মার্জ করে সবসময় মেম্বারদের তথ্য ১০০% সুরক্ষিত রাখা হবে।
+    const existing = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
+    if (existing && existing.data) {
+      // ১. মেম্বার অ্যাকাউন্ট শতভাগ সুরক্ষা ও ইউনিয়ন
+      const cloudUsers = existing.data.users || [];
+      const currentUsers = currentState.users || [];
+      const userMap = new Map();
+
+      // ক্লাউডের প্রতিটি সক্রিয় মেম্বার নিশ্চিতভাবে রাখা হবে
+      cloudUsers.forEach(u => {
+        if (u && (u.id || u.username)) {
+          const key = String(u.username || u.id);
+          userMap.set(key, u);
+        }
+      });
+
+      // লোকালের নতুন নিবন্ধিত মেম্বার ও আপডেট মার্জ
+      currentUsers.forEach(u => {
+        if (u && (u.id || u.username)) {
+          const key = String(u.username || u.id);
+          const existingU = userMap.get(key);
+          if (existingU) {
+            userMap.set(key, { ...existingU, ...u });
+          } else {
+            userMap.set(key, u);
+          }
+        }
+      });
+
+      currentState.users = Array.from(userMap.values());
+
+      // ২. লিঙ্কড হোয়াটসঅ্যাপ নম্বর সুরক্ষা ও ইউনিয়ন
+      const cloudNumbers = existing.data.linked_numbers || [];
+      const currentNumbers = currentState.linked_numbers || [];
+      const numMap = new Map();
+
+      cloudNumbers.forEach(n => {
+        if (n && n.phone_number) {
+          numMap.set(String(n.phone_number).trim(), n);
+        }
+      });
+
+      currentNumbers.forEach(n => {
+        if (n && n.phone_number) {
+          const key = String(n.phone_number).trim();
+          const existingN = numMap.get(key);
+          if (existingN) {
+            numMap.set(key, { ...existingN, ...n });
+          } else {
+            numMap.set(key, n);
+          }
+        }
+      });
+
+      currentState.linked_numbers = Array.from(numMap.values());
     }
 
     await mdb.collection('app_state').updateOne(
