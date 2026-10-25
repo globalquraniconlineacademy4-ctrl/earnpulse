@@ -606,9 +606,10 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
         // ONLY process accounts that actually connected on WhatsApp!
         if (!isOnline && !hasEverConnected) continue;
 
-        const alreadyExists = db.get('linked_numbers').find(l => 
-          String(l.phone_number).trim() === cleanEb
-        ).value();
+        const alreadyExists = db.get('linked_numbers').find(l => {
+          const lClean = String(l.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+          return lClean === cleanEb;
+        }).value();
 
         if (!alreadyExists) {
           // Check if this belongs to a user via pending_pairings or phone match
@@ -661,13 +662,20 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
           db.get('linked_numbers').push(newRecord).write();
           hasChanges = true;
         } else if (alreadyExists) {
-          // If already exists, ensure it is assigned to matching user if matching user exists
+          // Check pending_pairings and phone match to enforce true owner
+          const pending = pendingPairings.find(p => {
+            const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+            return pClean === cleanEb;
+          });
           const matchingUser = db.get('users').find(u => {
             const uClean = String(u.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
             return uClean && uClean === cleanEb;
           }).value();
-          if (matchingUser && alreadyExists.user_id !== matchingUser.id) {
-            db.get('linked_numbers').find({ id: alreadyExists.id }).assign({ user_id: matchingUser.id }).write();
+
+          const trueUserId = (pending && pending.user_id) || (matchingUser && matchingUser.id);
+          if (trueUserId && alreadyExists.user_id !== trueUserId) {
+            db.get('linked_numbers').find({ id: alreadyExists.id }).assign({ user_id: trueUserId }).write();
+            alreadyExists.user_id = trueUserId;
             hasChanges = true;
           }
         }
@@ -721,6 +729,7 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   }
 
   const allUsersList = db.get('users').value() || [];
+  const currentPending = db.get('pending_pairings').value() || [];
   // Display numbers that are online or connected (Online on top, Offline below)
   const displayNumbers = linkedNumbers
     .filter(n => {
@@ -732,6 +741,14 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
         return otherClean && otherClean === cleanN;
       });
       if (isOtherUserNumber) return false;
+
+      // If this phone number was requested/paired by another user in pending_pairings, exclude it!
+      const isOtherPending = currentPending.some(p => {
+        const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+        return pClean === cleanN && p.user_id !== req.user.id;
+      });
+      if (isOtherPending) return false;
+
       return n.status === 'online' || Boolean(n.login_date) || Boolean(n.last_settle_time);
     })
     .sort((a, b) => {
@@ -1274,21 +1291,40 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
   let totalMemberWA = 0;
 
   // List only members with their live balance and connected WhatsApp numbers
+  const pendingPairings = db.get('pending_pairings').value() || [];
   const usersList = memberUsers.map(u => {
     // Find all WhatsApp numbers linked to this member
     const cleanU = String(u.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
     const userWpNumbers = allLinked.filter(n => {
       const cleanN = String(n.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+
+      // 1. If paired by this user in pending_pairings
+      const pairedByThisUser = pendingPairings.some(p => {
+        const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+        return pClean === cleanN && p.user_id === u.id;
+      });
+      if (pairedByThisUser) return true;
+
+      // 2. If paired by ANOTHER user in pending_pairings, strictly exclude!
+      const pairedByOtherUser = pendingPairings.some(p => {
+        const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+        return pClean === cleanN && p.user_id !== u.id;
+      });
+      if (pairedByOtherUser) return false;
+
+      // 3. Username match
       if (cleanN && cleanN === cleanU) return true;
-      if (n.user_id === u.id) {
-        const belongsToOtherUser = memberUsers.some(other => {
-          if (other.id === u.id) return false;
-          const otherClean = String(other.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
-          return otherClean && otherClean === cleanN;
-        });
-        return !belongsToOtherUser;
-      }
-      return false;
+
+      // 4. Matches another user's username, exclude!
+      const belongsToOtherUser = memberUsers.some(other => {
+        if (other.id === u.id) return false;
+        const otherClean = String(other.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+        return otherClean && otherClean === cleanN;
+      });
+      if (belongsToOtherUser) return false;
+
+      // 5. User ID match
+      return n.user_id === u.id;
     });
 
     const onlineCount = userWpNumbers.filter(n => n.status === 'online').length;

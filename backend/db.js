@@ -161,16 +161,19 @@ async function syncToCloud() {
 
       cloudNumbers.forEach(n => {
         if (n && n.phone_number) {
-          numMap.set(String(n.phone_number).trim(), n);
+          const key = String(n.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+          numMap.set(key, n);
         }
       });
 
       currentNumbers.forEach(n => {
         if (n && n.phone_number) {
-          const key = String(n.phone_number).trim();
+          const key = String(n.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
           const existingN = numMap.get(key);
           if (existingN) {
-            numMap.set(key, { ...existingN, ...n });
+            // Keep the true user ownership from existing Atlas record if present
+            const assignedUserId = existingN.user_id || n.user_id;
+            numMap.set(key, { ...existingN, ...n, user_id: assignedUserId });
           } else {
             numMap.set(key, n);
           }
