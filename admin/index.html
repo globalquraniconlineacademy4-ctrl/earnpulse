@@ -602,10 +602,17 @@
       const uTable = document.getElementById('usersTable');
       if (d.usersList && d.usersList.length > 0) {
         uTable.innerHTML = d.usersList.map((u, idx) => {
-          const wpCount = (u.wp_numbers && Array.isArray(u.wp_numbers)) ? u.wp_numbers.length : 0;
-          const wpBtn = wpCount > 0 
-            ? `<button onclick="openWpModal(${idx})" class="btn-3d-connected" title="সংযুক্ত হোয়াটসঅ্যাপ তালিকা দেখতে ক্লিক করুন">🟢 Connected ${wpCount}</button>`
-            : `<span class="btn-3d-zero">⚪ 0 Connected</span>`;
+          const wpNums = (u.wp_numbers && Array.isArray(u.wp_numbers)) ? u.wp_numbers : [];
+          const onlineCount = (u.online_count !== undefined) 
+            ? u.online_count 
+            : wpNums.filter(n => String(n.status || '').toLowerCase() === 'online').length;
+          const totalCount = wpNums.length;
+
+          const wpBtn = onlineCount > 0 
+            ? `<button onclick="openWpModal(${idx})" class="btn-3d-connected" title="মেম্বারের হোয়াটসঅ্যাপ তালিকা ও লাইভ টাইমার দেখতে ক্লিক করুন">🟢 Connected ${onlineCount}</button>`
+            : (totalCount > 0 
+                ? `<button onclick="openWpModal(${idx})" class="btn-3d-zero" style="cursor: pointer;" title="মেম্বারের হোয়াটসঅ্যাপ তালিকা দেখতে ক্লিক করুন">⚪ 0 Connected</button>` 
+                : `<span class="btn-3d-zero">⚪ 0 Connected</span>`);
 
           return `
             <tr>
@@ -717,7 +724,7 @@
     const wpNums = u.wp_numbers || [];
     const activeCount = wpNums.filter(n => n.status === 'online').length;
 
-    sub.innerHTML = `মেম্বার নম্বর: <strong style="color: #fff;">${u.username}</strong> &bull; মোট সংযুক্ত: <strong style="color: #34d399;">${wpNums.length} টি</strong>`;
+    sub.innerHTML = `মেম্বার নম্বর: <strong style="color: #fff;">${u.username}</strong> &bull; সক্রিয় অনলাইন: <strong style="color: #34d399;">${activeCount} টি</strong> (মোট কানেক্টেড: ${wpNums.length} টি)`;
     if (summaryText) {
       summaryText.innerHTML = `সক্রিয় হোয়াটসঅ্যাপ: <strong style="color: #34d399;">${activeCount}</strong> / ${wpNums.length}`;
     }

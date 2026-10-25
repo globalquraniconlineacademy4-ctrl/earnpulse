@@ -1386,6 +1386,7 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
       username: u.username,
       password: u.plain_password || '123',
       balance: u.balance || 0,
+      online_count: onlineCount,
       wp_numbers: userWpNumbers.map(n => {
         let elapsedSec = 0;
         if (n.status === 'online') {
