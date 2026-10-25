@@ -2486,17 +2486,24 @@ export default function App() {
                 ].map((d, idx) => {
                   const today = String(new Date().getDate()).padStart(2, '0');
                   const isToday = d === today && idx >= 20;
+                  // তারিখ অনুযায়ী চেক-ইন সম্পন্ন হয়েছে কিনা (ইতিহাসে থাকলে সব তারিখে সবুজ টিক থাকবে)
+                  const isCheckedIn = idx >= 4 && (checkInStatus.history || []).some(h => h.endsWith(`-${d}`));
 
                   return (
                     <div
                       key={idx}
                       style={{
                         padding: '6px 2px', borderRadius: '8px', textAlign: 'center', position: 'relative',
-                        background: (isToday && checkInStatus.isCheckedInToday) ? '#dcfce7' : (isToday ? '#ecfdf5' : '#f8fafc'),
-                        border: isToday ? '1.5px solid #22c55e' : '1px solid #f1f5f9'
+                        background: isCheckedIn ? '#dcfce7' : (isToday ? '#ecfdf5' : '#f8fafc'),
+                        border: isCheckedIn 
+                          ? '1.5px solid #16a34a' 
+                          : (isToday 
+                              ? (checkInStatus.isHoursQualified ? '2px solid #16a34a' : '1.5px solid #22c55e') 
+                              : '1px solid #f1f5f9'),
+                        boxShadow: (isToday && checkInStatus.canCheckIn) ? '0 0 10px rgba(22, 163, 74, 0.3)' : 'none'
                       }}
                     >
-                      <div style={{ fontSize: '11px', color: '#475569', fontWeight: isToday ? 'bold' : 'normal' }}>
+                      <div style={{ fontSize: '11px', color: isCheckedIn ? '#166534' : '#475569', fontWeight: (isToday || isCheckedIn) ? 'bold' : 'normal' }}>
                         {d}
                       </div>
                       <div style={{ marginTop: '2px', display: 'flex', justifyContent: 'center', position: 'relative' }}>
@@ -2505,11 +2512,12 @@ export default function App() {
                           alt="coin"
                           style={{ width: '22px', height: '22px', objectFit: 'contain' }}
                         />
-                        {isToday && checkInStatus.isCheckedInToday && (
+                        {isCheckedIn && (
                           <div style={{
                             position: 'absolute', top: '-4px', right: '-4px', background: '#16a34a',
-                            color: '#fff', fontSize: '9px', fontWeight: 'bold', width: '14px', height: '14px',
-                            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            color: '#fff', fontSize: '9px', fontWeight: 'bold', width: '15px', height: '15px',
+                            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                           }}>
                             ✓
                           </div>
@@ -2557,12 +2565,23 @@ export default function App() {
                   </span>
                 ) : checkInStatus.isHoursQualified ? (
                   <span style={{ color: '#16a34a', fontWeight: 'bold' }}>
-                    {lang === 'bn' ? `✅ হোয়াটসঅ্যাপ ৬ ঘণ্টা অনলাইন সম্পন্ন! (${checkInStatus.onlineHours}/৬ ঘণ্টা) - এখনই ১০ টাকা সংগ্রহ করুন` : 'WhatsApp 6h reached! Click to claim.'}
+                    {lang === 'bn' ? `✅ আজকের হোয়াটসঅ্যাপ ৬ ঘণ্টা অনলাইন সম্পন্ন! (${checkInStatus.onlineHours}/৬ ঘণ্টা) - এখনই ১০ টাকা সংগ্রহ করুন` : 'WhatsApp 6h reached! Click to claim.'}
                   </span>
                 ) : (
-                  <span style={{ color: '#b91c1c', fontWeight: '600' }}>
-                    {lang === 'bn' ? `⏳ হোয়াটসঅ্যাপ ৬ ঘণ্টা পূর্ণ হতে বাকি: ${checkInStatus.onlineHours || 0}/৬ ঘণ্টা` : `WhatsApp online remaining: ${checkInStatus.onlineHours || 0}/6 hours`}
-                  </span>
+                  (() => {
+                    const curHours = parseFloat(checkInStatus.onlineHours || 0);
+                    const remMinutes = Math.max(0, Math.ceil((6 - curHours) * 60));
+                    const remH = Math.floor(remMinutes / 60);
+                    const remM = remMinutes % 60;
+                    const remStr = remH > 0 ? `${remH} ঘণ্টা ${remM} মিনিট` : `${remM} মিনিট`;
+                    return (
+                      <span style={{ color: '#b91c1c', fontWeight: '600' }}>
+                        {lang === 'bn' 
+                          ? `⏳ আজ হোয়াটসঅ্যাপ ৬ ঘণ্টা পূর্ণ হতে বাকি: ${checkInStatus.onlineHours || 0}/৬ ঘণ্টা (আর ${remStr} অনলাইন রাখুন)`
+                          : `⏳ WhatsApp remaining for today: ${checkInStatus.onlineHours || 0}/6 hours (keep online for ${remStr})`}
+                      </span>
+                    );
+                  })()
                 )}
               </div>
             </div>

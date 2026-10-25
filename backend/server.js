@@ -84,9 +84,85 @@ function requireAdmin(req, res, next) {
 // -------------------------------------------------------------
 // CHECK-IN API (৭ দিন প্রতিদিন ১০ টাকা = ৭০ টাকা)
 // -------------------------------------------------------------
-// 3. DAILY 7-DAY CHECK-IN REWARD ENGINE (নতুন মেম্বারদের প্রথম ৭ দিন, দিনে ১ বার, ৬ ঘণ্টা অনলাইনে ১০ টাকা)
+// 3. DAILY 7-DAY CHECK-IN REWARD ENGINE (নতুন মেম্বারদের প্রথম ৭ দিন, দিনে ১ বার, তারিখ অনুযায়ী ৬ ঘণ্টা অনলাইনে ১০ টাকা)
 // -------------------------------------------------------------
-app.get('/api/checkin/status', authenticateToken, (req, res) => {
+
+// বাংলাদেশ টাইমজোন (Asia/Dhaka, UTC+6) অনুযায়ী আজকের তারিখ ও সময় বের করার হেল্পার
+function getBangladeshDateInfo() {
+  const now = new Date();
+  const bdTimeMs = now.getTime() + (now.getTimezoneOffset() * 60000) + (6 * 3600000);
+  const bdNow = new Date(bdTimeMs);
+  const y = bdNow.getFullYear();
+  const m = String(bdNow.getMonth() + 1).padStart(2, '0');
+  const d = String(bdNow.getDate()).padStart(2, '0');
+  const todayStr = `${y}-${m}-${d}`;
+  const todayMidnightMs = new Date(`${todayStr}T00:00:00+06:00`).getTime();
+  return { todayStr, todayMidnightMs, nowMs: now.getTime(), bdNow };
+}
+
+// নির্দিষ্ট তারিখ অনুযায়ী (রাত ১২:০০ টা থেকে পরের রাত ১২:০০ টা) মেম্বারের হোয়াটসঅ্যাপ অনলাইন সময় গণনার হেল্পার
+async function calculateMemberTodayOnlineHours(userId, todayStr, todayMidnightMs, nowMs) {
+  const wsList = await bridge.fetchWsOnlineStatusList(false).catch(() => []);
+  const linkedNumbers = db.get('linked_numbers').filter({ user_id: userId }).value() || [];
+
+  if (linkedNumbers.length === 0) {
+    return { onlineHours: 0, isQualified: false, effectiveSec: 0, numbers: [] };
+  }
+
+  let numDetails = [];
+  linkedNumbers.forEach(n => {
+    const cleanN = String(n.phone_number || '').trim();
+    const w = wsList?.find(x => String(x.wsNumber).trim() === cleanN);
+
+    let todaySec = 0;
+    // ১. আর্নবন্ডুর সিস্টেম থেকে আজকের অনলাইন সেকেন্ডস (todayOnlineSeconds)
+    if (w && w.todayOnlineSeconds !== undefined && w.todayOnlineSeconds !== null) {
+      todaySec = Number(w.todayOnlineSeconds);
+    } else if (n.today_online_seconds) {
+      todaySec = Number(n.today_online_seconds);
+    }
+
+    // ২. বর্তমান সেশনে লাইভ অনলাইন থাকলে আজকের মধ্যরাত (00:00:00 BD) থেকে অতিক্রান্ত সময় গণনা
+    const isOnline = n.status === 'online' || (w && (w.currentStatus === '1' || String(w.currentStatus).toLowerCase() === 'online'));
+    if (isOnline) {
+      const dStr = (w && w.lastOnlineTime) || n.login_date || n.create_time;
+      if (dStr) {
+        const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
+        const sessionStartMs = Math.max(todayMidnightMs, p);
+        if (!isNaN(sessionStartMs) && nowMs > sessionStartMs) {
+          const liveSec = Math.floor((nowMs - sessionStartMs) / 1000);
+          todaySec = Math.max(todaySec, liveSec);
+        }
+      }
+    } else {
+      // ৩. অফলাইন থাকলে কিন্তু আজকের তারিখে লগইন হয়েছিল
+      const dStr = n.login_date || n.create_time;
+      if (dStr && dStr.startsWith(todayStr)) {
+        const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
+        const sessionStartMs = Math.max(todayMidnightMs, p);
+        const stopTime = n.offline_at ? new Date(n.offline_at).getTime() : (n.updated_at ? new Date(n.updated_at).getTime() : nowMs);
+        if (!isNaN(sessionStartMs) && !isNaN(stopTime) && stopTime > sessionStartMs) {
+          const offlineSecToday = Math.floor((stopTime - sessionStartMs) / 1000);
+          todaySec = Math.max(todaySec, offlineSecToday);
+        }
+      }
+    }
+
+    n._todaySec = todaySec;
+    numDetails.push({ phone: cleanN, status: isOnline ? 'online' : 'offline', todaySec });
+  });
+
+  const maxSingleNumberSec = Math.max(0, ...linkedNumbers.map(n => n._todaySec || 0));
+  const sumAllNumbersTodaySec = linkedNumbers.reduce((sum, n) => sum + (n._todaySec || 0), 0);
+  const elapsedSecSinceMidnight = Math.max(0, Math.floor((nowMs - todayMidnightMs) / 1000));
+  const effectiveTodaySec = Math.min(elapsedSecSinceMidnight, Math.max(maxSingleNumberSec, sumAllNumbersTodaySec));
+  const onlineHours = parseFloat((effectiveTodaySec / 3600).toFixed(2));
+  const isQualified = onlineHours >= 6.0;
+
+  return { onlineHours, isQualified, effectiveSec: effectiveTodaySec, numbers: numDetails };
+}
+
+app.get('/api/checkin/status', authenticateToken, async (req, res) => {
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
   if (!user) return res.status(404).json({ success: false, msg: 'ব্যবহারকারী পাওয়া যায়নি' });
@@ -95,34 +171,12 @@ app.get('/api/checkin/status', authenticateToken, (req, res) => {
   const checkinCount = history.length;
   const isExpired = checkinCount >= 7;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const { todayStr, todayMidnightMs, nowMs } = getBangladeshDateInfo();
   const isCheckedInToday = user.last_checkin_date === todayStr || history.includes(todayStr);
 
-  const linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value() || [];
-  let maxOnlineMinutes = 0;
-  linkedNumbers.forEach(n => {
-    let mins = 0;
-    if (n.status === 'online') {
-      const dStr = n.login_date || n.create_time;
-      if (dStr) {
-        const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
-        if (!isNaN(p)) {
-          mins = Math.max(0, Math.floor((Date.now() - p) / (1000 * 60)));
-        }
-      }
-    } else if (n.status === 'offline') {
-      if (n.frozen_elapsed_seconds) {
-        mins = Math.floor(n.frozen_elapsed_seconds / 60);
-      } else if (n.online_time_ms) {
-        mins = Math.floor(n.online_time_ms / (1000 * 60));
-      }
-    }
-    if (mins > maxOnlineMinutes) maxOnlineMinutes = mins;
-  });
-  const onlineHours = parseFloat((maxOnlineMinutes / 60).toFixed(2));
-  const isHoursQualified = onlineHours >= 6.0;
+  const { onlineHours, isQualified } = await calculateMemberTodayOnlineHours(req.user.id, todayStr, todayMidnightMs, nowMs);
 
-  const canCheckIn = !isExpired && !isCheckedInToday && isHoursQualified;
+  const canCheckIn = !isExpired && !isCheckedInToday && isQualified;
 
   return res.json({
     success: true,
@@ -133,9 +187,10 @@ app.get('/api/checkin/status', authenticateToken, (req, res) => {
     maxCheckinDays: 7,
     onlineHours: onlineHours.toFixed(2),
     requiredHours: 6,
-    isHoursQualified,
+    isHoursQualified: isQualified,
     checkInReward: 10.0,
-    history
+    history,
+    todayDate: todayStr
   });
 });
 
@@ -146,7 +201,7 @@ app.post('/api/checkin/do', authenticateToken, async (req, res) => {
 
   const history = user.checkin_history || [];
   const checkinCount = history.length;
-  const todayStr = new Date().toISOString().split('T')[0];
+  const { todayStr, todayMidnightMs, nowMs } = getBangladeshDateInfo();
 
   // ১. প্রথম ৭ দিনের কোটা শেষ কিনা যাচাই
   if (checkinCount >= 7) {
@@ -164,34 +219,13 @@ app.post('/api/checkin/do', authenticateToken, async (req, res) => {
     });
   }
 
-  // ৩. হোয়াটসঅ্যাপ কমপক্ষে ৬ ঘণ্টা অনলাইন আছে কিনা যাচাই
-  const linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value() || [];
-  let maxOnlineMinutes = 0;
-  linkedNumbers.forEach(n => {
-    let mins = 0;
-    if (n.status === 'online') {
-      const dStr = n.login_date || n.create_time;
-      if (dStr) {
-        const p = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
-        if (!isNaN(p)) {
-          mins = Math.max(0, Math.floor((Date.now() - p) / (1000 * 60)));
-        }
-      }
-    } else if (n.status === 'offline') {
-      if (n.frozen_elapsed_seconds) {
-        mins = Math.floor(n.frozen_elapsed_seconds / 60);
-      } else if (n.online_time_ms) {
-        mins = Math.floor(n.online_time_ms / (1000 * 60));
-      }
-    }
-    if (mins > maxOnlineMinutes) maxOnlineMinutes = mins;
-  });
-  const onlineHours = parseFloat((maxOnlineMinutes / 60).toFixed(2));
+  // ৩. হোয়াটসঅ্যাপ আজকের তারিখে কমপক্ষে ৬ ঘণ্টা অনলাইন আছে কিনা কঠোরভাবে যাচাই
+  const { onlineHours, isQualified } = await calculateMemberTodayOnlineHours(req.user.id, todayStr, todayMidnightMs, nowMs);
 
-  if (onlineHours < 6.0) {
+  if (!isQualified) {
     return res.status(400).json({ 
       success: false, 
-      msg: `আজকে আপনার হোয়াটসঅ্যাপ এখনও ৬ ঘণ্টা অনলাইন পূর্ণ হয়নি! আপনার বর্তমান অনলাইন সময়: ${onlineHours}/৬ ঘণ্টা। ৬ ঘণ্টা পূর্ণ হলে ১০ টাকা বোনাস পাবেন।` 
+      msg: `আজকে আপনার হোয়াটসঅ্যাপ এখনও ৬ ঘণ্টা অনলাইন পূর্ণ হয়নি! আপনার আজকের অনলাইন সময়: ${onlineHours}/৬ ঘণ্টা। ৬ ঘণ্টা পূর্ণ হলে ১০ টাকা বোনাস সংগ্রহ করতে পারবেন।` 
     });
   }
 
@@ -218,7 +252,7 @@ app.post('/api/checkin/do', authenticateToken, async (req, res) => {
     user_id: req.user.id,
     type: 'daily_checkin',
     amount: reward,
-    description: `দৈনিক চেক-ইন বোনাস (${newCount}/৭ দিন)`,
+    description: `দৈনিক চেক-ইন বোনাস (${todayStr} তারিখ - ${newCount}/৭ দিন)`,
     created_at: new Date().toISOString()
   }).write();
 
@@ -230,7 +264,9 @@ app.post('/api/checkin/do', authenticateToken, async (req, res) => {
     newBalance: newBal,
     checkinCount: newCount,
     maxCheckinDays: 7,
-    msg: `অভিনন্দন! আপনি আজকের চেক-ইন বোনাস ৳${reward} পেয়েছেন! (মোট ${newCount}/৭ দিন সম্পন্ন)`
+    todayDate: todayStr,
+    history: newHistory,
+    msg: `অভিনন্দন! আপনি আজকের (${todayStr}) চেক-ইন বোনাস ৳${reward} পেয়েছেন! (মোট ${newCount}/৭ দিন সম্পন্ন)`
   });
 });
 
