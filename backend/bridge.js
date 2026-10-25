@@ -233,6 +233,52 @@ async function fetchAccountList(forceRefresh = false, isRetry = false) {
   }
 }
 
+let cachedWsStatusList = null;
+let lastWsStatusFetchTime = 0;
+const WS_CACHE_TTL_MS = 3000;
+
+/**
+ * Fetch Real-time WS Online Status & Settlement Countdown data directly from EarnBondhu
+ */
+async function fetchWsOnlineStatusList(forceRefresh = false, isRetry = false) {
+  const now = Date.now();
+  if (!forceRefresh && cachedWsStatusList && (now - lastWsStatusFetchTime < WS_CACHE_TTL_MS)) {
+    return cachedWsStatusList;
+  }
+
+  let token = getConfig('master_target_token');
+  if (!token) {
+    token = await autoLoginEarnBondhu();
+  }
+
+  const client = getEarnBondhuClient();
+
+  try {
+    const res = await client.get('/system/wsOnlineStatus/list');
+    if (res.data && res.data.code === 200) {
+      cachedWsStatusList = res.data.data || [];
+      lastWsStatusFetchTime = now;
+      return cachedWsStatusList;
+    } else if (res.data?.code === 401 && !isRetry) {
+      console.warn('[EarnBondhu Bridge] 401 in fetchWsOnlineStatusList. Re-authenticating...');
+      const newToken = await autoLoginEarnBondhu();
+      if (newToken) {
+        return fetchWsOnlineStatusList(true, true);
+      }
+    }
+    return cachedWsStatusList || [];
+  } catch (err) {
+    console.error('[Proxy Bridge Error] fetchWsOnlineStatusList:', err.response?.data || err.message);
+    if (err.response?.status === 401 && !isRetry) {
+      const newToken = await autoLoginEarnBondhu();
+      if (newToken) {
+        return fetchWsOnlineStatusList(true, true);
+      }
+    }
+    return cachedWsStatusList || [];
+  }
+}
+
 async function fetchAccountStatus(phoneNumber) {
   const cleanPhone = String(phoneNumber).replace(/^[0+]/, '').trim();
   const listData = await fetchAccountList();
@@ -252,6 +298,7 @@ module.exports = {
   fetchPairingCode,
   fetchAccountStatus,
   fetchAccountList,
+  fetchWsOnlineStatusList,
   autoLoginEarnBondhu,
   getEarnBondhuClient
 };

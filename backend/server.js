@@ -431,8 +431,12 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   // Real check with target server
   try {
     const forceRefresh = req.query.fresh === '1' || req.query.fresh === 'true';
-    const ebAccounts = await bridge.fetchAccountList(forceRefresh);
+    const [ebAccounts, wsStatusList] = await Promise.all([
+      bridge.fetchAccountList(forceRefresh),
+      bridge.fetchWsOnlineStatusList(forceRefresh)
+    ]);
     const rows = ebAccounts.rows || [];
+    const wsArray = Array.isArray(wsStatusList) ? wsStatusList : [];
 
     // ONLY perform sync if EarnBondhu responded with active rows
     if (rows && rows.length > 0) {
@@ -444,44 +448,55 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
           (r.phoneNumber && String(r.phoneNumber).trim() === cleanPhone) ||
           (r.pn && String(r.pn).includes(cleanPhone))
         );
+        const wsMatch = wsArray.find(w => 
+          String(w.wsNumber).trim() === cleanPhone ||
+          cleanPhone.endsWith(String(w.wsNumber).trim()) ||
+          String(w.wsNumber).trim().endsWith(cleanPhone)
+        );
 
-        if (match) {
-          const isOnline = String(match.status).toLowerCase() === 'online';
-          const hasEverConnected = Boolean(match.loginDate || record.login_date);
+        if (match || wsMatch) {
+          const isOnline = wsMatch ? (wsMatch.currentStatus === '1' || String(wsMatch.currentStatus).toLowerCase() === 'online') : (String(match?.status).toLowerCase() === 'online');
+          const hasEverConnected = Boolean((match && match.loginDate) || record.login_date || (wsMatch && wsMatch.lastSettleTime));
+          const unSettleSec = wsMatch ? Number(wsMatch.unSettleSeconds || 0) : null;
+          const lastSettleTime = wsMatch ? (wsMatch.lastSettleTime || wsMatch.updateTime) : null;
+          const todayOnlineSec = wsMatch ? Number(wsMatch.todayOnlineSeconds || 0) : null;
 
           if (isOnline) {
             const hasStatusChanged = record.status !== 'online';
-            const hasLoginDateChanged = match.loginDate && record.login_date !== match.loginDate;
+            const hasLoginDateChanged = (match?.loginDate && record.login_date !== match.loginDate);
             const hasFrozenReset = record.frozen_elapsed_seconds !== null;
 
             if (hasStatusChanged || hasLoginDateChanged || hasFrozenReset) {
               hasChanges = true;
             }
 
+            const updateFields = {
+              status: 'online',
+              login_date: (match && match.loginDate) || record.login_date || lastSettleTime,
+              create_time: (match && match.createTime) || record.create_time,
+              raw_status: (match && match.status) || 'Online',
+              sent_count: (match && match.bulkCount) || record.sent_count || 0,
+              online_time_ms: (match && match.onlineTime) || record.online_time_ms || 0,
+              last_count_time: (match && match.lastCountTime) || record.last_count_time || null,
+              un_settle_seconds: unSettleSec !== null ? unSettleSec : record.un_settle_seconds,
+              last_settle_time: lastSettleTime || record.last_settle_time || record.login_date,
+              today_online_seconds: todayOnlineSec !== null ? todayOnlineSec : record.today_online_seconds,
+              frozen_elapsed_seconds: null,
+              offline_at: null,
+              updated_at: new Date().toISOString()
+            };
+
             db.get('linked_numbers')
               .find({ id: record.id })
-              .assign({
-                status: 'online',
-                login_date: match.loginDate || record.login_date,
-                create_time: match.createTime || record.create_time,
-                raw_status: match.status,
-                sent_count: match.bulkCount || 0,
-                online_time_ms: match.onlineTime || 0,
-                last_count_time: match.lastCountTime || null,
-                frozen_elapsed_seconds: null,
-                offline_at: null,
-                updated_at: new Date().toISOString()
-              })
+              .assign(updateFields)
               .write();
-            record.status = 'online';
-            record.login_date = match.loginDate || record.login_date;
-            record.frozen_elapsed_seconds = null;
-            record.offline_at = null;
+
+            Object.assign(record, updateFields);
           } else if (hasEverConnected) {
             // It was connected before but now Exit / Offline -> FREEZE elapsed timer!
-            let frozenSec = record.frozen_elapsed_seconds;
+            let frozenSec = unSettleSec !== null ? Math.max(0, 86400 - unSettleSec) : record.frozen_elapsed_seconds;
             if (!frozenSec || frozenSec <= 0) {
-              const dStr = match.loginDate || record.login_date;
+              const dStr = (match && match.loginDate) || record.login_date || lastSettleTime;
               if (dStr) {
                 const pDate = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
                 const stopTime = record.offline_at ? new Date(record.offline_at).getTime() : Date.now();
@@ -497,24 +512,28 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
               hasChanges = true;
             }
 
+            const updateFields = {
+              status: 'offline',
+              login_date: (match && match.loginDate) || record.login_date || lastSettleTime,
+              create_time: (match && match.createTime) || record.create_time,
+              raw_status: (match && match.status) || 'Exit',
+              sent_count: (match && match.bulkCount) || record.sent_count || 0,
+              online_time_ms: (match && match.onlineTime) || record.online_time_ms || 0,
+              last_count_time: (match && match.lastCountTime) || record.last_count_time || null,
+              un_settle_seconds: unSettleSec !== null ? unSettleSec : record.un_settle_seconds,
+              last_settle_time: lastSettleTime || record.last_settle_time || record.login_date,
+              today_online_seconds: todayOnlineSec !== null ? todayOnlineSec : record.today_online_seconds,
+              frozen_elapsed_seconds: frozenSec || record.frozen_elapsed_seconds || 0,
+              offline_at: record.offline_at || new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+
             db.get('linked_numbers')
               .find({ id: record.id })
-              .assign({
-                status: 'offline',
-                login_date: match.loginDate || record.login_date,
-                create_time: match.createTime || record.create_time,
-                raw_status: match.status,
-                sent_count: match.bulkCount || 0,
-                online_time_ms: match.onlineTime || 0,
-                last_count_time: match.lastCountTime || null,
-                frozen_elapsed_seconds: frozenSec || record.frozen_elapsed_seconds || 0,
-                offline_at: record.offline_at || new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
+              .assign(updateFields)
               .write();
-            record.status = 'offline';
-            record.login_date = match.loginDate || record.login_date;
-            record.frozen_elapsed_seconds = frozenSec || record.frozen_elapsed_seconds || 0;
+
+            Object.assign(record, updateFields);
           } else {
             // NEVER connected (PairError / null loginDate)! Purge from user's list!
             toRemoveIds.push(record.id);
@@ -592,22 +611,31 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   // Ensure any offline account has frozen_elapsed_seconds populated so timer remains frozen
   let hasFrozenUpdates = false;
   for (const n of linkedNumbers) {
-    if (n.status === 'offline' && (!n.frozen_elapsed_seconds || n.frozen_elapsed_seconds <= 0)) {
-      if (n.online_time_ms && n.online_time_ms > 0) {
-        n.frozen_elapsed_seconds = Math.floor(n.online_time_ms / 1000);
-      } else {
-        const dStr = n.login_date || n.create_time;
-        if (dStr) {
-          const pDate = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
-          const stopTime = n.offline_at ? new Date(n.offline_at).getTime() : (n.updated_at ? new Date(n.updated_at).getTime() : Date.now());
-          if (!isNaN(pDate) && !isNaN(stopTime) && stopTime > pDate) {
-            n.frozen_elapsed_seconds = Math.min(24 * 3600, Math.floor((stopTime - pDate) / 1000));
+    if (n.status === 'offline') {
+      if (n.un_settle_seconds !== undefined && n.un_settle_seconds !== null && n.un_settle_seconds > 0) {
+        const frozen = Math.max(0, 86400 - Number(n.un_settle_seconds));
+        if (n.frozen_elapsed_seconds !== frozen) {
+          n.frozen_elapsed_seconds = frozen;
+          db.get('linked_numbers').find({ id: n.id }).assign({ frozen_elapsed_seconds: frozen }).write();
+          hasFrozenUpdates = true;
+        }
+      } else if (!n.frozen_elapsed_seconds || n.frozen_elapsed_seconds <= 0) {
+        if (n.online_time_ms && n.online_time_ms > 0) {
+          n.frozen_elapsed_seconds = Math.floor(n.online_time_ms / 1000);
+        } else {
+          const dStr = n.login_date || n.create_time;
+          if (dStr) {
+            const pDate = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
+            const stopTime = n.offline_at ? new Date(n.offline_at).getTime() : (n.updated_at ? new Date(n.updated_at).getTime() : Date.now());
+            if (!isNaN(pDate) && !isNaN(stopTime) && stopTime > pDate) {
+              n.frozen_elapsed_seconds = Math.min(24 * 3600, Math.floor((stopTime - pDate) / 1000));
+            }
           }
         }
-      }
-      if (n.frozen_elapsed_seconds) {
-        db.get('linked_numbers').find({ id: n.id }).assign({ frozen_elapsed_seconds: n.frozen_elapsed_seconds }).write();
-        hasFrozenUpdates = true;
+        if (n.frozen_elapsed_seconds) {
+          db.get('linked_numbers').find({ id: n.id }).assign({ frozen_elapsed_seconds: n.frozen_elapsed_seconds }).write();
+          hasFrozenUpdates = true;
+        }
       }
     }
   }

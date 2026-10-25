@@ -16,6 +16,8 @@ function WhatsAppCountdownTimer({
   loginDate,
   createTime,
   status,
+  unSettleSeconds,
+  lastSettleTime,
   frozenElapsedSeconds,
   onlineTimeMs,
   offlineAt,
@@ -26,77 +28,42 @@ function WhatsAppCountdownTimer({
 
   useEffect(() => {
     const calc = () => {
-      // 1. If offline, time MUST FREEZE/STOP at disconnection time!
+      const o = 86400; // 24 hours (86400s) settlement countdown cycle (Exact EarnBondhu Logic)
+      const v = Number(unSettleSeconds !== undefined && unSettleSeconds !== null ? unSettleSeconds : (frozenElapsedSeconds ? (o - frozenElapsedSeconds) : 0));
+
+      // 1. If offline: frozen at remaining settlement countdown: Math.max(0, o - v)
       if (!isOnline) {
-        if (frozenElapsedSeconds !== undefined && frozenElapsedSeconds !== null && frozenElapsedSeconds > 0) {
-          const displaySeconds = Math.min(24 * 3600, frozenElapsedSeconds);
-          const hours = Math.floor(displaySeconds / 3600);
-          const minutes = Math.floor((displaySeconds % 3600) / 60);
-          const seconds = displaySeconds % 60;
-          return `${String(hours).padStart(2, '0')} : ${String(minutes).padStart(2, '0')} : ${String(seconds).padStart(2, '0')}`;
+        let remaining = Math.max(0, Math.floor(o - v));
+        if ((unSettleSeconds === undefined || unSettleSeconds === null) && frozenElapsedSeconds) {
+          remaining = frozenElapsedSeconds;
         }
+        const hours = Math.floor(remaining / 3600);
+        const minutes = Math.floor((remaining % 3600) / 60);
+        const seconds = remaining % 60;
+        const fmt = (x) => String(x).padStart(2, '0');
+        return `${fmt(hours)} : ${fmt(minutes)} : ${fmt(seconds)}`;
+      }
 
-        if (onlineTimeMs && onlineTimeMs > 0) {
-          const displaySeconds = Math.min(24 * 3600, Math.floor(onlineTimeMs / 1000));
-          const hours = Math.floor(displaySeconds / 3600);
-          const minutes = Math.floor((displaySeconds % 3600) / 60);
-          const seconds = displaySeconds % 60;
-          return `${String(hours).padStart(2, '0')} : ${String(minutes).padStart(2, '0')} : ${String(seconds).padStart(2, '0')}`;
-        }
-
-        // Fallback for offline when no precalculated frozen seconds: use offlineAt or updatedAt (NEVER Date.now())
-        const dateStr = loginDate;
-        if (!dateStr) return '00 : 00 : 00';
-
-        let parsedDate = 0;
-        if (dateStr.includes('T')) {
-          parsedDate = new Date(dateStr).getTime();
+      // 2. If online: countdown live: Math.max(0, o - v - h) (Exact EarnBondhu reverse-engineered formula)
+      const now = Math.floor(Date.now() / 1000);
+      let settleTimestamp = now;
+      const settleStr = lastSettleTime || loginDate;
+      if (settleStr) {
+        if (settleStr.includes('T')) {
+          settleTimestamp = Math.floor(new Date(settleStr).getTime() / 1000);
         } else {
-          parsedDate = new Date(dateStr.replace(' ', 'T') + '+06:00').getTime();
+          settleTimestamp = Math.floor(new Date(settleStr.replace(' ', 'T') + '+06:00').getTime() / 1000);
         }
-
-        const stopTimeStr = offlineAt || updatedAt;
-        let parsedStop = 0;
-        if (stopTimeStr) {
-          parsedStop = stopTimeStr.includes('T') ? new Date(stopTimeStr).getTime() : new Date(stopTimeStr.replace(' ', 'T') + '+06:00').getTime();
-        }
-
-        if (!isNaN(parsedDate) && !isNaN(parsedStop) && parsedStop > parsedDate) {
-          const displaySeconds = Math.min(24 * 3600, Math.floor((parsedStop - parsedDate) / 1000));
-          const hours = Math.floor(displaySeconds / 3600);
-          const minutes = Math.floor((displaySeconds % 3600) / 60);
-          const seconds = displaySeconds % 60;
-          return `${String(hours).padStart(2, '0')} : ${String(minutes).padStart(2, '0')} : ${String(seconds).padStart(2, '0')}`;
-        }
-
-        return '00 : 00 : 00';
       }
 
-      // 2. If online: Live count-up from loginDate to current time (matching EXACT live timer of main site)
-      const dateStr = loginDate;
-      if (!dateStr) return '00 : 00 : 00';
+      const h = Math.max(0, now - settleTimestamp);
+      const remaining = Math.max(0, Math.floor(o - v - h));
 
-      // Parse date: EarnBondhu returns "2026-10-25 09:58:29" in BD Time (+06:00)
-      let parsedDate = 0;
-      if (dateStr.includes('T')) {
-        parsedDate = new Date(dateStr).getTime();
-      } else {
-        parsedDate = new Date(dateStr.replace(' ', 'T') + '+06:00').getTime();
-      }
-
-      if (isNaN(parsedDate)) return '00 : 00 : 00';
-
-      const now = Date.now();
-      // মেইন সাইটে লগইন হওয়ার পর থেকে কত সেকেন্ড পার হয়েছে (00:00:01 থেকে 24:00:00 পর্যন্ত বাড়বে)
-      const elapsedSeconds = Math.max(0, Math.floor((now - parsedDate) / 1000));
-      // ২৪ ঘণ্টায় ক্যাপ
-      const displaySeconds = Math.min(24 * 3600, elapsedSeconds);
-
-      const hours = Math.floor(displaySeconds / 3600);
-      const minutes = Math.floor((displaySeconds % 3600) / 60);
-      const seconds = displaySeconds % 60;
-
-      return `${String(hours).padStart(2, '0')} : ${String(minutes).padStart(2, '0')} : ${String(seconds).padStart(2, '0')}`;
+      const hours = Math.floor(remaining / 3600);
+      const minutes = Math.floor((remaining % 3600) / 60);
+      const seconds = remaining % 60;
+      const fmt = (x) => String(x).padStart(2, '0');
+      return `${fmt(hours)} : ${fmt(minutes)} : ${fmt(seconds)}`;
     };
 
     setTimeStr(calc());
@@ -106,13 +73,13 @@ function WhatsAppCountdownTimer({
       return;
     }
 
-    // If online: tick live every 1 second
+    // If online: tick live countdown every 1 second
     const interval = setInterval(() => {
       setTimeStr(calc());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [loginDate, createTime, status, frozenElapsedSeconds, onlineTimeMs, offlineAt, updatedAt, isOnline]);
+  }, [unSettleSeconds, lastSettleTime, loginDate, createTime, status, frozenElapsedSeconds, onlineTimeMs, offlineAt, updatedAt, isOnline]);
 
   return (
     <div style={{
@@ -2222,6 +2189,8 @@ export default function App() {
                             loginDate={n.login_date}
                             createTime={n.create_time}
                             status={n.status}
+                            unSettleSeconds={n.un_settle_seconds}
+                            lastSettleTime={n.last_settle_time}
                             frozenElapsedSeconds={n.frozen_elapsed_seconds}
                             onlineTimeMs={n.online_time_ms}
                             offlineAt={n.offline_at}
