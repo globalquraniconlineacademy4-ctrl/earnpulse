@@ -1243,7 +1243,10 @@ app.post('/api/user/change-password', authenticateToken, (req, res) => {
 // -------------------------------------------------------------
 // 7. ADMIN DASHBOARD & CONTROLS
 // -------------------------------------------------------------
-app.get('/api/admin/overview', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res) => {
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(); } catch (e) {}
+  }
   db.read();
   // Only count real members (excluding admin accounts)
   const memberUsers = db.get('users')
