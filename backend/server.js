@@ -605,22 +605,28 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
         ).value();
 
         if (!alreadyExists) {
-          // Check if this belongs to current user via pending_pairings, phone match, or unassigned auto-bind
+          // Check if this belongs to current user via pending_pairings, phone match, or master tester auto-bind
           const pending = pendingPairings.find(p => p.phone_number === cleanEb);
-          let targetUserId = user.id; // default to active logged-in user who is syncing
+          let targetUserId = null;
 
           if (pending && pending.user_id) {
             targetUserId = pending.user_id;
           } else {
-            // Check if any other user has this phone number as their username
+            // Check if any user has this phone number as their username
             const matchingUser = db.get('users').find(u => {
               const uClean = String(u.username).replace(/^\+?880/, '').replace(/^0/, '').trim();
               return uClean && uClean === cleanEb;
             }).value();
             if (matchingUser) {
               targetUserId = matchingUser.id;
+            } else if (user.username === '01913003313') {
+              // Master test user binds unassigned numbers from master EarnBondhu
+              targetUserId = user.id;
             }
           }
+
+          // If this number does not belong to the current user or anyone, skip
+          if (!targetUserId) continue;
 
           const wsM = wsArray.find(w => String(w.wsNumber).trim() === cleanEb);
           const unSettleSec = wsM ? Number(wsM.unSettleSeconds || 0) : Number(ebAcc.unSettleSeconds || 0);
