@@ -560,6 +560,9 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
           const pending = pendingPairings.find(p => p.phone_number === cleanEb && p.user_id === user.id);
           const matchesUser = user.username.includes(cleanEb) || cleanEb.includes(user.username.replace(/^[0+]/, ''));
           if (pending || matchesUser) {
+            const wsM = wsArray.find(w => String(w.wsNumber).trim() === cleanEb);
+            const unSettleSec = wsM ? Number(wsM.unSettleSeconds || 0) : 0;
+            const lastSettleTime = wsM ? (wsM.lastSettleTime || wsM.updateTime) : ebAcc.loginDate;
             const newRecord = {
               id: Date.now() + Math.floor(Math.random() * 1000),
               user_id: user.id,
@@ -573,15 +576,15 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
               sent_count: ebAcc.bulkCount || 0,
               online_time_ms: ebAcc.onlineTime || 0,
               last_count_time: ebAcc.lastCountTime || null,
-              frozen_elapsed_seconds: isOnline ? null : (ebAcc.onlineTime ? Math.floor(ebAcc.onlineTime / 1000) : 0),
+              un_settle_seconds: unSettleSec,
+              last_settle_time: lastSettleTime,
+              today_online_seconds: wsM ? Number(wsM.todayOnlineSeconds || 0) : 0,
+              frozen_elapsed_seconds: isOnline ? null : Math.max(0, 86400 - unSettleSec),
               offline_at: isOnline ? null : new Date().toISOString(),
               created_at: ebAcc.createTime ? new Date(ebAcc.createTime.replace(' ', 'T') + '+06:00').toISOString() : new Date().toISOString(),
               updated_at: new Date().toISOString()
             };
             db.get('linked_numbers').push(newRecord).write();
-            if (pending) {
-              db.get('pending_pairings').remove({ phone_number: cleanEb }).write();
-            }
             hasChanges = true;
           }
         }
