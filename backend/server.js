@@ -163,6 +163,9 @@ async function calculateMemberTodayOnlineHours(userId, todayStr, todayMidnightMs
 }
 
 app.get('/api/checkin/status', authenticateToken, async (req, res) => {
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(); } catch (e) {}
+  }
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
   if (!user) return res.status(404).json({ success: false, msg: 'ব্যবহারকারী পাওয়া যায়নি' });
@@ -195,6 +198,9 @@ app.get('/api/checkin/status', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/checkin/do', authenticateToken, async (req, res) => {
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(); } catch (e) {}
+  }
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
   if (!user) return res.status(404).json({ success: false, msg: 'ব্যবহারকারী পাওয়া যায়নি' });
@@ -993,7 +999,10 @@ app.post('/api/whatsapp/sync-earnings', authenticateToken, async (req, res) => {
 // -------------------------------------------------------------
 // 5. REFERRAL SYSTEM & TEAM (আমার দল - সাব-অর্ডিনেট)
 // -------------------------------------------------------------
-app.get('/api/referrals', authenticateToken, (req, res) => {
+app.get('/api/referrals', authenticateToken, async (req, res) => {
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(); } catch (e) {}
+  }
   db.read();
   const referrals = db.get('users')
     .filter({ referred_by_id: req.user.id })
@@ -1070,6 +1079,9 @@ app.get('/api/config', (req, res) => {
 // 6. WITHDRAWALS
 // -------------------------------------------------------------
 app.post('/api/withdraw', authenticateToken, async (req, res) => {
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(); } catch (e) {}
+  }
   db.read();
   const { amount, method, accountNumber } = req.body;
   const withdrawAmount = parseFloat(amount);
@@ -1119,7 +1131,10 @@ app.post('/api/withdraw', authenticateToken, async (req, res) => {
   });
 });
 
-app.get('/api/withdraw/history', authenticateToken, (req, res) => {
+app.get('/api/withdraw/history', authenticateToken, async (req, res) => {
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(); } catch (e) {}
+  }
   const history = db.get('withdrawals')
     .filter({ user_id: req.user.id })
     .orderBy(['id'], ['desc'])
@@ -1131,7 +1146,10 @@ app.get('/api/withdraw/history', authenticateToken, (req, res) => {
 // -------------------------------------------------------------
 // 6.1 EARNINGS / TRANSACTIONS HISTORY (লেনদেনের ইতিহাস ও আয়ের বিবরণ)
 // -------------------------------------------------------------
-app.get('/api/user/transactions', authenticateToken, (req, res) => {
+app.get('/api/user/transactions', authenticateToken, async (req, res) => {
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(); } catch (e) {}
+  }
   const logs = db.get('earnings_log')
     .filter({ user_id: req.user.id })
     .orderBy(['id'], ['desc'])

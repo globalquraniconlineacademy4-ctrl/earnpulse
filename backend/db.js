@@ -98,16 +98,15 @@ async function syncToCloud() {
     const currentState = db.getState();
 
     // 🛡️ UNBREAKABLE PERMANENT DATA PRESERVATION GUARD:
-    // কোনো মেম্বার অ্যাকাউন্ট বা ব্যালেন্স কখনোই মুছে ফেলা যাবে না!
-    // ক্লাউড ও লোকাল ডেটা মার্জ করে সবসময় মেম্বারদের তথ্য ১০০% সুরক্ষিত রাখা হবে।
+    // কোনো মেম্বার অ্যাকাউন্ট, ব্যালেন্স, বা দৈনিক চেক-ইন কখনো মোছা বা কমে যাওয়া যাবে না!
     const existing = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
     if (existing && existing.data) {
-      // ১. মেম্বার অ্যাকাউন্ট শতভাগ সুরক্ষা ও ইউনিয়ন
+      // ১. মেম্বার অ্যাকাউন্ট শতভাগ সুরক্ষা ও ব্যালেন্স/চেকইন আপগ্রেড মার্জ
       const cloudUsers = existing.data.users || [];
       const currentUsers = currentState.users || [];
       const userMap = new Map();
 
-      // ক্লাউডের প্রতিটি সক্রিয় মেম্বার নিশ্চিতভাবে রাখা হবে
+      // ক্লাউডের প্রতিটি সক্রিয় মেম্বার রাখা হবে
       cloudUsers.forEach(u => {
         if (u && (u.id || u.username)) {
           const key = String(u.username || u.id);
@@ -115,13 +114,38 @@ async function syncToCloud() {
         }
       });
 
-      // লোকালের নতুন নিবন্ধিত মেম্বার ও আপডেট মার্জ
+      // লোকালের নতুন নিবন্ধিত মেম্বার ও আপডেট মার্জ (কখনোই ব্যালেন্স বা হিস্ট্রি ডাউনগ্রেড হবে না)
       currentUsers.forEach(u => {
         if (u && (u.id || u.username)) {
           const key = String(u.username || u.id);
           const existingU = userMap.get(key);
           if (existingU) {
-            userMap.set(key, { ...existingU, ...u });
+            // ব্যালেন্স বা মোট আয় কখনোই ভুলবশত কমে যাবে না (সর্বোচ্চটি থাকবে)
+            const mergedBalance = Math.max(Number(existingU.balance || 0), Number(u.balance || 0));
+            const mergedTotal = Math.max(Number(existingU.total_earned || 0), Number(u.total_earned || 0));
+
+            // চেক-ইন হিস্ট্রি ইউনিয়ন - একবার ক্লেইম হলে তা চিরস্থায়ী থাকবে
+            const historySet = new Set([
+              ...(Array.isArray(existingU.checkin_history) ? existingU.checkin_history : []),
+              ...(Array.isArray(u.checkin_history) ? u.checkin_history : [])
+            ]);
+            const mergedHistory = Array.from(historySet);
+            const mergedCount = Math.max(Number(existingU.checkin_count || 0), Number(u.checkin_count || 0), mergedHistory.length);
+
+            // সর্বশেষ চেক-ইন তারিখ সংরক্ষণ
+            const lastDate = (existingU.last_checkin_date && u.last_checkin_date)
+              ? (existingU.last_checkin_date > u.last_checkin_date ? existingU.last_checkin_date : u.last_checkin_date)
+              : (existingU.last_checkin_date || u.last_checkin_date || null);
+
+            userMap.set(key, {
+              ...existingU,
+              ...u,
+              balance: mergedBalance,
+              total_earned: mergedTotal,
+              checkin_history: mergedHistory,
+              checkin_count: mergedCount,
+              last_checkin_date: lastDate
+            });
           } else {
             userMap.set(key, u);
           }
@@ -154,6 +178,22 @@ async function syncToCloud() {
       });
 
       currentState.linked_numbers = Array.from(numMap.values());
+
+      // ৩. ট্রানজ্যাকশন ও আয়ের হিসাব (earnings_log) পার্মানেন্ট ইউনিয়ন
+      const cloudLogs = existing.data.earnings_log || [];
+      const currentLogs = currentState.earnings_log || [];
+      const logMap = new Map();
+      cloudLogs.forEach(l => { if (l && l.id) logMap.set(String(l.id), l); });
+      currentLogs.forEach(l => { if (l && l.id) logMap.set(String(l.id), l); });
+      currentState.earnings_log = Array.from(logMap.values()).sort((a, b) => b.id - a.id);
+
+      // ৪. উত্তোলন হিস্ট্রি (withdrawals) পার্মানেন্ট ইউনিয়ন
+      const cloudW = existing.data.withdrawals || [];
+      const currentW = currentState.withdrawals || [];
+      const wMap = new Map();
+      cloudW.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
+      currentW.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
+      currentState.withdrawals = Array.from(wMap.values()).sort((a, b) => b.id - a.id);
     }
 
     await mdb.collection('app_state').updateOne(
@@ -161,6 +201,9 @@ async function syncToCloud() {
       { $set: { data: currentState, updated_at: new Date() } },
       { upsert: true }
     );
+
+    // মেমোরি স্টেটকেও সাথে সাথে আপডেটেড করে নেওয়া যাতে একই রিকোয়েস্টে পুরোনো ডাটা না থাকে
+    db.setState(currentState);
   } catch (err) {
     console.error('❌ [Database Write Error] Failed to persist to MongoDB:', err.message);
   }
