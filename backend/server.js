@@ -414,6 +414,9 @@ app.post('/api/admin/login', (req, res) => {
 // 2. USER PROFILE & STATS
 // -------------------------------------------------------------
 app.get('/api/user/me', authenticateToken, async (req, res) => {
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(); } catch (e) {}
+  }
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
   if (!user) return res.status(404).json({ success: false, msg: 'User not found' });

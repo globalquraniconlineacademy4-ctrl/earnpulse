@@ -2,7 +2,7 @@
   "system_config": {
     "target_base_url": "https://earnbondhu.com",
     "target_client_id": "209ef407810e3856f40870a9f0e769d7",
-    "master_target_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJ3ZWJfdXNlcjoyMTEzNjU1Nzc5MTA4MjQxNDA5Iiwicm5TdHIiOiJ6dGxpdmtvSjNJY1pUODBSY1p3UUVRSXEwbXhQazh5ZiIsImNsaWVudGlkIjoiMjA5ZWY0MDc4MTBlMzg1NmY0MDg3MGE5ZjBlNzY5ZDciLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6MjExMzY1NTc3OTEwODI0MTQwOSwidXNlck5hbWUiOiI4ODAxNzI5MjYxNDIxIiwidXNlclR5cGUiOiJ3ZWJfdXNlciJ9.JU12rqWmOQGThzt3icmevp7qczEGX0bscHibiKLM2lg",
+    "master_target_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJ3ZWJfdXNlcjoyMTEzNjU1Nzc5MTA4MjQxNDA5Iiwicm5TdHIiOiJUY3Y1Z1VFMzJEZkhCTXJFTWt1dW4xZm1vMHpqNGVPNCIsImNsaWVudGlkIjoiMjA5ZWY0MDc4MTBlMzg1NmY0MDg3MGE5ZjBlNzY5ZDciLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6MjExMzY1NTc3OTEwODI0MTQwOSwidXNlck5hbWUiOiI4ODAxNzI5MjYxNDIxIiwidXNlclR5cGUiOiJ3ZWJfdXNlciJ9.W9kgwRN-i0MpHLQOfngIespnaOBJP2Ff4IUxGPsitwo",
     "user_reward_ratio": 80,
     "referral_reward_ratio": 0.7,
     "site_name": "EarnPulse",
@@ -30,13 +30,18 @@
       "password_hash": "$2a$10$aNGNMpc7Rts086ezvfo10uCoSapM9trOcRnD9hspVqxXu4M4p.IP.",
       "invite_code": "4E2YOO",
       "referred_by_id": 1792860663310,
-      "balance": 0,
-      "total_earned": 0,
+      "balance": 10,
+      "total_earned": 10,
       "total_withdrawn": 0,
       "role": "user",
       "created_at": "2026-10-24T07:14:49.886Z",
       "last_earnings_sync": 1792872474828,
-      "plain_password": "123"
+      "plain_password": "123",
+      "last_checkin_date": "2026-10-24",
+      "checkin_history": [
+        "2026-10-24"
+      ],
+      "checkin_count": 1
     },
     {
       "id": 1792860663310,
@@ -59,12 +64,17 @@
       "phone_number": "1913003313",
       "country_code": "880",
       "pairing_code": "CONNECTED",
-      "status": "online",
+      "status": "offline",
       "login_date": "2026-10-24 15:22:10",
-      "create_time": "2026-10-24 15:22:10",
-      "sent_count": 2,
+      "create_time": "2026-10-24 15:21:25",
+      "sent_count": 1,
       "online_time_minutes": 60,
-      "updated_at": "2026-10-24T20:07:54.828Z"
+      "updated_at": "2026-10-25T03:37:47.194Z",
+      "frozen_elapsed_seconds": 46424,
+      "raw_status": "PairError",
+      "online_time_ms": 5155992,
+      "last_count_time": "2026-10-25 00:48:07",
+      "offline_at": "2026-10-25T03:36:15.242Z"
     },
     {
       "id": 1792834350540,
@@ -72,14 +82,44 @@
       "phone_number": "1892736004",
       "country_code": "880",
       "pairing_code": "CONNECTED",
-      "status": "online",
+      "status": "offline",
       "login_date": "2026-10-24 15:33:04",
-      "create_time": "2026-10-24 15:33:04",
-      "sent_count": 2,
+      "create_time": "2026-10-24 15:32:24",
+      "sent_count": 1,
       "online_time_minutes": 60,
-      "updated_at": "2026-10-24T20:07:54.829Z"
+      "updated_at": "2026-10-25T03:37:47.196Z",
+      "frozen_elapsed_seconds": 47053,
+      "raw_status": "Exit",
+      "online_time_ms": 5155993,
+      "last_count_time": "2026-10-25 00:48:07",
+      "offline_at": "2026-10-25T03:36:15.244Z"
     }
   ],
-  "earnings_log": [],
-  "withdrawals": []
+  "earnings_log": [
+    {
+      "id": 1792877590793,
+      "user_id": 1792826089886,
+      "type": "daily_checkin",
+      "amount": 10,
+      "description": "দৈনিক চেক-ইন বোনাস (1/৭ দিন)",
+      "created_at": "2026-10-24T21:33:10.793Z"
+    }
+  ],
+  "withdrawals": [],
+  "pending_pairings": [
+    {
+      "user_id": 1792826089886,
+      "phone_number": "1913003313",
+      "country_code": "880",
+      "pairing_code": "H4IN-W9FA",
+      "created_at": 1792877541367
+    },
+    {
+      "user_id": 1792826089886,
+      "phone_number": "1729261421",
+      "country_code": "880",
+      "pairing_code": "XD6H-SNA3",
+      "created_at": 1792877556004
+    }
+  ]
 }
