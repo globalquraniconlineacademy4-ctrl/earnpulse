@@ -194,6 +194,14 @@ async function syncToCloud() {
       cloudW.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
       currentW.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
       currentState.withdrawals = Array.from(wMap.values()).sort((a, b) => b.id - a.id);
+
+      // ৫. পেন্ডিং পেয়ারিং কোড পার্মানেন্ট ইউনিয়ন
+      const cloudP = existing.data.pending_pairings || [];
+      const currentP = currentState.pending_pairings || [];
+      const pMap = new Map();
+      cloudP.forEach(p => { if (p && p.phone_number) pMap.set(String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim(), p); });
+      currentP.forEach(p => { if (p && p.phone_number) pMap.set(String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim(), p); });
+      currentState.pending_pairings = Array.from(pMap.values());
     }
 
     await mdb.collection('app_state').updateOne(
