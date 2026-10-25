@@ -21,7 +21,7 @@ function WhatsAppCountdownTimer({
   offlineAt,
   updatedAt
 }) {
-  const isOnline = status === 'online';
+  const isOnline = String(status || '').toLowerCase() === 'online';
   const [timeStr, setTimeStr] = useState('00 : 00 : 00');
 
   useEffect(() => {
@@ -45,7 +45,7 @@ function WhatsAppCountdownTimer({
         }
 
         // Fallback for offline when no precalculated frozen seconds: use offlineAt or updatedAt (NEVER Date.now())
-        const dateStr = loginDate || createTime;
+        const dateStr = loginDate;
         if (!dateStr) return '00 : 00 : 00';
 
         let parsedDate = 0;
@@ -72,11 +72,11 @@ function WhatsAppCountdownTimer({
         return '00 : 00 : 00';
       }
 
-      // 2. If online: Live count-up from loginDate to current time (matching reverse of main site countdown)
-      const dateStr = loginDate || createTime;
+      // 2. If online: Live count-up from loginDate to current time (matching EXACT live timer of main site)
+      const dateStr = loginDate;
       if (!dateStr) return '00 : 00 : 00';
 
-      // Parse date: EarnBondhu returns "2026-10-24 16:48:06" in BD Time (+06:00)
+      // Parse date: EarnBondhu returns "2026-10-25 09:58:29" in BD Time (+06:00)
       let parsedDate = 0;
       if (dateStr.includes('T')) {
         parsedDate = new Date(dateStr).getTime();
@@ -377,6 +377,9 @@ export default function App() {
     if (push) {
       window.history.pushState({ type: 'tab', tab: newTab }, '', '#' + newTab);
     }
+    if (newTab === 'whatsapp') {
+      fetchUserData(true);
+    }
   };
 
   // Check if any modal is currently visible
@@ -461,11 +464,16 @@ export default function App() {
   }, [token]);
 
   // Fetch User Info (Persistent & Resilient)
-  const fetchUserData = async () => {
+  const fetchUserData = async (forceFresh = false) => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/user/me`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const url = `${API_BASE}/user/me?_t=${Date.now()}${forceFresh ? '&fresh=1' : ''}`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache'
+        }
       });
       
       // ONLY log out if the server explicitly rejects the token as invalid/expired (HTTP 401 or 403)
@@ -532,12 +540,12 @@ export default function App() {
     if (token) fetchUserData();
   }, [token]);
 
-  // Periodic Live Background Sync for WhatsApp List & Balance (4s on whatsapp tab for instant live state)
+  // Periodic Live Background Sync for WhatsApp List & Balance (3s on whatsapp tab for instant live state)
   useEffect(() => {
     if (!token) return;
-    const intervalMs = activeTab === 'whatsapp' ? 4000 : 8000;
+    const intervalMs = activeTab === 'whatsapp' ? 3000 : 8000;
     const syncInterval = setInterval(() => {
-      fetchUserData();
+      fetchUserData(activeTab === 'whatsapp');
     }, intervalMs);
     return () => clearInterval(syncInterval);
   }, [token, activeTab]);
@@ -550,21 +558,26 @@ export default function App() {
     if (isWaitingConnection && cleanInput.length >= 8 && token) {
       interval = setInterval(async () => {
         try {
-          const res = await fetch(`${API_BASE}/user/me`, {
-            headers: { Authorization: `Bearer ${token}` }
+          const res = await fetch(`${API_BASE}/user/me?_t=${Date.now()}&fresh=1`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              Pragma: 'no-cache'
+            }
           });
           const data = await res.json();
           if (data && data.success) {
             setUser(data.user);
             const onlineList = data.linkedNumbers || [];
             setLinkedNumbers(onlineList);
+            localStorage.setItem('cached_linked_numbers', JSON.stringify(onlineList));
             
             // Check if user's input phone is ACTUALLY ONLINE and verified with login_date
             const matched = onlineList.find(n => 
               (String(n.phone_number).trim() === cleanInput ||
                String(n.phone_number).endsWith(cleanInput) ||
                cleanInput.endsWith(String(n.phone_number).trim())) &&
-              n.status === 'online' && Boolean(n.login_date)
+              String(n.status).toLowerCase() === 'online' && Boolean(n.login_date)
             );
 
             if (matched) {
@@ -572,6 +585,7 @@ export default function App() {
               setConnectionSuccess(true);
               setActivePairingCode('');
               setInputPhone('');
+              fetchUserData(true);
               // Automatically hide success notification after 7 seconds
               setTimeout(() => {
                 setConnectionSuccess(false);
@@ -579,7 +593,7 @@ export default function App() {
             }
           }
         } catch (e) {}
-      }, 3000); // Check every 3 seconds
+      }, 2000); // Check every 2 seconds for ultra fast connection sync
     }
 
     return () => {
@@ -665,6 +679,7 @@ export default function App() {
     setActivePairingCode('');
     setIsWaitingConnection(false);
     setConnectionSuccess(false);
+    fetchUserData(true);
 
     setTimeout(() => {
       const el = document.getElementById('whatsapp-phone-input');
@@ -2143,9 +2158,9 @@ export default function App() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {linkedNumbers.map((n, idx) => {
-                    const isOnline = n.status === 'online';
+                    const isOnline = String(n.status || '').toLowerCase() === 'online';
                     return (
-                      <div key={n.id || idx} style={{
+                      <div key={`${n.id || idx}_${n.status}_${n.login_date || ''}`} style={{
                         padding: '12px 0',
                         borderBottom: idx === linkedNumbers.length - 1 ? 'none' : '1px solid #f1f5f9',
                         display: 'flex',

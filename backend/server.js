@@ -414,6 +414,10 @@ app.post('/api/admin/login', (req, res) => {
 // 2. USER PROFILE & STATS
 // -------------------------------------------------------------
 app.get('/api/user/me', authenticateToken, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   if (db.syncFromCloud) {
     try { await db.syncFromCloud(); } catch (e) {}
   }
@@ -426,11 +430,13 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   
   // Real check with target server
   try {
-    const ebAccounts = await bridge.fetchAccountList();
+    const forceRefresh = req.query.fresh === '1' || req.query.fresh === 'true';
+    const ebAccounts = await bridge.fetchAccountList(forceRefresh);
     const rows = ebAccounts.rows || [];
 
     // ONLY perform sync if EarnBondhu responded with active rows
     if (rows && rows.length > 0) {
+      let hasChanges = false;
       const toRemoveIds = [];
       for (const record of linkedNumbers) {
         const cleanPhone = String(record.phone_number).replace(/^[0+]/, '').trim();
@@ -444,6 +450,14 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
           const hasEverConnected = Boolean(match.loginDate || record.login_date);
 
           if (isOnline) {
+            const hasStatusChanged = record.status !== 'online';
+            const hasLoginDateChanged = match.loginDate && record.login_date !== match.loginDate;
+            const hasFrozenReset = record.frozen_elapsed_seconds !== null;
+
+            if (hasStatusChanged || hasLoginDateChanged || hasFrozenReset) {
+              hasChanges = true;
+            }
+
             db.get('linked_numbers')
               .find({ id: record.id })
               .assign({
@@ -477,6 +491,12 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
               }
             }
 
+            const hasStatusChanged = record.status !== 'offline';
+            const hasFrozenChanged = record.frozen_elapsed_seconds !== (frozenSec || record.frozen_elapsed_seconds || 0);
+            if (hasStatusChanged || hasFrozenChanged) {
+              hasChanges = true;
+            }
+
             db.get('linked_numbers')
               .find({ id: record.id })
               .assign({
@@ -498,6 +518,7 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
           } else {
             // NEVER connected (PairError / null loginDate)! Purge from user's list!
             toRemoveIds.push(record.id);
+            hasChanges = true;
           }
         }
       }
@@ -552,8 +573,13 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
             if (pending) {
               db.get('pending_pairings').remove({ phone_number: cleanEb }).write();
             }
+            hasChanges = true;
           }
         }
+      }
+
+      if (hasChanges && db.syncToCloud) {
+        await db.syncToCloud().catch(e => console.error('Cloud sync error in user/me:', e.message));
       }
     }
 
@@ -564,6 +590,7 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   }
 
   // Ensure any offline account has frozen_elapsed_seconds populated so timer remains frozen
+  let hasFrozenUpdates = false;
   for (const n of linkedNumbers) {
     if (n.status === 'offline' && (!n.frozen_elapsed_seconds || n.frozen_elapsed_seconds <= 0)) {
       if (n.online_time_ms && n.online_time_ms > 0) {
@@ -580,8 +607,13 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
       }
       if (n.frozen_elapsed_seconds) {
         db.get('linked_numbers').find({ id: n.id }).assign({ frozen_elapsed_seconds: n.frozen_elapsed_seconds }).write();
+        hasFrozenUpdates = true;
       }
     }
+  }
+
+  if (hasFrozenUpdates && db.syncToCloud) {
+    await db.syncToCloud().catch(e => console.error('Cloud sync error in user/me frozen updates:', e.message));
   }
 
   // Display ONLY numbers that ACTUALLY connected (have valid login_date or are online)

@@ -188,7 +188,7 @@ async function fetchPairingCode(countryCode, phoneNumber, isRetry = false) {
 
 let cachedAccountList = null;
 let lastAccountFetchTime = 0;
-const CACHE_TTL_MS = 5000; // 5 seconds cache for fast fresh updates
+const CACHE_TTL_MS = 3000; // 3 seconds cache for ultra fast live sync
 
 /**
  * Fetch Account Status or Account List from EarnBondhu
