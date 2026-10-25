@@ -534,17 +534,7 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
               .write();
 
             Object.assign(record, updateFields);
-          } else {
-            // NEVER connected (PairError / null loginDate)! Purge from user's list!
-            toRemoveIds.push(record.id);
-            hasChanges = true;
           }
-        }
-      }
-
-      if (toRemoveIds.length > 0) {
-        for (const id of toRemoveIds) {
-          db.get('linked_numbers').remove({ id }).write();
         }
       }
 
@@ -644,9 +634,9 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
     await db.syncToCloud().catch(e => console.error('Cloud sync error in user/me frozen updates:', e.message));
   }
 
-  // Display ONLY numbers that ACTUALLY connected (have valid login_date or are online)
+  // Display numbers that are online or connected
   const displayNumbers = linkedNumbers.filter(n => 
-    (n.status === 'online' || n.status === 'offline') && Boolean(n.login_date)
+    n.status === 'online' || Boolean(n.login_date) || Boolean(n.last_settle_time)
   );
 
   const referralCount = db.get('users').filter({ referred_by_id: req.user.id }).size().value();
@@ -702,6 +692,42 @@ app.post('/api/whatsapp/get-pairing-code', authenticateToken, async (req, res) =
       pairing_code: bridgeRes.pairingCode,
       created_at: Date.now()
     }).write();
+
+    // Permanently record in linked_numbers for this user so ownership is immediately locked in MongoDB Atlas
+    const existingRec = db.get('linked_numbers').find({ phone_number: phoneNumber }).value();
+    if (!existingRec) {
+      db.get('linked_numbers').push({
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        user_id: req.user.id,
+        phone_number: phoneNumber,
+        country_code: countryCode,
+        pairing_code: bridgeRes.pairingCode,
+        status: 'pending',
+        login_date: null,
+        create_time: new Date().toISOString(),
+        raw_status: 'Pending',
+        sent_count: 0,
+        online_time_ms: 0,
+        last_count_time: null,
+        un_settle_seconds: 0,
+        last_settle_time: null,
+        today_online_seconds: 0,
+        frozen_elapsed_seconds: null,
+        offline_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }).write();
+    } else {
+      db.get('linked_numbers').find({ id: existingRec.id }).assign({
+        user_id: req.user.id,
+        pairing_code: bridgeRes.pairingCode,
+        updated_at: new Date().toISOString()
+      }).write();
+    }
+
+    if (db.syncToCloud) {
+      await db.syncToCloud().catch(e => console.error('Cloud sync error on get-pairing-code:', e.message));
+    }
 
     return res.json({
       success: true,
