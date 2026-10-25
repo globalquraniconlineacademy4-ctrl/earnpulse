@@ -574,15 +574,28 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
         }
       }
 
-      // 2. Check pending pairings or EarnBondhu accounts that actually connected
+      // 2. Combine and check all connected WhatsApp accounts from EarnBondhu (both bulk/account/list and wsOnlineStatus/list)
       const pendingPairings = db.get('pending_pairings').value() || [];
-      for (const ebAcc of rows) {
-        if (!ebAcc.phoneNumber && !ebAcc.pn) continue;
-        const cleanEb = String(ebAcc.phoneNumber || ebAcc.pn).replace(/^\+?880/, '').trim();
-        if (!cleanEb) continue;
+      const allEbNumbersMap = new Map();
 
-        const isOnline = String(ebAcc.status).toLowerCase() === 'online';
-        const hasEverConnected = Boolean(ebAcc.loginDate);
+      rows.forEach(ebAcc => {
+        if (!ebAcc.phoneNumber && !ebAcc.pn) return;
+        const clean = String(ebAcc.phoneNumber || ebAcc.pn).replace(/^\+?880/, '').trim();
+        if (clean) allEbNumbersMap.set(clean, { ...ebAcc, cleanPhone: clean });
+      });
+
+      wsArray.forEach(w => {
+        if (!w.wsNumber) return;
+        const clean = String(w.wsNumber).replace(/^\+?880/, '').trim();
+        if (clean) {
+          const existing = allEbNumbersMap.get(clean) || {};
+          allEbNumbersMap.set(clean, { ...existing, ...w, cleanPhone: clean });
+        }
+      });
+
+      for (const [cleanEb, ebAcc] of allEbNumbersMap.entries()) {
+        const isOnline = String(ebAcc.status || ebAcc.currentStatus).toLowerCase() === 'online' || ebAcc.currentStatus === '1';
+        const hasEverConnected = Boolean(ebAcc.loginDate || ebAcc.lastSettleTime || ebAcc.lastOnlineTime);
 
         // ONLY process accounts that actually connected on WhatsApp!
         if (!isOnline && !hasEverConnected) continue;
@@ -592,37 +605,52 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
         ).value();
 
         if (!alreadyExists) {
-          // Check if this belongs to current user via pending_pairings or phone match
-          const pending = pendingPairings.find(p => p.phone_number === cleanEb && p.user_id === user.id);
-          const matchesUser = user.username.includes(cleanEb) || cleanEb.includes(user.username.replace(/^[0+]/, ''));
-          if (pending || matchesUser) {
-            const wsM = wsArray.find(w => String(w.wsNumber).trim() === cleanEb);
-            const unSettleSec = wsM ? Number(wsM.unSettleSeconds || 0) : 0;
-            const lastSettleTime = wsM ? (wsM.lastSettleTime || wsM.updateTime) : ebAcc.loginDate;
-            const newRecord = {
-              id: Date.now() + Math.floor(Math.random() * 1000),
-              user_id: user.id,
-              phone_number: cleanEb,
-              country_code: ebAcc.countryCode || '880',
-              pairing_code: pending ? pending.pairing_code : 'AUTO-SYNC',
-              status: isOnline ? 'online' : 'offline',
-              login_date: ebAcc.loginDate || null,
-              create_time: ebAcc.createTime || null,
-              raw_status: ebAcc.status,
-              sent_count: ebAcc.bulkCount || 0,
-              online_time_ms: ebAcc.onlineTime || 0,
-              last_count_time: ebAcc.lastCountTime || null,
-              un_settle_seconds: unSettleSec,
-              last_settle_time: lastSettleTime,
-              today_online_seconds: wsM ? Number(wsM.todayOnlineSeconds || 0) : 0,
-              frozen_elapsed_seconds: isOnline ? null : Math.max(0, 86400 - unSettleSec),
-              offline_at: isOnline ? null : new Date().toISOString(),
-              created_at: ebAcc.createTime ? new Date(ebAcc.createTime.replace(' ', 'T') + '+06:00').toISOString() : new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            };
-            db.get('linked_numbers').push(newRecord).write();
-            hasChanges = true;
+          // Check if this belongs to current user via pending_pairings, phone match, or unassigned auto-bind
+          const pending = pendingPairings.find(p => p.phone_number === cleanEb);
+          let targetUserId = user.id; // default to active logged-in user who is syncing
+
+          if (pending && pending.user_id) {
+            targetUserId = pending.user_id;
+          } else {
+            // Check if any other user has this phone number as their username
+            const matchingUser = db.get('users').find(u => {
+              const uClean = String(u.username).replace(/^\+?880/, '').replace(/^0/, '').trim();
+              return uClean && uClean === cleanEb;
+            }).value();
+            if (matchingUser) {
+              targetUserId = matchingUser.id;
+            }
           }
+
+          const wsM = wsArray.find(w => String(w.wsNumber).trim() === cleanEb);
+          const unSettleSec = wsM ? Number(wsM.unSettleSeconds || 0) : Number(ebAcc.unSettleSeconds || 0);
+          const lastSettleTime = (wsM && (wsM.lastSettleTime || wsM.updateTime)) || ebAcc.loginDate || ebAcc.lastOnlineTime;
+          const newRecord = {
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            user_id: targetUserId,
+            phone_number: cleanEb,
+            country_code: ebAcc.countryCode || '880',
+            pairing_code: (pending && pending.pairing_code) || 'CONNECTED',
+            status: isOnline ? 'online' : 'offline',
+            login_date: ebAcc.loginDate || lastSettleTime || null,
+            create_time: ebAcc.createTime || null,
+            raw_status: ebAcc.status || (isOnline ? 'Online' : 'Exit'),
+            sent_count: ebAcc.bulkCount || 0,
+            online_time_ms: ebAcc.onlineTime || 0,
+            last_count_time: ebAcc.lastCountTime || null,
+            un_settle_seconds: unSettleSec,
+            last_settle_time: lastSettleTime,
+            today_online_seconds: (wsM && Number(wsM.todayOnlineSeconds || 0)) || 0,
+            frozen_elapsed_seconds: isOnline ? null : Math.max(0, 86400 - unSettleSec),
+            offline_at: isOnline ? null : new Date().toISOString(),
+            created_at: ebAcc.createTime ? new Date(ebAcc.createTime.replace(' ', 'T') + '+06:00').toISOString() : new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          db.get('linked_numbers').push(newRecord).write();
+          hasChanges = true;
+        } else if (alreadyExists && !alreadyExists.user_id) {
+          db.get('linked_numbers').find({ id: alreadyExists.id }).assign({ user_id: user.id }).write();
+          hasChanges = true;
         }
       }
 
