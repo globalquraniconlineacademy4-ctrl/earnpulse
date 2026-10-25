@@ -65,6 +65,8 @@ async function getMongoDb() {
   }
 }
 
+let hasSyncedFromCloud = false;
+
 // Sync from MongoDB Atlas into lowdb on startup/request
 async function syncFromCloud() {
   if (!MONGODB_URI) return;
@@ -75,9 +77,10 @@ async function syncFromCloud() {
     const doc = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
     if (doc && doc.data) {
       db.setState(doc.data);
+      hasSyncedFromCloud = true;
       console.log(`☁️ [Database] Synced ${doc.data.users?.length || 0} users from MongoDB Atlas!`);
     } else {
-      // First time initialization: upload current state to MongoDB Atlas
+      hasSyncedFromCloud = true;
       await syncToCloud();
     }
   } catch (err) {
@@ -85,7 +88,7 @@ async function syncFromCloud() {
   }
 }
 
-// Persist lowdb state to MongoDB Atlas
+// Persist lowdb state to MongoDB Atlas (Protected Against Accidental Data Loss)
 async function syncToCloud() {
   if (!MONGODB_URI) return;
   try {
@@ -93,6 +96,19 @@ async function syncToCloud() {
     if (!mdb) return;
 
     const currentState = db.getState();
+
+    // 🛡️ DATA LOSS PREVENTION GUARD:
+    // কখনোই কোনো খালি বা অসম্পূর্ণ লোকাল ডাটা দিয়ে ক্লাউডের আসল মেম্বারদের অ্যাকাউন্ট মোছা যাবে না!
+    if (!hasSyncedFromCloud) {
+      const existing = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
+      if (existing && existing.data && (existing.data.users?.length || 0) > (currentState.users?.length || 0)) {
+        console.warn('🛡️ [Data Protection Guard] Blocked overwrite to protect member data! Restoring cloud state.');
+        db.setState(existing.data);
+        hasSyncedFromCloud = true;
+        return;
+      }
+    }
+
     await mdb.collection('app_state').updateOne(
       { _id: 'earnpulse_store' },
       { $set: { data: currentState, updated_at: new Date() } },
