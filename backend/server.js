@@ -468,7 +468,33 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   if (!user) return res.status(404).json({ success: false, msg: 'User not found' });
 
   // Sync real WhatsApp account status from EarnBondhu
-  let linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value() || [];
+  const initialPending = db.get('pending_pairings').value() || [];
+  const cleanMyPhone = String(user.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+
+  let linkedNumbers = db.get('linked_numbers').filter(n => {
+    const cleanN = String(n.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+    if (cleanN && cleanN === cleanMyPhone) return true;
+    const isPairedByMe = initialPending.some(p => {
+      const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+      return pClean === cleanN && p.user_id === req.user.id;
+    });
+    if (isPairedByMe) return true;
+
+    const isPairedByOther = initialPending.some(p => {
+      const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+      return pClean === cleanN && p.user_id !== req.user.id;
+    });
+    if (isPairedByOther) return false;
+
+    return n.user_id === req.user.id;
+  }).value() || [];
+
+  linkedNumbers.forEach(n => {
+    if (n.user_id !== req.user.id) {
+      db.get('linked_numbers').find({ id: n.id }).assign({ user_id: req.user.id }).write();
+      n.user_id = req.user.id;
+    }
+  });
   
   // Real check with target server
   try {
@@ -687,7 +713,31 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
     }
 
     // Re-read user's linked numbers after sync
-    linkedNumbers = db.get('linked_numbers').filter({ user_id: req.user.id }).value() || [];
+    const currentPendingSync = db.get('pending_pairings').value() || [];
+    linkedNumbers = db.get('linked_numbers').filter(n => {
+      const cleanN = String(n.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+      if (cleanN && cleanN === cleanMyPhone) return true;
+      const isPairedByMe = currentPendingSync.some(p => {
+        const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+        return pClean === cleanN && p.user_id === req.user.id;
+      });
+      if (isPairedByMe) return true;
+
+      const isPairedByOther = currentPendingSync.some(p => {
+        const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+        return pClean === cleanN && p.user_id !== req.user.id;
+      });
+      if (isPairedByOther) return false;
+
+      return n.user_id === req.user.id;
+    }).value() || [];
+
+    linkedNumbers.forEach(n => {
+      if (n.user_id !== req.user.id) {
+        db.get('linked_numbers').find({ id: n.id }).assign({ user_id: req.user.id }).write();
+        n.user_id = req.user.id;
+      }
+    });
   } catch (syncErr) {
     console.error('EarnBondhu sync status error:', syncErr.message);
   }

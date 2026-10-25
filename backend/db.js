@@ -154,7 +154,29 @@ async function syncToCloud() {
 
       currentState.users = Array.from(userMap.values());
 
-      // ২. লিঙ্কড হোয়াটসঅ্যাপ নম্বর সুরক্ষা ও ইউনিয়ন
+      // ২. পেন্ডিং পেয়ারিং কোড পার্মানেন্ট ইউনিয়ন (সবার আগে মার্জ করা যাতে নম্বরের আসল মালিক নিশ্চিত হওয়া যায়)
+      const cloudP = existing.data.pending_pairings || [];
+      const currentP = currentState.pending_pairings || [];
+      const pMap = new Map();
+      cloudP.forEach(p => { if (p && p.phone_number) pMap.set(String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim(), p); });
+      currentP.forEach(p => { if (p && p.phone_number) pMap.set(String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim(), p); });
+      currentState.pending_pairings = Array.from(pMap.values());
+
+      const pendingList = currentState.pending_pairings;
+      const userList = currentState.users;
+
+      const getTrueOwnerId = (phone, fallbackId) => {
+        const clean = String(phone).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+        const p = pendingList.find(x => String(x.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim() === clean);
+        if (p && p.user_id) return p.user_id;
+
+        const u = userList.find(x => String(x.username).replace(/^\+?880/, '').replace(/^0+/, '').trim() === clean);
+        if (u && u.id) return u.id;
+
+        return fallbackId;
+      };
+
+      // ৩. লিঙ্কড হোয়াটসঅ্যাপ নম্বর সুরক্ষা ও ইউনিয়ন
       const cloudNumbers = existing.data.linked_numbers || [];
       const currentNumbers = currentState.linked_numbers || [];
       const numMap = new Map();
@@ -162,7 +184,8 @@ async function syncToCloud() {
       cloudNumbers.forEach(n => {
         if (n && n.phone_number) {
           const key = String(n.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
-          numMap.set(key, n);
+          const trueUid = getTrueOwnerId(n.phone_number, n.user_id);
+          numMap.set(key, { ...n, user_id: trueUid });
         }
       });
 
@@ -170,19 +193,18 @@ async function syncToCloud() {
         if (n && n.phone_number) {
           const key = String(n.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
           const existingN = numMap.get(key);
+          const trueUid = getTrueOwnerId(n.phone_number, existingN ? existingN.user_id : n.user_id);
           if (existingN) {
-            // Keep the true user ownership from existing Atlas record if present
-            const assignedUserId = existingN.user_id || n.user_id;
-            numMap.set(key, { ...existingN, ...n, user_id: assignedUserId });
+            numMap.set(key, { ...existingN, ...n, user_id: trueUid });
           } else {
-            numMap.set(key, n);
+            numMap.set(key, { ...n, user_id: trueUid });
           }
         }
       });
 
       currentState.linked_numbers = Array.from(numMap.values());
 
-      // ৩. ট্রানজ্যাকশন ও আয়ের হিসাব (earnings_log) পার্মানেন্ট ইউনিয়ন
+      // ৪. ট্রানজ্যাকশন ও আয়ের হিসাব (earnings_log) পার্মানেন্ট ইউনিয়ন
       const cloudLogs = existing.data.earnings_log || [];
       const currentLogs = currentState.earnings_log || [];
       const logMap = new Map();
@@ -190,21 +212,13 @@ async function syncToCloud() {
       currentLogs.forEach(l => { if (l && l.id) logMap.set(String(l.id), l); });
       currentState.earnings_log = Array.from(logMap.values()).sort((a, b) => b.id - a.id);
 
-      // ৪. উত্তোলন হিস্ট্রি (withdrawals) পার্মানেন্ট ইউনিয়ন
+      // ৫. উত্তোলন হিস্ট্রি (withdrawals) পার্মানেন্ট ইউনিয়ন
       const cloudW = existing.data.withdrawals || [];
       const currentW = currentState.withdrawals || [];
       const wMap = new Map();
       cloudW.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
       currentW.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
       currentState.withdrawals = Array.from(wMap.values()).sort((a, b) => b.id - a.id);
-
-      // ৫. পেন্ডিং পেয়ারিং কোড পার্মানেন্ট ইউনিয়ন
-      const cloudP = existing.data.pending_pairings || [];
-      const currentP = currentState.pending_pairings || [];
-      const pMap = new Map();
-      cloudP.forEach(p => { if (p && p.phone_number) pMap.set(String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim(), p); });
-      currentP.forEach(p => { if (p && p.phone_number) pMap.set(String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim(), p); });
-      currentState.pending_pairings = Array.from(pMap.values());
     }
 
     await mdb.collection('app_state').updateOne(
