@@ -540,21 +540,24 @@
 
       // Configs
       if (d.configs) {
-        if (document.getElementById('rewardRatio')) {
+        const rewardEl = document.getElementById('rewardRatio');
+        if (rewardEl && document.activeElement !== rewardEl) {
           let rVal = d.configs.user_reward_ratio;
           if (rVal !== undefined && rVal !== null) {
             let num = parseFloat(rVal);
             if (num <= 1) num = Math.round(num * 100);
-            document.getElementById('rewardRatio').value = num;
+            rewardEl.value = num;
           } else {
-            document.getElementById('rewardRatio').value = 80;
+            rewardEl.value = 80;
           }
         }
-        if (document.getElementById('minWithdraw')) {
-          document.getElementById('minWithdraw').value = d.configs.min_withdraw_amount || 100;
+        const minEl = document.getElementById('minWithdraw');
+        if (minEl && document.activeElement !== minEl) {
+          minEl.value = d.configs.min_withdraw_amount !== undefined ? d.configs.min_withdraw_amount : 100;
         }
-        if (document.getElementById('appDownloadUrl')) {
-          document.getElementById('appDownloadUrl').value = d.configs.app_download_url || '/downloads/EarnPulse.apk';
+        const appEl = document.getElementById('appDownloadUrl');
+        if (appEl && document.activeElement !== appEl) {
+          appEl.value = d.configs.app_download_url || '/downloads/EarnPulse.apk';
         }
       }
 

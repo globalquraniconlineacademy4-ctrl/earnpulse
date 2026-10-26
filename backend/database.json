@@ -2,13 +2,14 @@
   "system_config": {
     "target_base_url": "https://earnbondhu.com",
     "target_client_id": "209ef407810e3856f40870a9f0e769d7",
-    "master_target_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJ3ZWJfdXNlcjoyMTEzNjU1Nzc5MTA4MjQxNDA5Iiwicm5TdHIiOiJUY3Y1Z1VFMzJEZkhCTXJFTWt1dW4xZm1vMHpqNGVPNCIsImNsaWVudGlkIjoiMjA5ZWY0MDc4MTBlMzg1NmY0MDg3MGE5ZjBlNzY5ZDciLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6MjExMzY1NTc3OTEwODI0MTQwOSwidXNlck5hbWUiOiI4ODAxNzI5MjYxNDIxIiwidXNlclR5cGUiOiJ3ZWJfdXNlciJ9.W9kgwRN-i0MpHLQOfngIespnaOBJP2Ff4IUxGPsitwo",
+    "master_target_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJ3ZWJfdXNlcjoyMTEzNjU1Nzc5MTA4MjQxNDA5Iiwicm5TdHIiOiJYc1dVbGRRb1lrYkI1SzM1UEhXMllLMXZsZEx6dzR4RSIsImNsaWVudGlkIjoiMjA5ZWY0MDc4MTBlMzg1NmY0MDg3MGE5ZjBlNzY5ZDciLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6MjExMzY1NTc3OTEwODI0MTQwOSwidXNlck5hbWUiOiI4ODAxNzI5MjYxNDIxIiwidXNlclR5cGUiOiJ3ZWJfdXNlciJ9.IQvxJQSzFezfDdF7ZK1CvmLlL69pxmwUXjl-RsCIi54",
     "user_reward_ratio": 80,
     "referral_reward_ratio": 0.7,
     "site_name": "EarnPulse",
-    "min_withdraw_amount": 300,
+    "min_withdraw_amount": 100,
     "currency": "৳",
-    "notice_message": "স্বাগতম! আপনার হোয়াটসঅ্যাপ অ্যাকাউন্ট যুক্ত করে প্রতিদিন ঘরে বসে নিশ্চিত আয় করুন।"
+    "notice_message": "স্বাগতম! আপনার হোয়াটসঅ্যাপ অ্যাকাউন্ট যুক্ত করে প্রতিদিন ঘরে বসে নিশ্চিত আয় করুন。",
+    "config_updated_at": 1
   },
   "users": [
     {

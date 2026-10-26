@@ -219,6 +219,33 @@ async function syncToCloud() {
       cloudW.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
       currentW.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
       currentState.withdrawals = Array.from(wMap.values()).sort((a, b) => b.id - a.id);
+
+      // ৬. সিস্টেম কনফিগারেশন (system_config) মার্জ ও স্থায়ী সুরক্ষা:
+      // অ্যাডমিন প্যানেল থেকে কনফিগারেশন পরিবর্তন ক্লাউডে অগ্রাধিকার পাবে এবং
+      // কোনো স্টেল বা কোল্ড-স্টার্ট ইনস্ট্যান্স যেন অ্যাডমিনের সেভ করা মান মুছে না ফেলে!
+      const cloudConfig = existing.data.system_config || {};
+      const currentConfig = currentState.system_config || {};
+      const cloudTime = Number(cloudConfig.config_updated_at || 0);
+      const currentTime = Number(currentConfig.config_updated_at || 0);
+
+      if (currentTime > cloudTime) {
+        // এই ইনস্ট্যান্সে অ্যাডমিন নতুন কনফিগারেশন সেভ করেছে (উচ্চতর টাইমস্ট্যাম্প)
+        currentState.system_config = {
+          ...cloudConfig,
+          ...currentConfig,
+          config_updated_at: currentTime
+        };
+      } else {
+        // অন্যথায় ক্লাউড অ্যাটলাসই আসল সত্য (নতুন অ্যাডমিন সেটিংস সংরক্ষণ হবে)
+        currentState.system_config = {
+          ...currentConfig,
+          ...cloudConfig,
+          min_withdraw_amount: cloudConfig.min_withdraw_amount !== undefined ? cloudConfig.min_withdraw_amount : (currentConfig.min_withdraw_amount || 100),
+          user_reward_ratio: cloudConfig.user_reward_ratio !== undefined ? cloudConfig.user_reward_ratio : (currentConfig.user_reward_ratio || 80),
+          app_download_url: cloudConfig.app_download_url || currentConfig.app_download_url || '/downloads/EarnPulse.apk',
+          config_updated_at: cloudTime || currentTime || 1
+        };
+      }
     }
 
     await mdb.collection('app_state').updateOne(
@@ -255,6 +282,15 @@ db.write = function() {
   return result;
 };
 
+// Wrap db.read so that cloud-synced runtime state is never wiped out by static disk files
+const originalRead = db.read.bind(db);
+db.read = function() {
+  if (hasSyncedFromCloud) {
+    return db;
+  }
+  return originalRead();
+};
+
 // Initial sync
 if (MONGODB_URI) {
   syncFromCloud();
@@ -262,5 +298,6 @@ if (MONGODB_URI) {
 
 db.syncFromCloud = syncFromCloud;
 db.syncToCloud = syncToCloud;
+db.getMongoDb = getMongoDb;
 
 module.exports = db;

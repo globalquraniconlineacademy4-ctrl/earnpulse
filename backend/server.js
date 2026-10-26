@@ -1140,7 +1140,10 @@ app.get('/api/referrals', authenticateToken, async (req, res) => {
 // -------------------------------------------------------------
 // 5.5. PUBLIC SYSTEM CONFIG
 // -------------------------------------------------------------
-app.get('/api/config', (req, res) => {
+app.get('/api/config', async (req, res) => {
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(); } catch (e) {}
+  }
   db.read();
   const config = db.get('system_config').value() || {};
   const ratio = getRewardRatio();
@@ -1456,6 +1459,10 @@ app.post('/api/admin/config', authenticateToken, requireAdmin, async (req, res) 
     return res.status(400).json({ success: false, msg: 'অবৈধ কনফিগারেশন' });
   }
 
+  // ১. সবার আগে ক্লাউড থেকে সর্বশেষ লাইভ কনফিগ লোড করা
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(); } catch (e) {}
+  }
   db.read();
   const current = db.get('system_config').value() || {};
 
@@ -1476,13 +1483,44 @@ app.post('/api/admin/config', authenticateToken, requireAdmin, async (req, res) 
     configs.app_download_url = String(configs.app_download_url).trim();
   }
 
-  db.set('system_config', { ...current, ...configs }).write();
-  await db.syncToCloud();
+  // অ্যাডমিন কনফিগ আপডেট টাইমস্ট্যাম্প (স্টেল ওভাররাইট রোধে)
+  const now = Date.now();
+  configs.config_updated_at = now;
+
+  const updatedConfig = { ...current, ...configs, config_updated_at: now };
+  db.set('system_config', updatedConfig).write();
+
+  // সরাসরি মোঙ্গোডিবি অ্যাটলাসে ইনস্ট্যান্ট ও পার্মানেন্ট সংরক্ষণ
+  if (db.getMongoDb) {
+    try {
+      const mdb = await db.getMongoDb();
+      if (mdb) {
+        await mdb.collection('app_state').updateOne(
+          { _id: 'earnpulse_store' },
+          { 
+            $set: { 
+              'data.system_config': updatedConfig,
+              updated_at: new Date()
+            } 
+          },
+          { upsert: true }
+        );
+      }
+    } catch (e) {
+      console.error('❌ Direct Atlas config update error:', e.message);
+    }
+  }
+
+  if (db.syncToCloud) {
+    await db.syncToCloud();
+  }
 
   return res.json({
     success: true,
     msg: 'কনফিগারেশন সফলভাবে আপডেট করা হয়েছে',
-    user_reward_ratio: configs.user_reward_ratio || current.user_reward_ratio
+    configs: updatedConfig,
+    user_reward_ratio: configs.user_reward_ratio || current.user_reward_ratio,
+    min_withdraw_amount: configs.min_withdraw_amount !== undefined ? configs.min_withdraw_amount : current.min_withdraw_amount
   });
 });
 
