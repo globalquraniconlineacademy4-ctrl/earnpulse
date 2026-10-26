@@ -430,11 +430,9 @@ export default function App() {
         // Double press within 2.5s: allow exit
         return;
       } else {
-        // Single press: notify user and keep them safely inside the app
+        // Single press: keep them safely inside the app without showing any toast on screen
         lastBackPressTimeRef.current = now;
         window.history.pushState({ type: 'tab', tab: 'home' }, '', '#home');
-        setExitToast(true);
-        setTimeout(() => setExitToast(false), 2200);
       }
     };
 
@@ -2772,28 +2770,6 @@ export default function App() {
         })}
       </div>
 
-      {/* Floating Exit Notification Toast */}
-      {exitToast && (
-        <div style={{
-          position: 'fixed',
-          bottom: '80px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(15, 23, 42, 0.92)',
-          color: '#ffffff',
-          padding: '10px 20px',
-          borderRadius: '30px',
-          fontSize: '13px',
-          fontWeight: '600',
-          zIndex: 99999,
-          boxShadow: '0 8px 25px rgba(0,0,0,0.3)',
-          pointerEvents: 'none',
-          whiteSpace: 'nowrap',
-          animation: 'fadeInOut 2.2s ease forwards'
-        }}>
-          {lang === 'bn' ? 'অ্যাপ থেকে বের হতে আবার ব্যাক চাপুন' : 'Press back again to exit'}
-        </div>
-      )}
 
       {/* 4. LANGUAGE SELECTION MODAL */}
       {showLangModal && (
