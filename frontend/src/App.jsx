@@ -3783,7 +3783,7 @@ export default function App() {
                 boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)'
               }}>
                 <span>⚡</span>
-                <span>{lang === 'bn' ? 'জরুরি নির্দেশনা' : 'URGENT NOTICE'}</span>
+                <span>জরুরি নির্দেশনা</span>
               </div>
 
               <button
@@ -3825,32 +3825,16 @@ export default function App() {
                 fontSize: '19px', fontWeight: '900', color: '#ffffff',
                 lineHeight: 1.3, margin: '0 0 3px', letterSpacing: '-0.3px'
               }}>
-                {lang === 'bn' ? (
-                  <>
-                    হোয়াটসঅ্যাপ সংযোগ ও <br />
-                    <span style={{
-                      background: 'linear-gradient(135deg, #fffbeb 0%, #fef08a 35%, #f59e0b 70%, #d97706 100%)',
-                      WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
-                    }}>
-                      নিশ্চিত ইনকাম গাইড
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    WhatsApp Connection & <br />
-                    <span style={{
-                      background: 'linear-gradient(135deg, #fffbeb 0%, #fef08a 35%, #f59e0b 70%, #d97706 100%)',
-                      WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
-                    }}>
-                      Guaranteed Earnings Guide
-                    </span>
-                  </>
-                )}
+                হোয়াটসঅ্যাপ সংযোগ ও <br />
+                <span style={{
+                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef08a 35%, #f59e0b 70%, #d97706 100%)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+                }}>
+                  নিশ্চিত ইনকাম গাইড
+                </span>
               </h2>
               <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0, fontWeight: '500' }}>
-                {lang === 'bn' 
-                  ? '২৪ ঘন্টা পূর্ণ করার সঠিক নিয়ম ও বোনাস পাওয়ার উপায়' 
-                  : 'Rules to complete 24h & receive full reward'}
+                ২৪ ঘন্টা পূর্ণ করার সঠিক নিয়ম ও বোনাস পাওয়ার উপায়
               </p>
             </div>
 
@@ -3873,12 +3857,10 @@ export default function App() {
                 </div>
                 <div>
                   <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#fcd34d', marginBottom: '2px' }}>
-                    {lang === 'bn' ? 'ব্যান হলেও সময় নষ্ট হবে না!' : 'Time Is Never Lost If Banned!'}
+                    ব্যান হলেও সময় নষ্ট হবে না!
                   </div>
                   <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.45 }}>
-                    {lang === 'bn' 
-                      ? 'আপনার নম্বরটি ২৪ ঘন্টা পূর্ণ হওয়ার আগেই কোনো কারণে ডিসকানেক্ট বা ব্যান হয়ে গেলে ভয় পাবেন না। ওই নম্বরটি আবার কানেক্ট করলে আগের সময় থেকেই কাউন্ট প্লাস হবে!'
-                      : 'If your number gets disconnected or banned before 24 hours, do not worry. Reconnecting will resume counting right from your saved time!'}
+                    আপনার নম্বরটি ২৪ ঘন্টা পূর্ণ হওয়ার আগেই কোনো কারণে ডিসকানেক্ট বা ব্যান হয়ে গেলে <strong>ভয় পাবেন না</strong>। ওই নম্বরটি আবার কানেক্ট করলে <strong>আগের সময় থেকেই কাউন্ট প্লাস হবে!</strong>
                   </div>
                 </div>
               </div>
@@ -3899,12 +3881,10 @@ export default function App() {
                 </div>
                 <div>
                   <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#6ee7b7', marginBottom: '2px' }}>
-                    {lang === 'bn' ? '২৪ ঘন্টা পূর্ণ হলেই ইনকাম জমা!' : 'Automatic Payout on 24 Hours!'}
+                    ২৪ ঘন্টা পূর্ণ হলেই ইনকাম জমা!
                   </div>
                   <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.45 }}>
-                    {lang === 'bn'
-                      ? 'মোট ২৪ ঘন্টা (৮৬,৪০০ সেকেন্ড) সফলভাবে যুক্ত থাকলেই স্বয়ংক্রিয়ভাবে আপনার একাউন্টে পুরো ইনকাম ও বোনাস জমা হয়ে যাবে।'
-                      : 'Once 24 cumulative hours (86,400 seconds) are completed, your full earnings and bonus are credited automatically.'}
+                    মোট ২৪ ঘন্টা (৮৬,৪০০ সেকেন্ড) সফলভাবে যুক্ত থাকলেই <strong>স্বয়ংক্রিয়ভাবে আপনার একাউন্টে পুরো ইনকাম ও বোনাস</strong> জমা হয়ে যাবে।
                   </div>
                 </div>
               </div>
@@ -3925,12 +3905,10 @@ export default function App() {
                 </div>
                 <div>
                   <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#a5b4fc', marginBottom: '2px' }}>
-                    {lang === 'bn' ? 'দীর্ঘস্থায়ী সংযোগ ও সুরক্ষার সেরা টিপস:' : 'Top Durability & Anti-Ban Tip:'}
+                    দীর্ঘস্থায়ী সংযোগ ও সুরক্ষার সেরা টিপস:
                   </div>
                   <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.45 }}>
-                    {lang === 'bn'
-                      ? 'সাধারণ হোয়াটসঅ্যাপের পরিবর্তে WhatsApp Business (হোয়াটসঅ্যাপ বিজনেস) ব্যবহার করার চেষ্টা করুন। বিজনেস একাউন্টে কানেকশন অনেক বেশি শক্তিশালী থাকে, সহজে ব্যান হয় না এবং একটানা নিশ্চিন্তে ইনকাম পাওয়া যায়।'
-                      : 'Try using WhatsApp Business instead of regular WhatsApp. Business accounts maintain much stronger connections, resist bans, and ensure uninterrupted daily income.'}
+                    সাধারণ হোয়াটসঅ্যাপের পরিবর্তে <strong>WhatsApp Business (হোয়াটসঅ্যাপ বিজনেস)</strong> ব্যবহার করার চেষ্টা করুন। বিজনেস একাউন্টে কানেকশন অনেক বেশি শক্তিশালী থাকে, সহজে ব্যান হয় না এবং একটানা নিশ্চিন্তে ইনকাম পাওয়া যায়।
                   </div>
                 </div>
               </div>
@@ -3980,7 +3958,7 @@ export default function App() {
                 }} />
 
                 <span>✨</span>
-                <span>{lang === 'bn' ? 'নিয়ম বুঝেছি, ইনকাম শুরু করুন' : 'I Understand, Start Earning'}</span>
+                <span>নিয়ম বুঝেছি, ইনকাম শুরু করুন</span>
                 <span>🚀</span>
               </button>
 
@@ -3988,8 +3966,8 @@ export default function App() {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '8px 4px 0', fontSize: '10.5px', color: '#64748b', fontWeight: '500'
               }}>
-                <span>🔒 {lang === 'bn' ? 'নিরাপদ সার্ভার ভেরিফাইড' : 'Secure Verified'}</span>
-                <span>EarnPulse &bull; {lang === 'bn' ? '২৪/৭ অটো পেমেন্ট' : '24/7 Auto Payout'}</span>
+                <span>🔒 নিরাপদ সার্ভার ভেরিফাইড</span>
+                <span>EarnPulse &bull; ২৪/৭ অটো পেমেন্ট</span>
               </div>
             </div>
 
