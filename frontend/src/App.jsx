@@ -370,11 +370,23 @@ export default function App() {
     }
   }, [isAnyModalOpen]);
 
+  // Dismiss VIP WhatsApp Notice Modal (Remembers per session)
+  const closeNoticeModal = () => {
+    try {
+      sessionStorage.setItem('ep_notice_seen', 'true');
+    } catch (e) {}
+    setShowNoticeModal(false);
+  };
+
   // Close all open modals helper (used on back button popstate)
   const closeAllOpenModals = () => {
     const m = modalsRef.current;
     let hadModal = false;
-    if (m.showNoticeModal) { setShowNoticeModal(false); hadModal = true; }
+    if (m.showNoticeModal) { 
+      try { sessionStorage.setItem('ep_notice_seen', 'true'); } catch (e) {}
+      setShowNoticeModal(false); 
+      hadModal = true; 
+    }
     if (m.showWithdrawModal) { setShowWithdrawModal(false); hadModal = true; }
     if (m.showWithdrawHistoryModal) { setShowWithdrawHistoryModal(false); hadModal = true; }
     if (m.showShareModal) { setShowShareModal(false); hadModal = true; }
@@ -504,7 +516,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (token) fetchUserData();
+    if (token) {
+      fetchUserData();
+      // Show VIP Notice Banner once per session when member enters the site or app
+      try {
+        const hasSeen = sessionStorage.getItem('ep_notice_seen');
+        if (!hasSeen) {
+          const timer = setTimeout(() => {
+            setShowNoticeModal(true);
+          }, 450);
+          return () => clearTimeout(timer);
+        }
+      } catch (e) {
+        setShowNoticeModal(true);
+      }
+    }
   }, [token]);
 
   // Periodic Live Background Sync for WhatsApp List & Balance (3s on whatsapp tab for instant live state)
@@ -3697,39 +3723,276 @@ export default function App() {
         </div>
       )}
 
-      {/* 10.1 IMPORTANT NOTICE MODAL (জরুরি বিজ্ঞপ্তি) */}
+      {/* 10.1 VIP WHATSAPP NOTICE & ANTI-BAN MODAL (রাজকীয় রয়্যাল গোল্ড ব্যানার) */}
       {showNoticeModal && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 350,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+          position: 'fixed', inset: 0,
+          background: 'rgba(0, 0, 0, 0.78)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '16px',
+          animation: 'vipModalFadeIn 0.22s ease-out'
         }}>
+          <style>{`
+            @keyframes vipModalFadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes vipModalZoom {
+              from { opacity: 0; transform: scale(0.92); }
+              to { opacity: 1; transform: scale(1); }
+            }
+            @keyframes vipShineSweep {
+              0% { transform: translateX(-100%) rotate(25deg); }
+              35% { transform: translateX(220%) rotate(25deg); }
+              100% { transform: translateX(220%) rotate(25deg); }
+            }
+          `}</style>
+          
           <div style={{
-            background: '#ffffff', borderRadius: '20px', width: '100%', maxWidth: '360px',
-            padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.2)', textAlign: 'center'
+            position: 'relative',
+            width: '100%', maxWidth: '390px',
+            maxHeight: '92vh', overflowY: 'auto',
+            background: 'linear-gradient(160deg, #181510 0%, #0d0b08 50%, #050403 100%)',
+            border: '1.5px solid rgba(245, 158, 11, 0.45)',
+            borderRadius: '26px',
+            boxShadow: '0 25px 60px -10px rgba(0, 0, 0, 0.95), 0 0 35px rgba(245, 158, 11, 0.22)',
+            padding: '22px 18px 18px',
+            color: '#ffffff',
+            boxSizing: 'border-box',
+            animation: 'vipModalZoom 0.24s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
+            
+            {/* Top Atmospheric Golden Glow */}
             <div style={{
-              width: '54px', height: '54px', borderRadius: '50%',
-              background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '26px', marginBottom: '14px'
-            }}>
-              ✉️
+              position: 'absolute', top: '-50px', left: '50%', transform: 'translateX(-50%)',
+              width: '220px', height: '120px',
+              background: 'radial-gradient(circle, rgba(245, 158, 11, 0.35) 0%, transparent 70%)',
+              pointerEvents: 'none', borderRadius: '50%'
+            }} />
+
+            {/* Top Badges & Close (✕) Button */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', position: 'relative', zIndex: 2 }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                padding: '4px 10px', borderRadius: '20px',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+                color: '#1a1005', fontSize: '11px', fontWeight: '900', letterSpacing: '0.4px',
+                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)'
+              }}>
+                <span>⚡</span>
+                <span>{lang === 'bn' ? 'জরুরি নির্দেশনা' : 'URGENT NOTICE'}</span>
+              </div>
+
+              <button
+                onClick={closeNoticeModal}
+                style={{
+                  width: '32px', height: '32px', borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#94a3b8', fontSize: '16px', fontWeight: 'bold',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              >
+                ✕
+              </button>
             </div>
-            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}>
-              {t.importantNotice}
+
+            {/* Header / Title */}
+            <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative', zIndex: 2 }}>
+              <div style={{
+                width: '56px', height: '56px', margin: '0 auto 8px',
+                borderRadius: '16px', padding: '1.5px',
+                background: 'linear-gradient(135deg, #fffbeb 0%, #fbbf24 40%, #d97706 100%)',
+                boxShadow: '0 8px 20px rgba(245, 158, 11, 0.35)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <div style={{
+                  width: '100%', height: '100%', borderRadius: '15px',
+                  background: '#0a0806', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '26px'
+                }}>
+                  📲
+                </div>
+              </div>
+
+              <h2 style={{
+                fontSize: '19px', fontWeight: '900', color: '#ffffff',
+                lineHeight: 1.3, margin: '0 0 3px', letterSpacing: '-0.3px'
+              }}>
+                {lang === 'bn' ? (
+                  <>
+                    হোয়াটসঅ্যাপ সংযোগ ও <br />
+                    <span style={{
+                      background: 'linear-gradient(135deg, #fffbeb 0%, #fef08a 35%, #f59e0b 70%, #d97706 100%)',
+                      WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+                    }}>
+                      নিশ্চিত ইনকাম গাইড
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    WhatsApp Connection & <br />
+                    <span style={{
+                      background: 'linear-gradient(135deg, #fffbeb 0%, #fef08a 35%, #f59e0b 70%, #d97706 100%)',
+                      WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+                    }}>
+                      Guaranteed Earnings Guide
+                    </span>
+                  </>
+                )}
+              </h2>
+              <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0, fontWeight: '500' }}>
+                {lang === 'bn' 
+                  ? '২৪ ঘন্টা পূর্ণ করার সঠিক নিয়ম ও বোনাস পাওয়ার উপায়' 
+                  : 'Rules to complete 24h & receive full reward'}
+              </p>
             </div>
-            <div style={{ fontSize: '14px', color: '#475569', lineHeight: 1.6, marginBottom: '20px' }}>
-              {lang === 'bn' 
-                ? 'স্বাগতম EarnPulse-এ! আপনার হোয়াটসঅ্যাপ অ্যাকাউন্ট যুক্ত করে প্রতিদিন ঘরে বসে নিশ্চিত আয় করুন। সিস্টেমের সকল সেবা সম্পূর্ণ স্বাভাবিক ও সক্রিয় আছে।'
-                : 'Welcome to EarnPulse! Connect your WhatsApp account and earn guaranteed daily income. All platform services are fully operational.'}
+
+            {/* Key Information Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '16px', position: 'relative', zIndex: 2 }}>
+              
+              {/* Card 1: Rollover Guarantee */}
+              <div style={{
+                padding: '11px 12px', borderRadius: '15px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex', alignItems: 'flex-start', gap: '11px'
+              }}>
+                <div style={{
+                  width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
+                  background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                }}>
+                  ⏳
+                </div>
+                <div>
+                  <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#fcd34d', marginBottom: '2px' }}>
+                    {lang === 'bn' ? 'ব্যান হলেও সময় নষ্ট হবে না!' : 'Time Is Never Lost If Banned!'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.45 }}>
+                    {lang === 'bn' 
+                      ? 'আপনার নম্বরটি ২৪ ঘন্টা পূর্ণ হওয়ার আগেই কোনো কারণে ডিসকানেক্ট বা ব্যান হয়ে গেলে ভয় পাবেন না। ওই নম্বরটি আবার কানেক্ট করলে আগের সময় থেকেই কাউন্ট প্লাস হবে!'
+                      : 'If your number gets disconnected or banned before 24 hours, do not worry. Reconnecting will resume counting right from your saved time!'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Auto Reward */}
+              <div style={{
+                padding: '11px 12px', borderRadius: '15px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex', alignItems: 'flex-start', gap: '11px'
+              }}>
+                <div style={{
+                  width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
+                  background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                }}>
+                  💰
+                </div>
+                <div>
+                  <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#6ee7b7', marginBottom: '2px' }}>
+                    {lang === 'bn' ? '২৪ ঘন্টা পূর্ণ হলেই ইনকাম জমা!' : 'Automatic Payout on 24 Hours!'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.45 }}>
+                    {lang === 'bn'
+                      ? 'মোট ২৪ ঘন্টা (৮৬,৪০০ সেকেন্ড) সফলভাবে যুক্ত থাকলেই স্বয়ংক্রিয়ভাবে আপনার একাউন্টে পুরো ইনকাম ও বোনাস জমা হয়ে যাবে।'
+                      : 'Once 24 cumulative hours (86,400 seconds) are completed, your full earnings and bonus are credited automatically.'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: WhatsApp Business Tip */}
+              <div style={{
+                padding: '11px 12px', borderRadius: '15px',
+                background: 'rgba(99, 102, 241, 0.08)',
+                border: '1px solid rgba(99, 102, 241, 0.25)',
+                display: 'flex', alignItems: 'flex-start', gap: '11px'
+              }}>
+                <div style={{
+                  width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
+                  background: 'rgba(99, 102, 241, 0.2)', border: '1px solid rgba(99, 102, 241, 0.35)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                }}>
+                  💡
+                </div>
+                <div>
+                  <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#a5b4fc', marginBottom: '2px' }}>
+                    {lang === 'bn' ? 'দীর্ঘস্থায়ী সংযোগ ও সুরক্ষার সেরা টিপস:' : 'Top Durability & Anti-Ban Tip:'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.45 }}>
+                    {lang === 'bn'
+                      ? 'সাধারণ হোয়াটসঅ্যাপের পরিবর্তে WhatsApp Business (হোয়াটসঅ্যাপ বিজনেস) ব্যবহার করার চেষ্টা করুন। বিজনেস একাউন্টে কানেকশন অনেক বেশি শক্তিশালী থাকে, সহজে ব্যান হয় না এবং একটানা নিশ্চিন্তে ইনকাম পাওয়া যায়।'
+                      : 'Try using WhatsApp Business instead of regular WhatsApp. Business accounts maintain much stronger connections, resist bans, and ensure uninterrupted daily income.'}
+                  </div>
+                </div>
+              </div>
+
             </div>
-            <button
-              onClick={() => setShowNoticeModal(false)}
-              className="action-btn-green"
-              style={{ width: '100%', height: '44px', borderRadius: '12px', fontSize: '14px' }}
-            >
-              {lang === 'bn' ? 'ঠিক আছে' : 'OK'}
-            </button>
+
+            {/* 3D Royal Gold CTA Button */}
+            <div style={{ position: 'relative', zIndex: 2 }}>
+              <button
+                onClick={closeNoticeModal}
+                style={{
+                  position: 'relative',
+                  overflow: 'hidden',
+                  width: '100%', height: '46px', borderRadius: '15px',
+                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef08a 15%, #f59e0b 50%, #d97706 75%, #92400e 100%)',
+                  color: '#1a1005',
+                  border: '1px solid rgba(254, 240, 138, 0.8)',
+                  boxShadow: '0 5px 0 #78350f, 0 10px 22px rgba(245, 158, 11, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
+                  fontSize: '14.5px', fontWeight: '900', letterSpacing: '0.2px',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'translateY(3px)';
+                  e.currentTarget.style.boxShadow = '0 2px 0 #78350f, 0 4px 10px rgba(245, 158, 11, 0.3)';
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 5px 0 #78350f, 0 10px 22px rgba(245, 158, 11, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.8)';
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.transform = 'translateY(3px)';
+                  e.currentTarget.style.boxShadow = '0 2px 0 #78350f, 0 4px 10px rgba(245, 158, 11, 0.3)';
+                }}
+                onTouchEnd={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 5px 0 #78350f, 0 10px 22px rgba(245, 158, 11, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.8)';
+                }}
+              >
+                {/* Dynamic light shimmer sweep */}
+                <span style={{
+                  position: 'absolute', top: '-50%', left: '-60%',
+                  width: '35%', height: '200%',
+                  background: 'linear-gradient(60deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%)',
+                  pointerEvents: 'none',
+                  animation: 'vipShineSweep 3.2s infinite ease-in-out'
+                }} />
+
+                <span>✨</span>
+                <span>{lang === 'bn' ? 'নিয়ম বুঝেছি, ইনকাম শুরু করুন' : 'I Understand, Start Earning'}</span>
+                <span>🚀</span>
+              </button>
+
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 4px 0', fontSize: '10.5px', color: '#64748b', fontWeight: '500'
+              }}>
+                <span>🔒 {lang === 'bn' ? 'নিরাপদ সার্ভার ভেরিফাইড' : 'Secure Verified'}</span>
+                <span>EarnPulse &bull; {lang === 'bn' ? '২৪/৭ অটো পেমেন্ট' : '24/7 Auto Payout'}</span>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
