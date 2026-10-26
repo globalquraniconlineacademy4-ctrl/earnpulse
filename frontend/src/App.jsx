@@ -3957,9 +3957,7 @@ export default function App() {
                   animation: 'vipShineSweep 3.2s infinite ease-in-out'
                 }} />
 
-                <span>✨</span>
                 <span>নিয়ম বুঝেছি, ইনকাম শুরু করুন</span>
-                <span>🚀</span>
               </button>
 
               <div style={{
