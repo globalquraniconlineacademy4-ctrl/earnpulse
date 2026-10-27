@@ -805,11 +805,9 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
     }
 
     // Check if 24 hours (86,400s) milestone has been achieved!
-    // STRICT GUARD: Must be verified >= 24 hours online!
-    // Newly connected accounts (consequent === 0, online_time_ms < 86400000, activeSecInCycle < 86400) are BLOCKED.
-    const isGenuinely24h = (activeSecInCycle >= 86400) ||
-      (Number(n.consequent || 0) > (n.reward_cycles_count || 0)) ||
-      (Math.floor((Number(n.online_time_ms || 0)) / 86400000) > (n.reward_cycles_count || 0));
+    // STRICT GUARD: Must reach full 86,400 active seconds in cycle!
+    // No premature bonus, no lifetime-time false bonus!
+    const isGenuinely24h = (activeSecInCycle >= 86400);
 
     if (isGenuinely24h) {
       const lastRewardTime = n.last_rewarded_at ? new Date(n.last_rewarded_at).getTime() : 0;
@@ -1296,7 +1294,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.27.07',
+      build_version: '2026.10.27.08',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
