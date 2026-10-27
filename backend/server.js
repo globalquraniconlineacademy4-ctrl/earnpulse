@@ -938,20 +938,29 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   const displayNumbers = linkedNumbers
     .filter(n => {
       const cleanN = String(n.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
-      // If this phone number matches another registered user's username, exclude it from current user!
-      const isOtherUserNumber = allUsersList.some(other => {
-        if (other.id === req.user.id) return false;
-        const otherClean = String(other.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
-        return otherClean && otherClean === cleanN;
-      });
-      if (isOtherUserNumber) return false;
 
-      // If this phone number was requested/paired by another user in pending_pairings, exclude it!
+      // If this phone number was requested/paired by another user in pending_pairings, strictly exclude!
       const isOtherPending = currentPending.some(p => {
         const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
         return pClean === cleanN && p.user_id !== req.user.id;
       });
       if (isOtherPending) return false;
+
+      // If this phone number was explicitly paired by current user, keep it!
+      const isPairedByMe = currentPending.some(p => {
+        const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+        return pClean === cleanN && p.user_id === req.user.id;
+      });
+
+      if (!isPairedByMe) {
+        // If not paired by current user, but matches another registered user's username, exclude it!
+        const isOtherUserNumber = allUsersList.some(other => {
+          if (other.id === req.user.id) return false;
+          const otherClean = String(other.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+          return otherClean && otherClean === cleanN;
+        });
+        if (isOtherUserNumber) return false;
+      }
 
       return n.status === 'online' || Boolean(n.login_date) || Boolean(n.last_settle_time);
     })
@@ -1307,7 +1316,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.27.11',
+      build_version: '2026.10.27.12',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
