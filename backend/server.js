@@ -464,6 +464,155 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 // -------------------------------------------------------------
+// 1.9. AUTOMATIC OFFICIAL EARNBONDHU SETTLEMENT SYNC
+// Directly queries EarnBondhu's official pointsSettle list
+// and automatically rewards members and referrers without delay!
+// -------------------------------------------------------------
+let lastOfficialSettlementSyncTime = 0;
+
+async function syncOfficialEarnBondhuSettlements() {
+  const now = Date.now();
+  if (now - lastOfficialSettlementSyncTime < 5000) return;
+  lastOfficialSettlementSyncTime = now;
+
+  try {
+    const settleRows = await bridge.fetchOfficialSettlementsList();
+    if (!Array.isArray(settleRows) || settleRows.length === 0) return;
+
+    db.read();
+    const earningsLog = db.get('earnings_log').value() || [];
+    const pendingPairings = db.get('pending_pairings').value() || [];
+    const users = db.get('users').value() || [];
+    const linkedNumbers = db.get('linked_numbers').value() || [];
+
+    let hasNewSettlements = false;
+
+    for (const row of settleRows) {
+      const rawPhone = String(row.wsAccount || row.phoneNumber || '').trim();
+      const cleanPhone = rawPhone.replace(/^[0+]/, '').replace(/^880/, '');
+      if (!cleanPhone) continue;
+
+      const settleId = String(row.id || '');
+      const settleEndTime = row.settleEndTime || row.settleStartTime || row.createTime;
+
+      // Check if already rewarded
+      const alreadyRewarded = earningsLog.some(l => 
+        (settleId && String(l.settle_id) === settleId) ||
+        (l.type === 'whatsapp_online' && String(l.phone_number).replace(/^[0+]/, '').replace(/^880/, '') === cleanPhone && l.settle_time === settleEndTime)
+      );
+
+      if (alreadyRewarded) continue;
+
+      // Find owner of this number
+      const pMatch = pendingPairings.find(p => String(p.phone_number).replace(/^[0+]/, '').replace(/^880/, '') === cleanPhone);
+      const nMatch = linkedNumbers.find(n => String(n.phone_number).replace(/^[0+]/, '').replace(/^880/, '') === cleanPhone);
+      const uMatch = users.find(u => String(u.username).replace(/^[0+]/, '').replace(/^880/, '') === cleanPhone);
+
+      const ownerId = (pMatch && pMatch.user_id) || (nMatch && nMatch.user_id) || (uMatch && uMatch.id);
+      if (!ownerId) continue;
+
+      const ownerUser = users.find(u => u.id === ownerId);
+      if (!ownerUser) continue;
+
+      const rewardAmount = 32.0;
+      const grossAmount = 40.0;
+      const nowIso = settleEndTime 
+        ? (settleEndTime.includes('T') ? new Date(settleEndTime).toISOString() : new Date(settleEndTime.replace(' ', 'T') + '+06:00').toISOString())
+        : new Date().toISOString();
+
+      const newBal = parseFloat(((ownerUser.balance || 0) + rewardAmount).toFixed(2));
+      const newTotal = parseFloat(((ownerUser.total_earned || 0) + rewardAmount).toFixed(2));
+
+      ownerUser.balance = newBal;
+      ownerUser.total_earned = newTotal;
+
+      db.get('users').find({ id: ownerUser.id }).assign({ balance: newBal, total_earned: newTotal }).write();
+
+      db.get('earnings_log').push({
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        user_id: ownerUser.id,
+        type: 'whatsapp_online',
+        amount: rewardAmount,
+        gross_amount: grossAmount,
+        settle_id: settleId,
+        settle_time: settleEndTime,
+        phone_number: cleanPhone,
+        description: `WhatsApp (+880 ${cleanPhone}) ২৪ ঘণ্টা সফল সংযোগ বোনাস (৳ ৩২.০০)`,
+        created_at: nowIso
+      }).write();
+
+      // Referral commissions
+      if (ownerUser.referred_by_id) {
+        const parentUser = users.find(u => u.id === ownerUser.referred_by_id);
+        if (parentUser) {
+          const tier1 = parseFloat((rewardAmount * 0.15).toFixed(2));
+          if (tier1 > 0) {
+            parentUser.balance = parseFloat(((parentUser.balance || 0) + tier1).toFixed(2));
+            parentUser.total_earned = parseFloat(((parentUser.total_earned || 0) + tier1).toFixed(2));
+            db.get('users').find({ id: parentUser.id }).assign({ balance: parentUser.balance, total_earned: parentUser.total_earned }).write();
+
+            db.get('earnings_log').push({
+              id: Date.now() + Math.floor(Math.random() * 1000) + 1,
+              user_id: parentUser.id,
+              type: 'referral_bonus',
+              tier: 1,
+              amount: tier1,
+              source_user_id: ownerUser.id,
+              source_username: ownerUser.username,
+              description: `১ম স্তর রেফারেল কমিশন (${ownerUser.username} এর ২৪ ঘণ্টা আয় থেকে ১৫%)`,
+              created_at: nowIso
+            }).write();
+
+            if (parentUser.referred_by_id) {
+              const grandParent = users.find(u => u.id === parentUser.referred_by_id);
+              if (grandParent) {
+                const tier2 = parseFloat((rewardAmount * 0.05).toFixed(2));
+                if (tier2 > 0) {
+                  grandParent.balance = parseFloat(((grandParent.balance || 0) + tier2).toFixed(2));
+                  grandParent.total_earned = parseFloat(((grandParent.total_earned || 0) + tier2).toFixed(2));
+                  db.get('users').find({ id: grandParent.id }).assign({ balance: grandParent.balance, total_earned: grandParent.total_earned }).write();
+
+                  db.get('earnings_log').push({
+                    id: Date.now() + Math.floor(Math.random() * 1000) + 2,
+                    user_id: grandParent.id,
+                    type: 'referral_bonus',
+                    tier: 2,
+                    amount: tier2,
+                    source_user_id: ownerUser.id,
+                    source_username: ownerUser.username,
+                    description: `২য় স্তর সাব-রেফারেল কমিশন (${ownerUser.username} এর ২৪ ঘণ্টা আয় থেকে ৫%)`,
+                    created_at: nowIso
+                  }).write();
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (nMatch) {
+        db.get('linked_numbers').find({ id: nMatch.id }).assign({
+          user_id: ownerUser.id,
+          last_settle_time: settleEndTime || new Date().toISOString(),
+          last_rewarded_at: nowIso,
+          reward_cycles_count: (nMatch.reward_cycles_count || 0) + 1,
+          updated_at: nowIso
+        }).write();
+      }
+
+      hasNewSettlements = true;
+      console.log(`[Settlement Sync] Credited 24h bonus for ${cleanPhone} (Settle ID: ${settleId}) to user ${ownerUser.username}!`);
+    }
+
+    if (hasNewSettlements && db.syncToCloud) {
+      await db.syncToCloud();
+    }
+  } catch (err) {
+    console.error('[Settlement Sync Error]:', err.message);
+  }
+}
+
+// -------------------------------------------------------------
 // 2. USER PROFILE & STATS
 // -------------------------------------------------------------
 app.get('/api/user/me', authenticateToken, async (req, res) => {
@@ -474,6 +623,7 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   if (db.syncFromCloud) {
     try { await db.syncFromCloud(); } catch (e) {}
   }
+  await syncOfficialEarnBondhuSettlements();
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
   if (!user) return res.status(404).json({ success: false, msg: 'User not found' });
@@ -1316,7 +1466,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.27.12',
+      build_version: '2026.10.27.13',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1481,6 +1631,7 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
   if (db.syncFromCloud) {
     try { await db.syncFromCloud(); } catch (e) {}
   }
+  await syncOfficialEarnBondhuSettlements();
   db.read();
   // Only count real members (excluding admin accounts)
   const memberUsers = db.get('users')
