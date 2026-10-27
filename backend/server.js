@@ -588,14 +588,6 @@ async function syncOfficialEarnBondhuSettlements() {
                 }
               }
             }
-                    source_user_id: ownerUser.id,
-                    source_username: ownerUser.username,
-                    description: `২য় স্তর সাব-রেফারেল কমিশন (${ownerUser.username} এর ২৪ ঘণ্টা আয় থেকে ৫%)`,
-                    created_at: nowIso
-                  }).write();
-                }
-              }
-            }
           }
         }
       }
