@@ -19,6 +19,7 @@ function WhatsAppCountdownTimer({
   unSettleSeconds,
   lastSettleTime,
   frozenElapsedSeconds,
+  remainingSeconds,
   onlineTimeMs,
   offlineAt,
   updatedAt
@@ -30,20 +31,19 @@ function WhatsAppCountdownTimer({
     const calc = () => {
       const o = 86400; // 24 hours (86,400s)
 
-      // Initial countdown seconds (e.g. 74946s = 20:49:06)
-      let remainingSec = 0;
-      if (frozenElapsedSeconds !== undefined && frozenElapsedSeconds !== null && frozenElapsedSeconds > 0) {
-        remainingSec = Number(frozenElapsedSeconds);
-      } else if (unSettleSeconds !== undefined && unSettleSeconds !== null && unSettleSeconds > 0) {
-        remainingSec = Number(unSettleSeconds);
-      } else {
-        remainingSec = o;
-      }
-
       // 1. If offline: frozen at remaining countdown time (e.g. 20:49:06)
       if (!isOnline) {
-        let remaining = remainingSec % o;
-        if (remaining === 0 && remainingSec > 0) remaining = o;
+        let remaining = o;
+        if (frozenElapsedSeconds !== undefined && frozenElapsedSeconds !== null && frozenElapsedSeconds > 0) {
+          remaining = Number(frozenElapsedSeconds);
+        } else if (remainingSeconds !== undefined && remainingSeconds !== null && remainingSeconds > 0) {
+          remaining = Number(remainingSeconds);
+        } else if (unSettleSeconds !== undefined && unSettleSeconds !== null) {
+          remaining = Math.max(0, o - (Number(unSettleSeconds) % o));
+        }
+        remaining = ((remaining % o) + o) % o;
+        if (remaining === 0) remaining = o;
+
         const hours = Math.floor(remaining / 3600);
         const minutes = Math.floor((remaining % 3600) / 60);
         const seconds = remaining % 60;
@@ -51,7 +51,14 @@ function WhatsAppCountdownTimer({
         return `${fmt(hours)} : ${fmt(minutes)} : ${fmt(seconds)}`;
       }
 
-      // 2. If online: counts DOWN from remainingSec live every second
+      // 2. If online: counts DOWN from base remaining time live every second!
+      let baseRemaining = o;
+      if (remainingSeconds !== undefined && remainingSeconds !== null && remainingSeconds > 0) {
+        baseRemaining = Number(remainingSeconds);
+      } else if (unSettleSeconds !== undefined && unSettleSeconds !== null) {
+        baseRemaining = Math.max(0, o - (Number(unSettleSeconds) % o));
+      }
+
       const now = Math.floor(Date.now() / 1000);
       let settleTimestamp = now;
       const settleStr = lastSettleTime || loginDate;
@@ -65,8 +72,8 @@ function WhatsAppCountdownTimer({
 
       const h = Math.max(0, now - settleTimestamp);
 
-      // Remaining seconds countdown (decreases as h increases)
-      let currentRemaining = remainingSec - h;
+      // Remaining seconds countdown (decreases as time passes)
+      let currentRemaining = baseRemaining - h;
 
       // When it reaches 0 or below, it restarts countdown from 24 hours again!
       let cycleRemaining = ((currentRemaining % o) + o) % o;
@@ -94,7 +101,7 @@ function WhatsAppCountdownTimer({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [unSettleSeconds, lastSettleTime, loginDate, createTime, status, frozenElapsedSeconds, onlineTimeMs, offlineAt, updatedAt, isOnline]);
+  }, [unSettleSeconds, lastSettleTime, loginDate, createTime, status, frozenElapsedSeconds, remainingSeconds, onlineTimeMs, offlineAt, updatedAt, isOnline]);
 
   return (
     <div style={{
@@ -2240,6 +2247,7 @@ export default function App() {
                             unSettleSeconds={n.un_settle_seconds}
                             lastSettleTime={n.last_settle_time}
                             frozenElapsedSeconds={n.frozen_elapsed_seconds}
+                            remainingSeconds={n.remaining_seconds}
                             onlineTimeMs={n.online_time_ms}
                             offlineAt={n.offline_at}
                             updatedAt={n.updated_at}

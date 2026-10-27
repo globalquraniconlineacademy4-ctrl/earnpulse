@@ -538,6 +538,8 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
               hasChanges = true;
             }
 
+            const unSettle = unSettleSec !== null ? unSettleSec : (record.un_settle_seconds || 0);
+            const remaining = Math.max(0, 86400 - (unSettle % 86400));
             const updateFields = {
               status: 'online',
               login_date: (match && match.loginDate) || record.login_date || lastSettleTime,
@@ -545,8 +547,10 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
               raw_status: (match && match.status) || 'Online',
               sent_count: (match && match.bulkCount) || record.sent_count || 0,
               online_time_ms: (match && match.onlineTime) || record.online_time_ms || 0,
+              consequent: (match && match.consequent !== undefined) ? match.consequent : (record.consequent || 0),
               last_count_time: (match && match.lastCountTime) || record.last_count_time || null,
-              un_settle_seconds: unSettleSec !== null ? unSettleSec : record.un_settle_seconds,
+              un_settle_seconds: unSettle,
+              remaining_seconds: remaining,
               last_settle_time: lastSettleTime || record.last_settle_time || record.login_date,
               today_online_seconds: todayOnlineSec !== null ? todayOnlineSec : record.today_online_seconds,
               frozen_elapsed_seconds: null,
@@ -561,21 +565,12 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
 
             Object.assign(record, updateFields);
           } else if (hasEverConnected) {
-            // It was connected before but now Exit / Offline -> FREEZE elapsed timer!
-            let frozenSec = unSettleSec !== null ? Math.max(0, 86400 - unSettleSec) : record.frozen_elapsed_seconds;
-            if (!frozenSec || frozenSec <= 0) {
-              const dStr = (match && match.loginDate) || record.login_date || lastSettleTime;
-              if (dStr) {
-                const pDate = dStr.includes('T') ? new Date(dStr).getTime() : new Date(dStr.replace(' ', 'T') + '+06:00').getTime();
-                const stopTime = record.offline_at ? new Date(record.offline_at).getTime() : Date.now();
-                if (!isNaN(pDate) && !isNaN(stopTime) && stopTime > pDate) {
-                  frozenSec = Math.floor((stopTime - pDate) / 1000);
-                }
-              }
-            }
+            // It was connected before but now Exit / Offline -> FREEZE remaining countdown!
+            const unSettle = unSettleSec !== null ? unSettleSec : (record.un_settle_seconds || 0);
+            const remainingFrozen = Math.max(0, 86400 - (unSettle % 86400));
 
             const hasStatusChanged = record.status !== 'offline';
-            const hasFrozenChanged = record.frozen_elapsed_seconds !== (frozenSec || record.frozen_elapsed_seconds || 0);
+            const hasFrozenChanged = record.frozen_elapsed_seconds !== remainingFrozen;
             if (hasStatusChanged || hasFrozenChanged) {
               hasChanges = true;
             }
@@ -587,11 +582,13 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
               raw_status: (match && match.status) || 'Exit',
               sent_count: (match && match.bulkCount) || record.sent_count || 0,
               online_time_ms: (match && match.onlineTime) || record.online_time_ms || 0,
+              consequent: (match && match.consequent !== undefined) ? match.consequent : (record.consequent || 0),
               last_count_time: (match && match.lastCountTime) || record.last_count_time || null,
-              un_settle_seconds: unSettleSec !== null ? unSettleSec : record.un_settle_seconds,
+              un_settle_seconds: unSettle,
+              remaining_seconds: remainingFrozen,
               last_settle_time: lastSettleTime || record.last_settle_time || record.login_date,
               today_online_seconds: todayOnlineSec !== null ? todayOnlineSec : record.today_online_seconds,
-              frozen_elapsed_seconds: frozenSec || record.frozen_elapsed_seconds || 0,
+              frozen_elapsed_seconds: remainingFrozen,
               offline_at: record.offline_at || new Date().toISOString(),
               updated_at: new Date().toISOString()
             };
@@ -663,6 +660,7 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
 
           const wsM = wsArray.find(w => String(w.wsNumber).trim() === cleanEb);
           const unSettleSec = wsM ? Number(wsM.unSettleSeconds || 0) : Number(ebAcc.unSettleSeconds || 0);
+          const remainingSec = Math.max(0, 86400 - (unSettleSec % 86400));
           const lastSettleTime = (wsM && (wsM.lastSettleTime || wsM.updateTime)) || ebAcc.loginDate || ebAcc.lastOnlineTime;
           const newRecord = {
             id: Date.now() + Math.floor(Math.random() * 1000),
@@ -676,11 +674,13 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
             raw_status: ebAcc.status || (isOnline ? 'Online' : 'Exit'),
             sent_count: ebAcc.bulkCount || 0,
             online_time_ms: ebAcc.onlineTime || 0,
+            consequent: ebAcc.consequent || 0,
             last_count_time: ebAcc.lastCountTime || null,
             un_settle_seconds: unSettleSec,
+            remaining_seconds: remainingSec,
             last_settle_time: lastSettleTime,
             today_online_seconds: (wsM && Number(wsM.todayOnlineSeconds || 0)) || 0,
-            frozen_elapsed_seconds: isOnline ? null : Math.max(0, 86400 - unSettleSec),
+            frozen_elapsed_seconds: isOnline ? null : remainingSec,
             offline_at: isOnline ? null : new Date().toISOString(),
             created_at: ebAcc.createTime ? new Date(ebAcc.createTime.replace(' ', 'T') + '+06:00').toISOString() : new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -781,20 +781,15 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   // -------------------------------------------------------------
   // 🌟 AUTOMATIC 24-HOUR SETTLEMENT & BONUS ENGINE (Live Check)
   // If any WhatsApp account reaches 24 hours (86,400s) online connection,
-  // automatically credit ৳40 to the member's account and start next 24h cycle!
+  // automatically credit ৳32 to the member's account and start next 24h cycle!
   // -------------------------------------------------------------
   let has24hBonusAwarded = false;
   for (const n of linkedNumbers) {
     const unSettle = n.un_settle_seconds !== null && n.un_settle_seconds !== undefined
       ? Number(n.un_settle_seconds)
-      : (n.frozen_elapsed_seconds ? (86400 - Number(n.frozen_elapsed_seconds)) : null);
+      : 0;
 
-    let activeSecInCycle = 0;
-    if (unSettle !== null && unSettle >= 0) {
-      activeSecInCycle = Math.max(0, 86400 - unSettle);
-    } else if (n.frozen_elapsed_seconds) {
-      activeSecInCycle = Number(n.frozen_elapsed_seconds);
-    }
+    let activeSecInCycle = unSettle;
 
     if (n.status === 'online') {
       const nowSec = Math.floor(Date.now() / 1000);
@@ -810,7 +805,13 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
     }
 
     // Check if 24 hours (86,400s) milestone has been achieved!
-    if (activeSecInCycle >= 86400 || (unSettle === 0 && Boolean(n.login_date || n.last_settle_time))) {
+    // STRICT GUARD: Must be verified >= 24 hours online!
+    // Newly connected accounts (consequent === 0, online_time_ms < 86400000, activeSecInCycle < 86400) are BLOCKED.
+    const isGenuinely24h = (activeSecInCycle >= 86400) ||
+      (Number(n.consequent || 0) > (n.reward_cycles_count || 0)) ||
+      (Math.floor((Number(n.online_time_ms || 0)) / 86400000) > (n.reward_cycles_count || 0));
+
+    if (isGenuinely24h) {
       const lastRewardTime = n.last_rewarded_at ? new Date(n.last_rewarded_at).getTime() : 0;
       const timeSinceLastReward = Date.now() - lastRewardTime;
 
@@ -901,10 +902,11 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
         const remainingInNextCycle = activeSecInCycle % 86400;
         const rewardUpdates = {
           last_rewarded_at: nowIso,
-          reward_cycles_count: (n.reward_cycles_count || 0) + 1,
+          reward_cycles_count: Math.max((n.reward_cycles_count || 0) + 1, Number(n.consequent || 1)),
           last_settle_time: nowIso,
-          un_settle_seconds: Math.max(0, 86400 - remainingInNextCycle),
-          frozen_elapsed_seconds: n.status === 'online' ? null : remainingInNextCycle,
+          un_settle_seconds: remainingInNextCycle,
+          remaining_seconds: Math.max(0, 86400 - remainingInNextCycle),
+          frozen_elapsed_seconds: n.status === 'online' ? null : Math.max(0, 86400 - remainingInNextCycle),
           updated_at: nowIso
         };
 

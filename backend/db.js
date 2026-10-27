@@ -120,9 +120,9 @@ async function syncToCloud() {
           const key = String(u.username || u.id);
           const existingU = userMap.get(key);
           if (existingU) {
-            // ব্যালেন্স বা মোট আয় কখনোই ভুলবশত কমে যাবে না (সর্বোচ্চটি থাকবে)
-            const mergedBalance = Math.max(Number(existingU.balance || 0), Number(u.balance || 0));
-            const mergedTotal = Math.max(Number(existingU.total_earned || 0), Number(u.total_earned || 0));
+            // ব্যালেন্স বা মোট আয় সংরক্ষিত মেমোরি স্টেট অনুযায়ী থাকবে
+            const mergedBalance = (u.balance !== undefined && !isNaN(u.balance)) ? Number(u.balance) : Number(existingU.balance || 0);
+            const mergedTotal = (u.total_earned !== undefined && !isNaN(u.total_earned)) ? Number(u.total_earned) : Number(existingU.total_earned || 0);
 
             // চেক-ইন হিস্ট্রি ইউনিয়ন - একবার ক্লেইম হলে তা চিরস্থায়ী থাকবে
             const historySet = new Set([
@@ -204,13 +204,12 @@ async function syncToCloud() {
 
       currentState.linked_numbers = Array.from(numMap.values());
 
-      // ৪. ট্রানজ্যাকশন ও আয়ের হিসাব (earnings_log) পার্মানেন্ট ইউনিয়ন
-      const cloudLogs = existing.data.earnings_log || [];
-      const currentLogs = currentState.earnings_log || [];
-      const logMap = new Map();
-      cloudLogs.forEach(l => { if (l && l.id) logMap.set(String(l.id), l); });
-      currentLogs.forEach(l => { if (l && l.id) logMap.set(String(l.id), l); });
-      currentState.earnings_log = Array.from(logMap.values()).sort((a, b) => b.id - a.id);
+      // ৪. ট্রানজ্যাকশন ও আয়ের হিসাব (earnings_log)
+      if (Array.isArray(currentState.earnings_log) && currentState.earnings_log.length > 0) {
+        currentState.earnings_log = currentState.earnings_log.sort((a, b) => b.id - a.id);
+      } else {
+        currentState.earnings_log = existing.data.earnings_log || [];
+      }
 
       // ৫. উত্তোলন হিস্ট্রি (withdrawals) পার্মানেন্ট ইউনিয়ন
       const cloudW = existing.data.withdrawals || [];
@@ -268,7 +267,7 @@ db.lastCloudSyncPromise = null;
 const originalAdapterWrite = adapter.write.bind(adapter);
 adapter.write = function(data) {
   const res = originalAdapterWrite(data);
-  if (MONGODB_URI) {
+  if (MONGODB_URI && hasSyncedFromCloud) {
     db.lastCloudSyncPromise = syncToCloud();
   }
   return res;
@@ -277,7 +276,7 @@ adapter.write = function(data) {
 const originalWrite = db.write.bind(db);
 db.write = function() {
   const result = originalWrite();
-  if (MONGODB_URI) {
+  if (MONGODB_URI && hasSyncedFromCloud) {
     db.lastCloudSyncPromise = syncToCloud();
   }
   return result;
