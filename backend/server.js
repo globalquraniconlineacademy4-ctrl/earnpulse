@@ -791,17 +791,19 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
 
     let activeSecInCycle = unSettle;
 
-    if (n.status === 'online') {
+    if (n.status === 'online' && n.last_settle_time) {
       const nowSec = Math.floor(Date.now() / 1000);
-      const sStr = n.last_settle_time || n.login_date;
+      const sStr = n.last_settle_time;
       let sTimestamp = nowSec;
       if (sStr) {
         sTimestamp = sStr.includes('T')
           ? Math.floor(new Date(sStr).getTime() / 1000)
           : Math.floor(new Date(sStr.replace(' ', 'T') + '+06:00').getTime() / 1000);
       }
-      const sessionElapsed = Math.max(0, nowSec - sTimestamp);
-      activeSecInCycle = activeSecInCycle + sessionElapsed;
+      const elapsed = nowSec - sTimestamp;
+      if (elapsed > 0 && elapsed <= 86400) {
+        activeSecInCycle = activeSecInCycle + elapsed;
+      }
     }
 
     // Check if 24 hours (86,400s) milestone has been achieved!
@@ -1294,7 +1296,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.27.08',
+      build_version: '2026.10.27.09',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
