@@ -66,10 +66,15 @@ async function getMongoDb() {
 }
 
 let hasSyncedFromCloud = false;
+let lastCloudSyncTime = 0;
 
 // Sync from MongoDB Atlas into lowdb on startup/request
-async function syncFromCloud() {
+async function syncFromCloud(force = false) {
   if (!MONGODB_URI) return;
+  const now = Date.now();
+  if (!force && hasSyncedFromCloud && (now - lastCloudSyncTime < 2000)) {
+    return;
+  }
   try {
     const mdb = await getMongoDb();
     if (!mdb) return;
@@ -78,10 +83,12 @@ async function syncFromCloud() {
     if (doc && doc.data) {
       db.setState(doc.data);
       hasSyncedFromCloud = true;
+      lastCloudSyncTime = Date.now();
       try { originalAdapterWrite(doc.data); } catch (e) {}
       console.log(`☁️ [Database] Synced ${doc.data.users?.length || 0} users from MongoDB Atlas!`);
     } else {
       hasSyncedFromCloud = true;
+      lastCloudSyncTime = Date.now();
       await syncToCloud();
     }
   } catch (err) {
