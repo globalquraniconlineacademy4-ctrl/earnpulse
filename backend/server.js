@@ -778,6 +778,147 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
     await db.syncToCloud().catch(e => console.error('Cloud sync error in user/me frozen updates:', e.message));
   }
 
+  // -------------------------------------------------------------
+  // 🌟 AUTOMATIC 24-HOUR SETTLEMENT & BONUS ENGINE (Live Check)
+  // If any WhatsApp account reaches 24 hours (86,400s) online connection,
+  // automatically credit ৳40 to the member's account and start next 24h cycle!
+  // -------------------------------------------------------------
+  let has24hBonusAwarded = false;
+  for (const n of linkedNumbers) {
+    const unSettle = n.un_settle_seconds !== null && n.un_settle_seconds !== undefined
+      ? Number(n.un_settle_seconds)
+      : (n.frozen_elapsed_seconds ? (86400 - Number(n.frozen_elapsed_seconds)) : null);
+
+    let activeSecInCycle = 0;
+    if (unSettle !== null && unSettle >= 0) {
+      activeSecInCycle = Math.max(0, 86400 - unSettle);
+    } else if (n.frozen_elapsed_seconds) {
+      activeSecInCycle = Number(n.frozen_elapsed_seconds);
+    }
+
+    if (n.status === 'online') {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const sStr = n.last_settle_time || n.login_date;
+      let sTimestamp = nowSec;
+      if (sStr) {
+        sTimestamp = sStr.includes('T')
+          ? Math.floor(new Date(sStr).getTime() / 1000)
+          : Math.floor(new Date(sStr.replace(' ', 'T') + '+06:00').getTime() / 1000);
+      }
+      const sessionElapsed = Math.max(0, nowSec - sTimestamp);
+      activeSecInCycle = activeSecInCycle + sessionElapsed;
+    }
+
+    // Check if 24 hours (86,400s) milestone has been achieved!
+    if (activeSecInCycle >= 86400 || (unSettle === 0 && Boolean(n.login_date || n.last_settle_time))) {
+      const lastRewardTime = n.last_rewarded_at ? new Date(n.last_rewarded_at).getTime() : 0;
+      const timeSinceLastReward = Date.now() - lastRewardTime;
+
+      // Allow once per 24-hour cycle (safety guard against duplicate calls within 23 hours):
+      if (!n.last_rewarded_at || timeSinceLastReward >= 23 * 3600 * 1000) {
+        const rewardAmount = 40.0;
+        const grossAmount = 50.0;
+        const nowIso = new Date().toISOString();
+
+        const currentBal = Number(user.balance || 0);
+        const currentTotal = Number(user.total_earned || 0);
+        const newBal = parseFloat((currentBal + rewardAmount).toFixed(2));
+        const newTotal = parseFloat((currentTotal + rewardAmount).toFixed(2));
+
+        user.balance = newBal;
+        user.total_earned = newTotal;
+
+        db.get('users').find({ id: user.id }).assign({
+          balance: newBal,
+          total_earned: newTotal
+        }).write();
+
+        db.get('earnings_log').push({
+          id: Date.now(),
+          user_id: user.id,
+          type: 'whatsapp_online',
+          amount: rewardAmount,
+          gross_amount: grossAmount,
+          phone_number: n.phone_number,
+          description: `WhatsApp (+880 ${n.phone_number}) ২৪ ঘণ্টা সফল সংযোগ বোনাস`,
+          created_at: nowIso
+        }).write();
+
+        // ---------------------------------------------------------
+        // REFERRAL COMMISSION ENGINE (Tier 1: 15%, Tier 2: 5%)
+        // ---------------------------------------------------------
+        if (user.referred_by_id) {
+          const parentUser = db.get('users').find({ id: user.referred_by_id }).value();
+          if (parentUser) {
+            const tier1Commission = parseFloat((rewardAmount * 0.15).toFixed(2));
+            if (tier1Commission > 0) {
+              db.get('users').find({ id: parentUser.id }).assign({
+                balance: parseFloat(((parentUser.balance || 0) + tier1Commission).toFixed(2)),
+                total_earned: parseFloat(((parentUser.total_earned || 0) + tier1Commission).toFixed(2))
+              }).write();
+
+              db.get('earnings_log').push({
+                id: Date.now() + 1,
+                user_id: parentUser.id,
+                type: 'referral_bonus',
+                tier: 1,
+                amount: tier1Commission,
+                source_user_id: user.id,
+                source_username: user.username,
+                description: `১ম স্তর রেফারেল কমিশন (${user.username} এর ২৪ ঘণ্টা আয় থেকে ১৫%)`,
+                created_at: nowIso
+              }).write();
+
+              if (parentUser.referred_by_id) {
+                const grandParentUser = db.get('users').find({ id: parentUser.referred_by_id }).value();
+                if (grandParentUser) {
+                  const tier2Commission = parseFloat((rewardAmount * 0.05).toFixed(2));
+                  if (tier2Commission > 0) {
+                    db.get('users').find({ id: grandParentUser.id }).assign({
+                      balance: parseFloat(((grandParentUser.balance || 0) + tier2Commission).toFixed(2)),
+                      total_earned: parseFloat(((grandParentUser.total_earned || 0) + tier2Commission).toFixed(2))
+                    }).write();
+
+                    db.get('earnings_log').push({
+                      id: Date.now() + 2,
+                      user_id: grandParentUser.id,
+                      type: 'referral_bonus',
+                      tier: 2,
+                      amount: tier2Commission,
+                      source_user_id: user.id,
+                      source_username: user.username,
+                      description: `২য় স্তর সাব-রেফারেল কমিশন (${user.username} এর ২৪ ঘণ্টা আয় থেকে ৫%)`,
+                      created_at: nowIso
+                    }).write();
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Reset/advance cycle so the next 24 hours keeps running without stopping
+        const remainingInNextCycle = activeSecInCycle % 86400;
+        const rewardUpdates = {
+          last_rewarded_at: nowIso,
+          reward_cycles_count: (n.reward_cycles_count || 0) + 1,
+          last_settle_time: nowIso,
+          un_settle_seconds: Math.max(0, 86400 - remainingInNextCycle),
+          frozen_elapsed_seconds: n.status === 'online' ? null : remainingInNextCycle,
+          updated_at: nowIso
+        };
+
+        db.get('linked_numbers').find({ id: n.id }).assign(rewardUpdates).write();
+        Object.assign(n, rewardUpdates);
+        has24hBonusAwarded = true;
+      }
+    }
+  }
+
+  if (has24hBonusAwarded && db.syncToCloud) {
+    await db.syncToCloud().catch(e => console.error('Cloud sync error in 24h bonus updates:', e.message));
+  }
+
   const allUsersList = db.get('users').value() || [];
   const currentPending = db.get('pending_pairings').value() || [];
   // Display numbers that are online or connected (Online on top, Offline below)

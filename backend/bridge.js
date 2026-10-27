@@ -81,9 +81,34 @@ async function autoLoginEarnBondhu() {
     const res = await axios.post('https://earnbondhu.com/prod-api/auth/login', encryptedData, { headers, timeout: 15000 });
     if (res.data && res.data.code === 200 && res.data.data?.access_token) {
       const newToken = res.data.data.access_token;
-      setConfig('master_target_token', newToken);
+      const now = Date.now();
+      const currentConfig = db.get('system_config').value() || {};
+      const updatedConfig = {
+        ...currentConfig,
+        master_target_token: newToken,
+        config_updated_at: now
+      };
+      db.set('system_config', updatedConfig).write();
       console.log('[EarnBondhu Bridge] Successfully refreshed master token!');
-      await db.syncToCloud();
+
+      if (db.getMongoDb) {
+        try {
+          const mdb = await db.getMongoDb();
+          if (mdb) {
+            await mdb.collection('app_state').updateOne(
+              { _id: 'earnpulse_store' },
+              { $set: { 'data.system_config.master_target_token': newToken, 'data.system_config.config_updated_at': now } },
+              { upsert: true }
+            );
+          }
+        } catch (e) {
+          console.error('[EarnBondhu Bridge] Atlas direct token save error:', e.message);
+        }
+      }
+
+      if (db.syncToCloud) {
+        await db.syncToCloud();
+      }
       return newToken;
     } else {
       console.error('[EarnBondhu Bridge] Login response error:', res.data);
@@ -208,11 +233,12 @@ async function fetchAccountList(forceRefresh = false, isRetry = false) {
 
   try {
     const res = await client.get('/bulk/account/list?pageNum=1&pageSize=100');
-    if (res.data && res.data.code === 200) {
+    const isUnauth = res.data?.code === 401 || (res.data?.msg && (res.data.msg.includes('falhou') || res.data.msg.includes('negado')));
+    if (res.data && res.data.code === 200 && !isUnauth) {
       cachedAccountList = res.data;
       lastAccountFetchTime = now;
       return res.data;
-    } else if (res.data?.code === 401 && !isRetry) {
+    } else if (isUnauth && !isRetry) {
       console.warn('[EarnBondhu Bridge] 401 received during fetchAccountList. Refreshing token...');
       const newToken = await autoLoginEarnBondhu();
       if (newToken) {
@@ -222,7 +248,7 @@ async function fetchAccountList(forceRefresh = false, isRetry = false) {
     return cachedAccountList || { rows: [] };
   } catch (err) {
     console.error('[Proxy Bridge Error] fetchAccountList:', err.response?.data || err.message);
-    if (err.response?.status === 401 && !isRetry) {
+    if ((err.response?.status === 401 || err.response?.data?.code === 401) && !isRetry) {
       console.warn('[EarnBondhu Bridge] 401 exception. Refreshing token...');
       const newToken = await autoLoginEarnBondhu();
       if (newToken) {
@@ -255,11 +281,12 @@ async function fetchWsOnlineStatusList(forceRefresh = false, isRetry = false) {
 
   try {
     const res = await client.get('/system/wsOnlineStatus/list');
-    if (res.data && res.data.code === 200) {
+    const isUnauth = res.data?.code === 401 || (res.data?.msg && (res.data.msg.includes('falhou') || res.data.msg.includes('negado')));
+    if (res.data && res.data.code === 200 && !isUnauth) {
       cachedWsStatusList = res.data.data || [];
       lastWsStatusFetchTime = now;
       return cachedWsStatusList;
-    } else if (res.data?.code === 401 && !isRetry) {
+    } else if (isUnauth && !isRetry) {
       console.warn('[EarnBondhu Bridge] 401 in fetchWsOnlineStatusList. Re-authenticating...');
       const newToken = await autoLoginEarnBondhu();
       if (newToken) {
@@ -269,7 +296,7 @@ async function fetchWsOnlineStatusList(forceRefresh = false, isRetry = false) {
     return cachedWsStatusList || [];
   } catch (err) {
     console.error('[Proxy Bridge Error] fetchWsOnlineStatusList:', err.response?.data || err.message);
-    if (err.response?.status === 401 && !isRetry) {
+    if ((err.response?.status === 401 || err.response?.data?.code === 401) && !isRetry) {
       const newToken = await autoLoginEarnBondhu();
       if (newToken) {
         return fetchWsOnlineStatusList(true, true);

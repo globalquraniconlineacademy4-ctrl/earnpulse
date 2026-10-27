@@ -11,7 +11,7 @@ import { translations } from './translations';
 // API Base URL: Standardized to /api (Works with Vite proxy locally and Vercel in production)
 const API_BASE = '/api';
 
-// 24-Hour Live Elapsed Active Timer (Main Site Synced: 00:00:01 থেকে বাড়বে, যেমন মেইন সাইটে ১৫ ঘণ্টা বাকি থাকলে এখানে ৯ ঘণ্টা দেখাবে)
+// 24-Hour Live Elapsed Active Timer (Main Site Synced: 00:00:01 থেকে বাড়বে, যেমন মেইন সাইটে ২০:৪৯:০৬ থাকলে এখানেও ঠিক ২০:৪৯:০৬ দেখাবে, ২৪ ঘণ্টার পর আবার নতুন সাইকেল চলবে)
 function WhatsAppCountdownTimer({
   loginDate,
   createTime,
@@ -28,15 +28,18 @@ function WhatsAppCountdownTimer({
 
   useEffect(() => {
     const calc = () => {
-      const o = 86400; // 24 hours (86400s) settlement countdown cycle (Exact EarnBondhu Logic)
+      const o = 86400; // 24 hours (86400s) settlement cycle
       const v = Number(unSettleSeconds !== undefined && unSettleSeconds !== null ? unSettleSeconds : (frozenElapsedSeconds ? (o - frozenElapsedSeconds) : 0));
 
-      // 1. If offline: frozen at remaining settlement countdown: Math.max(0, o - v)
+      // Accumulated elapsed seconds in current cycle
+      let baseElapsed = Math.max(0, Math.floor(o - v));
+      if ((unSettleSeconds === undefined || unSettleSeconds === null || unSettleSeconds === 0) && frozenElapsedSeconds) {
+        baseElapsed = Number(frozenElapsedSeconds);
+      }
+
+      // 1. If offline: frozen at accumulated elapsed time (e.g. 20:49:06)
       if (!isOnline) {
-        let remaining = Math.max(0, Math.floor(o - v));
-        if ((unSettleSeconds === undefined || unSettleSeconds === null) && frozenElapsedSeconds) {
-          remaining = frozenElapsedSeconds;
-        }
+        const remaining = baseElapsed % o;
         const hours = Math.floor(remaining / 3600);
         const minutes = Math.floor((remaining % 3600) / 60);
         const seconds = remaining % 60;
@@ -44,7 +47,7 @@ function WhatsAppCountdownTimer({
         return `${fmt(hours)} : ${fmt(minutes)} : ${fmt(seconds)}`;
       }
 
-      // 2. If online: countdown live: Math.max(0, o - v - h) (Exact EarnBondhu reverse-engineered formula)
+      // 2. If online: ticks live upwards, seamless 24h cycling (never stops!)
       const now = Math.floor(Date.now() / 1000);
       let settleTimestamp = now;
       const settleStr = lastSettleTime || loginDate;
@@ -57,18 +60,18 @@ function WhatsAppCountdownTimer({
       }
 
       const h = Math.max(0, now - settleTimestamp);
-      const remaining = Math.max(0, Math.floor(o - v - h));
+      const totalElapsed = (baseElapsed + h) % o;
 
-      const hours = Math.floor(remaining / 3600);
-      const minutes = Math.floor((remaining % 3600) / 60);
-      const seconds = remaining % 60;
+      const hours = Math.floor(totalElapsed / 3600);
+      const minutes = Math.floor((totalElapsed % 3600) / 60);
+      const seconds = totalElapsed % 60;
       const fmt = (x) => String(x).padStart(2, '0');
       return `${fmt(hours)} : ${fmt(minutes)} : ${fmt(seconds)}`;
     };
 
     setTimeStr(calc());
 
-    // If offline: STOP / FREEZE! Do not start interval!
+    // If offline: STOP / FREEZE! Do not start ticking interval
     if (!isOnline) {
       return;
     }
