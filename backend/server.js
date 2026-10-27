@@ -816,8 +816,8 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
 
       // Allow once per 24-hour cycle (safety guard against duplicate calls within 23 hours):
       if (!n.last_rewarded_at || timeSinceLastReward >= 23 * 3600 * 1000) {
-        const rewardAmount = 40.0;
-        const grossAmount = 50.0;
+        const grossAmount = 40.0;
+        const rewardAmount = 32.0; // ৪০ টাকার ৮০% = ৳৩২.০০ মেম্বার পাবে
         const nowIso = new Date().toISOString();
 
         const currentBal = Number(user.balance || 0);
@@ -839,8 +839,9 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
           type: 'whatsapp_online',
           amount: rewardAmount,
           gross_amount: grossAmount,
+          payout_percentage: 80,
           phone_number: n.phone_number,
-          description: `WhatsApp (+880 ${n.phone_number}) ২৪ ঘণ্টা সফল সংযোগ বোনাস`,
+          description: `WhatsApp (+880 ${n.phone_number}) ২৪ ঘণ্টা সফল সংযোগ বোনাস (৪০ টাকার ৮০%)`,
           created_at: nowIso
         }).write();
 

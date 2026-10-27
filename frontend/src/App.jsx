@@ -11,7 +11,7 @@ import { translations } from './translations';
 // API Base URL: Standardized to /api (Works with Vite proxy locally and Vercel in production)
 const API_BASE = '/api';
 
-// 24-Hour Live Elapsed Active Timer (Main Site Synced: 00:00:01 থেকে বাড়বে, যেমন মেইন সাইটে ২০:৪৯:০৬ থাকলে এখানেও ঠিক ২০:৪৯:০৬ দেখাবে, ২৪ ঘণ্টার পর আবার নতুন সাইকেল চলবে)
+// 24-Hour Live Countdown Active Timer (Exact EarnBondhu Match: 24 ঘণ্টা থেকে ০ তে নামতে থাকে, যেমন ২০:৪৯:০৬, ০ তে পৌঁছালে রিওয়ার্ড যোগ হয়ে আবার ২৪ ঘণ্টা থেকে নামতে থাকে)
 function WhatsAppCountdownTimer({
   loginDate,
   createTime,
@@ -24,30 +24,32 @@ function WhatsAppCountdownTimer({
   updatedAt
 }) {
   const isOnline = String(status || '').toLowerCase() === 'online';
-  const [timeStr, setTimeStr] = useState('00 : 00 : 00');
+  const [timeStr, setTimeStr] = useState('24 : 00 : 00');
 
   useEffect(() => {
     const calc = () => {
       const o = 86400; // 24 hours (86400s) settlement cycle
-      const v = Number(unSettleSeconds !== undefined && unSettleSeconds !== null ? unSettleSeconds : (frozenElapsedSeconds ? (o - frozenElapsedSeconds) : 0));
 
-      // Accumulated elapsed seconds in current cycle
-      let baseElapsed = Math.max(0, Math.floor(o - v));
-      if ((unSettleSeconds === undefined || unSettleSeconds === null || unSettleSeconds === 0) && frozenElapsedSeconds) {
-        baseElapsed = Number(frozenElapsedSeconds);
+      // Remaining countdown seconds until 00:00:00 settlement
+      let remaining = 86400;
+      if (frozenElapsedSeconds !== undefined && frozenElapsedSeconds !== null && frozenElapsedSeconds > 0) {
+        remaining = Number(frozenElapsedSeconds);
+      } else if (unSettleSeconds !== undefined && unSettleSeconds !== null && unSettleSeconds > 0) {
+        remaining = Number(unSettleSeconds);
       }
 
-      // 1. If offline: frozen at accumulated elapsed time (e.g. 20:49:06)
+      // 1. If offline: frozen at current remaining countdown (e.g. 20:49:06)
       if (!isOnline) {
-        const remaining = baseElapsed % o;
-        const hours = Math.floor(remaining / 3600);
-        const minutes = Math.floor((remaining % 3600) / 60);
-        const seconds = remaining % 60;
+        let sec = remaining % o;
+        if (sec === 0 && remaining > 0) sec = o;
+        const hours = Math.floor(sec / 3600);
+        const minutes = Math.floor((sec % 3600) / 60);
+        const seconds = sec % 60;
         const fmt = (x) => String(x).padStart(2, '0');
         return `${fmt(hours)} : ${fmt(minutes)} : ${fmt(seconds)}`;
       }
 
-      // 2. If online: ticks live upwards, seamless 24h cycling (never stops!)
+      // 2. If online: countdown ticks DOWN towards 00:00:00 live:
       const now = Math.floor(Date.now() / 1000);
       let settleTimestamp = now;
       const settleStr = lastSettleTime || loginDate;
@@ -60,11 +62,18 @@ function WhatsAppCountdownTimer({
       }
 
       const h = Math.max(0, now - settleTimestamp);
-      const totalElapsed = (baseElapsed + h) % o;
 
-      const hours = Math.floor(totalElapsed / 3600);
-      const minutes = Math.floor((totalElapsed % 3600) / 60);
-      const seconds = totalElapsed % 60;
+      // Countdown decreases every second online:
+      // When it reaches 0 (after 24h), it seamlessly wraps around from 24h again!
+      let liveRemaining = remaining - (h % o);
+      if (liveRemaining <= 0) {
+        liveRemaining = o + liveRemaining;
+      }
+      if (liveRemaining <= 0) liveRemaining = o;
+
+      const hours = Math.floor(liveRemaining / 3600);
+      const minutes = Math.floor((liveRemaining % 3600) / 60);
+      const seconds = liveRemaining % 60;
       const fmt = (x) => String(x).padStart(2, '0');
       return `${fmt(hours)} : ${fmt(minutes)} : ${fmt(seconds)}`;
     };
@@ -76,7 +85,7 @@ function WhatsAppCountdownTimer({
       return;
     }
 
-    // If online: tick live countdown every 1 second
+    // If online: tick countdown DOWN every 1 second
     const interval = setInterval(() => {
       setTimeStr(calc());
     }, 1000);
@@ -1396,7 +1405,7 @@ export default function App() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#0f172a' }}>{t.online24h}</div>
                     <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{t.online24hDesc}</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#15803d', marginTop: '3px' }}>৳ 40.00</div>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#15803d', marginTop: '3px' }}>৳ 32.00</div>
                   </div>
                   <ChevronRight size={18} color="#94a3b8" />
                 </div>
