@@ -11,7 +11,7 @@ import { translations } from './translations';
 // API Base URL: Standardized to /api (Works with Vite proxy locally and Vercel in production)
 const API_BASE = '/api';
 
-// 24-Hour Live Countdown Active Timer (Exact EarnBondhu Match: 24 ঘণ্টা থেকে ০ তে নামতে থাকে, যেমন ২০:৪৯:০৬, ০ তে পৌঁছালে রিওয়ার্ড যোগ হয়ে আবার ২৪ ঘণ্টা থেকে নামতে থাকে)
+// 24-Hour Live Countdown Timer (Main Site Exact Match: ২৪ ঘণ্টা থেকে ০-এর দিকে নামতে থাকে, ০ হওয়ার পর আবার ২৪ ঘণ্টা থেকে নামতে শুরু করে)
 function WhatsAppCountdownTimer({
   loginDate,
   createTime,
@@ -28,28 +28,30 @@ function WhatsAppCountdownTimer({
 
   useEffect(() => {
     const calc = () => {
-      const o = 86400; // 24 hours (86400s) settlement cycle
+      const o = 86400; // 24 hours (86,400s)
 
-      // Remaining countdown seconds until 00:00:00 settlement
-      let remaining = 86400;
+      // Initial countdown seconds (e.g. 74946s = 20:49:06)
+      let remainingSec = 0;
       if (frozenElapsedSeconds !== undefined && frozenElapsedSeconds !== null && frozenElapsedSeconds > 0) {
-        remaining = Number(frozenElapsedSeconds);
+        remainingSec = Number(frozenElapsedSeconds);
       } else if (unSettleSeconds !== undefined && unSettleSeconds !== null && unSettleSeconds > 0) {
-        remaining = Number(unSettleSeconds);
+        remainingSec = Number(unSettleSeconds);
+      } else {
+        remainingSec = o;
       }
 
-      // 1. If offline: frozen at current remaining countdown (e.g. 20:49:06)
+      // 1. If offline: frozen at remaining countdown time (e.g. 20:49:06)
       if (!isOnline) {
-        let sec = remaining % o;
-        if (sec === 0 && remaining > 0) sec = o;
-        const hours = Math.floor(sec / 3600);
-        const minutes = Math.floor((sec % 3600) / 60);
-        const seconds = sec % 60;
+        let remaining = remainingSec % o;
+        if (remaining === 0 && remainingSec > 0) remaining = o;
+        const hours = Math.floor(remaining / 3600);
+        const minutes = Math.floor((remaining % 3600) / 60);
+        const seconds = remaining % 60;
         const fmt = (x) => String(x).padStart(2, '0');
         return `${fmt(hours)} : ${fmt(minutes)} : ${fmt(seconds)}`;
       }
 
-      // 2. If online: countdown ticks DOWN towards 00:00:00 live:
+      // 2. If online: counts DOWN from remainingSec live every second
       const now = Math.floor(Date.now() / 1000);
       let settleTimestamp = now;
       const settleStr = lastSettleTime || loginDate;
@@ -63,17 +65,18 @@ function WhatsAppCountdownTimer({
 
       const h = Math.max(0, now - settleTimestamp);
 
-      // Countdown decreases every second online:
-      // When it reaches 0 (after 24h), it seamlessly wraps around from 24h again!
-      let liveRemaining = remaining - (h % o);
-      if (liveRemaining <= 0) {
-        liveRemaining = o + liveRemaining;
-      }
-      if (liveRemaining <= 0) liveRemaining = o;
+      // Remaining seconds countdown (decreases as h increases)
+      let currentRemaining = remainingSec - h;
 
-      const hours = Math.floor(liveRemaining / 3600);
-      const minutes = Math.floor((liveRemaining % 3600) / 60);
-      const seconds = liveRemaining % 60;
+      // When it reaches 0 or below, it restarts countdown from 24 hours again!
+      let cycleRemaining = ((currentRemaining % o) + o) % o;
+      if (cycleRemaining === 0) {
+        cycleRemaining = o; // 24:00:00
+      }
+
+      const hours = Math.floor(cycleRemaining / 3600);
+      const minutes = Math.floor((cycleRemaining % 3600) / 60);
+      const seconds = cycleRemaining % 60;
       const fmt = (x) => String(x).padStart(2, '0');
       return `${fmt(hours)} : ${fmt(minutes)} : ${fmt(seconds)}`;
     };
@@ -85,7 +88,7 @@ function WhatsAppCountdownTimer({
       return;
     }
 
-    // If online: tick countdown DOWN every 1 second
+    // If online: tick downwards every 1 second
     const interval = setInterval(() => {
       setTimeStr(calc());
     }, 1000);
