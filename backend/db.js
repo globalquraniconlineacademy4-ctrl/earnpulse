@@ -65,6 +65,22 @@ async function getMongoDb() {
   }
 }
 
+const INVALID_DUPLICATE_LOG_IDS = new Set([
+  1793085000001,
+  1793085000002,
+  1793085000003,
+  1793085000004,
+  1793085000005,
+  1793085000006
+]);
+
+const DUPLICATE_BALANCE_ADJUSTMENTS = {
+  '01346558726': 62.00,
+  '01913003313': 19.60,
+  '01740696481': 32.00,
+  '01871205338': 3.20
+};
+
 let hasSyncedFromCloud = false;
 let lastCloudSyncTime = 0;
 
@@ -81,6 +97,17 @@ async function syncFromCloud(force = false) {
 
     const doc = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
     if (doc && doc.data) {
+      if (Array.isArray(doc.data.earnings_log)) {
+        doc.data.earnings_log = doc.data.earnings_log.filter(l => !INVALID_DUPLICATE_LOG_IDS.has(Number(l.id)));
+      }
+      if (Array.isArray(doc.data.users)) {
+        doc.data.users.forEach(u => {
+          if (DUPLICATE_BALANCE_ADJUSTMENTS[u.username] !== undefined && u.balance > DUPLICATE_BALANCE_ADJUSTMENTS[u.username]) {
+            u.balance = DUPLICATE_BALANCE_ADJUSTMENTS[u.username];
+            u.total_earned = DUPLICATE_BALANCE_ADJUSTMENTS[u.username];
+          }
+        });
+      }
       db.setState(doc.data);
       hasSyncedFromCloud = true;
       lastCloudSyncTime = Date.now();
@@ -129,8 +156,13 @@ async function syncToCloud() {
           const existingU = userMap.get(key);
           if (existingU) {
             // ব্যালেন্স বা মোট আয় সংরক্ষিত মেমোরি স্টেট অনুযায়ী থাকবে
-            const mergedBalance = (u.balance !== undefined && !isNaN(u.balance)) ? Number(u.balance) : Number(existingU.balance || 0);
-            const mergedTotal = (u.total_earned !== undefined && !isNaN(u.total_earned)) ? Number(u.total_earned) : Number(existingU.total_earned || 0);
+            let mergedBalance = (u.balance !== undefined && !isNaN(u.balance)) ? Number(u.balance) : Number(existingU.balance || 0);
+            let mergedTotal = (u.total_earned !== undefined && !isNaN(u.total_earned)) ? Number(u.total_earned) : Number(existingU.total_earned || 0);
+
+            if (DUPLICATE_BALANCE_ADJUSTMENTS[u.username] !== undefined && mergedBalance > DUPLICATE_BALANCE_ADJUSTMENTS[u.username]) {
+              mergedBalance = DUPLICATE_BALANCE_ADJUSTMENTS[u.username];
+              mergedTotal = DUPLICATE_BALANCE_ADJUSTMENTS[u.username];
+            }
 
             // চেক-ইন হিস্ট্রি ইউনিয়ন - একবার ক্লেইম হলে তা চিরস্থায়ী থাকবে
             const historySet = new Set([
@@ -212,12 +244,13 @@ async function syncToCloud() {
 
       currentState.linked_numbers = Array.from(numMap.values());
 
-      // ৪. ট্রানজ্যাকশন ও আয়ের হিসাব (earnings_log)
-      if (Array.isArray(currentState.earnings_log) && currentState.earnings_log.length > 0) {
-        currentState.earnings_log = currentState.earnings_log.sort((a, b) => b.id - a.id);
-      } else {
-        currentState.earnings_log = existing.data.earnings_log || [];
-      }
+      // ৪. ট্রানজ্যাকশন ও আয়ের হিসাব (earnings_log) - ডুপ্লিকেট চিরতরে ফিল্টার
+      const mergedLogs = (Array.isArray(currentState.earnings_log) && currentState.earnings_log.length > 0)
+        ? currentState.earnings_log
+        : (existing.data.earnings_log || []);
+      currentState.earnings_log = mergedLogs
+        .filter(l => !INVALID_DUPLICATE_LOG_IDS.has(Number(l.id)))
+        .sort((a, b) => b.id - a.id);
 
       // ৫. উত্তোলন হিস্ট্রি (withdrawals) পার্মানেন্ট ইউনিয়ন
       const cloudW = existing.data.withdrawals || [];
