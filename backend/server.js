@@ -195,83 +195,96 @@ app.get('/api/checkin/status', authenticateToken, async (req, res) => {
   });
 });
 
+const activeCheckinUsers = new Set();
+
 app.post('/api/checkin/do', authenticateToken, async (req, res) => {
-  if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
-  }
-  db.read();
-  const user = db.get('users').find({ id: req.user.id }).value();
-  if (!user) return res.status(404).json({ success: false, msg: 'ব্যবহারকারী পাওয়া যায়নি' });
-
-  const history = user.checkin_history || [];
-  const checkinCount = history.length;
-  const { todayStr, todayMidnightMs, nowMs } = getBangladeshDateInfo();
-
-  // ১. প্রথম ৭ দিনের কোটা শেষ কিনা যাচাই
-  if (checkinCount >= 7) {
-    return res.status(400).json({ 
+  if (activeCheckinUsers.has(req.user.id)) {
+    return res.status(429).json({ 
       success: false, 
-      msg: 'আপনি ইতিমধ্যে ৭ দিনের সব চেক-ইন বোনাস গ্রহণ করেছেন! এই অফারটি নতুন মেম্বারদের প্রথম ৭ দিনের জন্য প্রযোজ্য।' 
+      msg: 'আপনার পূর্ববর্তী অনুরোধ প্রক্রিয়াধীন রয়েছে, অনুগ্রহ করে অপেক্ষা করুন...' 
     });
   }
+  activeCheckinUsers.add(req.user.id);
+  try {
+    if (db.syncFromCloud) {
+      try { await db.syncFromCloud(); } catch (e) {}
+    }
+    db.read();
+    const user = db.get('users').find({ id: req.user.id }).value();
+    if (!user) return res.status(404).json({ success: false, msg: 'ব্যবহারকারী পাওয়া যায়নি' });
 
-  // ২. দিনে মাত্র একবারই করা যাবে - একই দিনে ২/৩ বার রোধ
-  if (user.last_checkin_date === todayStr || history.includes(todayStr)) {
-    return res.status(400).json({ 
-      success: false, 
-      msg: 'আজকের চেক-ইন আপনি ইতিমধ্যে সম্পন্ন করেছেন! দিনে শুধুমাত্র একবারই চেক-ইন করা যাবে।' 
+    const history = user.checkin_history || [];
+    const checkinCount = history.length;
+    const { todayStr, todayMidnightMs, nowMs } = getBangladeshDateInfo();
+
+    // ১. প্রথম ৭ দিনের কোটা শেষ কিনা যাচাই
+    if (checkinCount >= 7) {
+      return res.status(400).json({ 
+        success: false, 
+        msg: 'আপনি ইতিমধ্যে ৭ দিনের সব চেক-ইন বোনাস গ্রহণ করেছেন! এই অফারটি নতুন মেম্বারদের প্রথম ৭ দিনের জন্য প্রযোজ্য।' 
+      });
+    }
+
+    // ২. দিনে মাত্র একবারই করা যাবে - একই দিনে ২/৩ বার রোধ
+    if (user.last_checkin_date === todayStr || history.includes(todayStr)) {
+      return res.status(400).json({ 
+        success: false, 
+        msg: 'আজকের চেক-ইন আপনি ইতিমধ্যে সম্পন্ন করেছেন! দিনে শুধুমাত্র একবারই চেক-ইন করা যাবে।' 
+      });
+    }
+
+    // ৩. হোয়াটসঅ্যাপ আজকের তারিখে কমপক্ষে ৬ ঘণ্টা অনলাইন আছে কিনা কঠোরভাবে যাচাই
+    const { onlineHours, isQualified } = await calculateMemberTodayOnlineHours(req.user.id, todayStr, todayMidnightMs, nowMs);
+
+    if (!isQualified) {
+      return res.status(400).json({ 
+        success: false, 
+        msg: `আজকে আপনার হোয়াটসঅ্যাপ এখনও ৬ ঘণ্টা অনলাইন পূর্ণ হয়নি! আপনার আজকের অনলাইন সময়: ${onlineHours}/৬ ঘণ্টা। ৬ ঘণ্টা পূর্ণ হলে ১০ টাকা বোনাস সংগ্রহ করতে পারবেন।` 
+      });
+    }
+
+    // সব শর্ত পূরণ হয়েছে: মেম্বারকে ১০ টাকা দেওয়া হচ্ছে
+    const reward = 10.0;
+    const newBal = parseFloat(((user.balance || 0) + reward).toFixed(2));
+    const newTotal = parseFloat(((user.total_earned || 0) + reward).toFixed(2));
+    const newHistory = [...history, todayStr];
+    const newCount = newHistory.length;
+
+    db.get('users')
+      .find({ id: req.user.id })
+      .assign({
+        balance: newBal,
+        total_earned: newTotal,
+        last_checkin_date: todayStr,
+        checkin_history: newHistory,
+        checkin_count: newCount
+      })
+      .write();
+
+    db.get('earnings_log').push({
+      id: Date.now(),
+      user_id: req.user.id,
+      type: 'daily_checkin',
+      amount: reward,
+      description: `দৈনিক চেক-ইন বোনাস (${todayStr} তারিখ - ${newCount}/৭ দিন)`,
+      created_at: new Date().toISOString()
+    }).write();
+
+    await db.syncToCloud();
+
+    return res.json({
+      success: true,
+      reward,
+      newBalance: newBal,
+      checkinCount: newCount,
+      maxCheckinDays: 7,
+      todayDate: todayStr,
+      history: newHistory,
+      msg: `অভিনন্দন! আপনি আজকের (${todayStr}) চেক-ইন বোনাস ৳${reward} পেয়েছেন! (মোট ${newCount}/৭ দিন সম্পন্ন)`
     });
+  } finally {
+    activeCheckinUsers.delete(req.user.id);
   }
-
-  // ৩. হোয়াটসঅ্যাপ আজকের তারিখে কমপক্ষে ৬ ঘণ্টা অনলাইন আছে কিনা কঠোরভাবে যাচাই
-  const { onlineHours, isQualified } = await calculateMemberTodayOnlineHours(req.user.id, todayStr, todayMidnightMs, nowMs);
-
-  if (!isQualified) {
-    return res.status(400).json({ 
-      success: false, 
-      msg: `আজকে আপনার হোয়াটসঅ্যাপ এখনও ৬ ঘণ্টা অনলাইন পূর্ণ হয়নি! আপনার আজকের অনলাইন সময়: ${onlineHours}/৬ ঘণ্টা। ৬ ঘণ্টা পূর্ণ হলে ১০ টাকা বোনাস সংগ্রহ করতে পারবেন।` 
-    });
-  }
-
-  // সব শর্ত পূরণ হয়েছে: মেম্বারকে ১০ টাকা দেওয়া হচ্ছে
-  const reward = 10.0;
-  const newBal = parseFloat(((user.balance || 0) + reward).toFixed(2));
-  const newTotal = parseFloat(((user.total_earned || 0) + reward).toFixed(2));
-  const newHistory = [...history, todayStr];
-  const newCount = newHistory.length;
-
-  db.get('users')
-    .find({ id: req.user.id })
-    .assign({
-      balance: newBal,
-      total_earned: newTotal,
-      last_checkin_date: todayStr,
-      checkin_history: newHistory,
-      checkin_count: newCount
-    })
-    .write();
-
-  db.get('earnings_log').push({
-    id: Date.now(),
-    user_id: req.user.id,
-    type: 'daily_checkin',
-    amount: reward,
-    description: `দৈনিক চেক-ইন বোনাস (${todayStr} তারিখ - ${newCount}/৭ দিন)`,
-    created_at: new Date().toISOString()
-  }).write();
-
-  await db.syncToCloud();
-
-  return res.json({
-    success: true,
-    reward,
-    newBalance: newBal,
-    checkinCount: newCount,
-    maxCheckinDays: 7,
-    todayDate: todayStr,
-    history: newHistory,
-    msg: `অভিনন্দন! আপনি আজকের (${todayStr}) চেক-ইন বোনাস ৳${reward} পেয়েছেন! (মোট ${newCount}/৭ দিন সম্পন্ন)`
-  });
 });
 
 // -------------------------------------------------------------
@@ -1294,7 +1307,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.27.10',
+      build_version: '2026.10.27.11',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,

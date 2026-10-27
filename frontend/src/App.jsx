@@ -266,7 +266,11 @@ export default function App() {
     } catch (e) {}
   };
 
+  const [checkInSubmitting, setCheckInSubmitting] = useState(false);
+
   const handleDoCheckIn = async () => {
+    if (checkInSubmitting) return;
+    setCheckInSubmitting(true);
     try {
       const res = await fetch(`${API_BASE}/checkin/do`, {
         method: 'POST',
@@ -274,10 +278,12 @@ export default function App() {
       });
       const data = await res.json();
       alert(data.msg || (lang === 'bn' ? 'চেক-ইন প্রক্রিয়া সম্পন্ন' : 'Check-in processed'));
-      fetchCheckInStatus();
-      fetchUserData();
+      await fetchCheckInStatus();
+      await fetchUserData();
     } catch (e) {
       alert(lang === 'bn' ? 'চেক-ইন ব্যর্থ হয়েছে' : 'Check-in failed');
+    } finally {
+      setCheckInSubmitting(false);
     }
   };
 
@@ -2578,27 +2584,29 @@ export default function App() {
               {/* Check-In Action Button */}
               <button
                 onClick={handleDoCheckIn}
-                disabled={checkInStatus.isCheckedInToday || checkInStatus.isExpired || !checkInStatus.canCheckIn}
+                disabled={checkInStatus.isCheckedInToday || checkInStatus.isExpired || !checkInStatus.canCheckIn || checkInSubmitting}
                 style={{
                   width: '100%', height: '48px', marginTop: '20px', borderRadius: '12px',
                   background: checkInStatus.isExpired 
                     ? '#cbd5e1' 
                     : (checkInStatus.isCheckedInToday 
                         ? '#e2e8f0' 
-                        : (checkInStatus.canCheckIn ? 'linear-gradient(135deg, #16a34a, #15803d)' : '#e2e8f0')),
-                  color: (checkInStatus.isExpired || checkInStatus.isCheckedInToday) ? '#64748b' : (checkInStatus.canCheckIn ? '#ffffff' : '#64748b'),
-                  fontWeight: 'bold', fontSize: '15px', border: 'none', cursor: checkInStatus.canCheckIn ? 'pointer' : 'not-allowed',
-                  boxShadow: checkInStatus.canCheckIn ? '0 4px 14px rgba(22, 163, 74, 0.35)' : 'none',
+                        : ((checkInStatus.canCheckIn && !checkInSubmitting) ? 'linear-gradient(135deg, #16a34a, #15803d)' : '#e2e8f0')),
+                  color: (checkInStatus.isExpired || checkInStatus.isCheckedInToday) ? '#64748b' : ((checkInStatus.canCheckIn && !checkInSubmitting) ? '#ffffff' : '#64748b'),
+                  fontWeight: 'bold', fontSize: '15px', border: 'none', cursor: (checkInStatus.canCheckIn && !checkInSubmitting) ? 'pointer' : 'not-allowed',
+                  boxShadow: (checkInStatus.canCheckIn && !checkInSubmitting) ? '0 4px 14px rgba(22, 163, 74, 0.35)' : 'none',
                   transition: 'all 0.2s ease'
                 }}
               >
-                {checkInStatus.isExpired 
-                  ? (lang === 'bn' ? '৭ দিনের অফার সম্পন্ন' : '7 Days Completed') 
-                  : (checkInStatus.isCheckedInToday 
-                      ? (lang === 'bn' ? 'আজকের চেক-ইন সম্পন্ন (৳১০ প্রাপ্ত)' : 'Checked in today (10 Tk)') 
-                      : (checkInStatus.canCheckIn 
-                          ? (lang === 'bn' ? 'চেক-ইন করুন (৳১০ সংগ্রহ করুন)' : 'Claim Check-in (10 Tk)') 
-                          : (lang === 'bn' ? 'চেক-ইন করুন' : 'Check In')))}
+                {checkInSubmitting
+                  ? (lang === 'bn' ? 'প্রক্রিয়াধীন রয়েছে...' : 'Processing...')
+                  : (checkInStatus.isExpired 
+                      ? (lang === 'bn' ? '৭ দিনের অফার সম্পন্ন' : '7 Days Completed') 
+                      : (checkInStatus.isCheckedInToday 
+                          ? (lang === 'bn' ? 'আজকের চেক-ইন সম্পন্ন (৳১০ প্রাপ্ত)' : 'Checked in today (10 Tk)') 
+                          : (checkInStatus.canCheckIn 
+                              ? (lang === 'bn' ? 'চেক-ইন করুন (৳১০ সংগ্রহ করুন)' : 'Claim Check-in (10 Tk)') 
+                              : (lang === 'bn' ? 'চেক-ইন করুন' : 'Check In'))))}
               </button>
 
               <div style={{ textAlign: 'center', fontSize: '12px', marginTop: '12px', lineHeight: 1.5 }}>
