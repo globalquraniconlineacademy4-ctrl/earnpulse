@@ -326,7 +326,9 @@ async function fetchOfficialSettlementsList(isRetry = false) {
   }
   const client = getEarnBondhuClient();
   try {
-    const res = await client.get('/system/pointsSettle/list?userId=2113655779108241409&pageNum=1&pageSize=100');
+    const res = await client.get('/system/pointsSettle/list', {
+      params: { pageNum: 1, pageSize: 100, userName: MASTER_USERNAME }
+    });
     if (res.data && res.data.code === 200 && Array.isArray(res.data.rows)) {
       return res.data.rows;
     } else if (res.data?.code === 401 && !isRetry) {

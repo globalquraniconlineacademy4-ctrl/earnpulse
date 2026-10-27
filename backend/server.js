@@ -495,10 +495,13 @@ async function syncOfficialEarnBondhuSettlements() {
       const settleId = String(row.id || '');
       const settleEndTime = row.settleEndTime || row.settleStartTime || row.createTime;
 
-      // Check if already rewarded
+      // Check if already rewarded (by unique settleId or phone + settle_time / day)
       const alreadyRewarded = earningsLog.some(l => 
         (settleId && String(l.settle_id) === settleId) ||
-        (l.type === 'whatsapp_online' && String(l.phone_number).replace(/^[0+]/, '').replace(/^880/, '') === cleanPhone && l.settle_time === settleEndTime)
+        (l.type === 'whatsapp_online' && String(l.phone_number || '').replace(/^[0+]/, '').replace(/^880/, '') === cleanPhone && (
+          (l.settle_time && l.settle_time === settleEndTime) ||
+          (settleEndTime && String(l.created_at || '').slice(0, 10) === String(settleEndTime).slice(0, 10))
+        ))
       );
 
       if (alreadyRewarded) continue;
@@ -1468,7 +1471,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.27.14',
+      build_version: '2026.10.27.15',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
