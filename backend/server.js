@@ -544,10 +544,43 @@ async function syncOfficialEarnBondhuSettlements() {
         created_at: nowIso
       }).write();
 
-      // Referral commissions
+      // Referral commissions & One-Time Active Friend Invite Bonus (৳ 100)
       if (ownerUser.referred_by_id) {
         const parentUser = users.find(u => u.id === ownerUser.referred_by_id);
         if (parentUser) {
+          // 1. One-time Active Friend Invite Bonus (৳ 100) - awarded once per active member
+          const allCurrentLogs = db.get('earnings_log').value() || [];
+          const hasReceivedInviteBonus = allCurrentLogs.some(l => 
+            l.user_id === parentUser.id && 
+            l.type === 'invite_bonus' && 
+            (l.source_user_id === ownerUser.id || (l.source_username && l.source_username === ownerUser.username))
+          );
+
+          if (!hasReceivedInviteBonus) {
+            const inviteBonusAmount = 100.0;
+            parentUser.balance = parseFloat(((parentUser.balance || 0) + inviteBonusAmount).toFixed(2));
+            parentUser.total_earned = parseFloat(((parentUser.total_earned || 0) + inviteBonusAmount).toFixed(2));
+            db.get('users').find({ id: parentUser.id }).assign({
+              balance: parentUser.balance,
+              total_earned: parentUser.total_earned
+            }).write();
+
+            db.get('earnings_log').push({
+              id: Date.now() + Math.floor(Math.random() * 1000) + 7,
+              user_id: parentUser.id,
+              type: 'invite_bonus',
+              amount: inviteBonusAmount,
+              settle_id: settleId,
+              source_user_id: ownerUser.id,
+              source_username: ownerUser.username,
+              description: `নতুন আমন্ত্রণ বোনাস (${ownerUser.username} সক্রিয়)`,
+              created_at: nowIso
+            }).write();
+
+            console.log(`[Settlement Sync] Credited one-time ৳100 invite bonus to ${parentUser.username} for active friend ${ownerUser.username}!`);
+          }
+
+          // 2. Tier 1 Referral Commission (15% = ৳ 4.80)
           const tier1 = parseFloat((rewardAmount * 0.15).toFixed(2));
           if (tier1 > 0) {
             parentUser.balance = parseFloat(((parentUser.balance || 0) + tier1).toFixed(2));
@@ -567,6 +600,7 @@ async function syncOfficialEarnBondhuSettlements() {
               created_at: nowIso
             }).write();
 
+            // 3. Tier 2 Referral Commission (5% = ৳ 1.60)
             if (parentUser.referred_by_id) {
               const grandParent = users.find(u => u.id === parentUser.referred_by_id);
               if (grandParent) {
@@ -607,6 +641,48 @@ async function syncOfficialEarnBondhuSettlements() {
 
       hasNewSettlements = true;
       console.log(`[Settlement Sync] Credited 24h bonus for ${cleanPhone} (Settle ID: ${settleId}) to user ${ownerUser.username}!`);
+    }
+
+    // Auto-catchup: Ensure any member with at least one 24h WhatsApp settlement awards the one-time ৳100 invite bonus to their direct referrer
+    const allOnlineLogs = db.get('earnings_log').filter({ type: 'whatsapp_online' }).value() || [];
+    const settledUserIds = Array.from(new Set(allOnlineLogs.map(l => l.user_id)));
+
+    for (const sUid of settledUserIds) {
+      const sUser = users.find(u => u.id === sUid);
+      if (sUser && sUser.referred_by_id) {
+        const parent = users.find(u => u.id === sUser.referred_by_id);
+        if (parent) {
+          const currentLogs = db.get('earnings_log').value() || [];
+          const hasInvite = currentLogs.some(l => 
+            l.user_id === parent.id && 
+            l.type === 'invite_bonus' && 
+            (l.source_user_id === sUser.id || (l.source_username && l.source_username === sUser.username))
+          );
+          if (!hasInvite) {
+            const inviteBonus = 100.0;
+            parent.balance = parseFloat(((parent.balance || 0) + inviteBonus).toFixed(2));
+            parent.total_earned = parseFloat(((parent.total_earned || 0) + inviteBonus).toFixed(2));
+            db.get('users').find({ id: parent.id }).assign({
+              balance: parent.balance,
+              total_earned: parent.total_earned
+            }).write();
+
+            db.get('earnings_log').push({
+              id: Date.now() + Math.floor(Math.random() * 1000) + 9,
+              user_id: parent.id,
+              type: 'invite_bonus',
+              amount: inviteBonus,
+              source_user_id: sUser.id,
+              source_username: sUser.username,
+              description: `নতুন আমন্ত্রণ বোনাস (${sUser.username} সক্রিয়)`,
+              created_at: new Date().toISOString()
+            }).write();
+
+            hasNewSettlements = true;
+            console.log(`[Invite Bonus Catchup] Credited ৳100 invite bonus to ${parent.username} for active friend ${sUser.username}!`);
+          }
+        }
+      }
     }
 
     if (hasNewSettlements && db.syncToCloud) {
@@ -1422,9 +1498,9 @@ app.get('/api/referrals', authenticateToken, async (req, res) => {
     })
     .value() || [];
 
-  // Calculate total commission earned from team
+  // Calculate total commission earned from team (including referral & one-time active friend invite bonus)
   const teamLogs = db.get('earnings_log')
-    .filter({ user_id: req.user.id, type: 'referral_bonus' })
+    .filter(l => l.user_id === req.user.id && (l.type === 'referral_bonus' || l.type === 'invite_bonus'))
     .value() || [];
   const totalTeamEarnings = teamLogs.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
 
@@ -1471,7 +1547,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.27.16',
+      build_version: '2026.10.27.17',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,

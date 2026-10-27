@@ -3355,7 +3355,8 @@ export default function App() {
                 if (transFilter === 'checkIn') filtered = filtered.filter(t => t.type === 'daily_checkin');
                 else if (transFilter === 'online') filtered = filtered.filter(t => t.type === 'whatsapp_online');
                 else if (transFilter === 'withdraw') filtered = filtered.filter(t => t.type === 'withdraw');
-                else if (transFilter === 'subCommission' || transFilter === 'invite') filtered = filtered.filter(t => t.type === 'referral_bonus');
+                else if (transFilter === 'subCommission') filtered = filtered.filter(t => t.type === 'referral_bonus');
+                else if (transFilter === 'invite') filtered = filtered.filter(t => t.type === 'invite_bonus' || t.type === 'referral_bonus');
                 else if (transFilter !== 'all') filtered = [];
 
                 // Filter by date
@@ -3391,7 +3392,11 @@ export default function App() {
                           ? (lang === 'bn' ? 'অনলাইন পুরস্কার' : 'Online Reward')
                           : (item.type === 'withdraw'
                             ? (lang === 'bn' ? 'উত্তোলন' : 'Withdrawal')
-                            : (item.description || (lang === 'bn' ? 'বোনাস' : 'Bonus'))));
+                            : (item.type === 'invite_bonus'
+                              ? (lang === 'bn' ? 'নতুন আমন্ত্রণ বোনাস' : 'New Invite Bonus')
+                              : (item.type === 'referral_bonus'
+                                ? (lang === 'bn' ? 'রেফারেল কমিশন' : 'Referral Commission')
+                                : (item.description || (lang === 'bn' ? 'বোনাস' : 'Bonus'))))));
 
                       const formattedDate = item.created_at 
                         ? item.created_at.replace('T', ' ').substring(0, 19)
@@ -3419,7 +3424,12 @@ export default function App() {
                               <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>
                                 {displayTitle}
                               </div>
-                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                              {item.description && (
+                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', maxWidth: '200px', wordBreak: 'break-word' }}>
+                                  {item.description}
+                                </div>
+                              )}
+                              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
                                 {formattedDate}
                               </div>
                             </div>

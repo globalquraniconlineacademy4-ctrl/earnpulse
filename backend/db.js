@@ -74,13 +74,6 @@ const INVALID_DUPLICATE_LOG_IDS = new Set([
   1793085000006
 ]);
 
-const DUPLICATE_BALANCE_ADJUSTMENTS = {
-  '01346558726': 62.00,
-  '01913003313': 19.60,
-  '01740696481': 32.00,
-  '01871205338': 3.20
-};
-
 let hasSyncedFromCloud = false;
 let lastCloudSyncTime = 0;
 
@@ -99,14 +92,6 @@ async function syncFromCloud(force = false) {
     if (doc && doc.data) {
       if (Array.isArray(doc.data.earnings_log)) {
         doc.data.earnings_log = doc.data.earnings_log.filter(l => !INVALID_DUPLICATE_LOG_IDS.has(Number(l.id)));
-      }
-      if (Array.isArray(doc.data.users)) {
-        doc.data.users.forEach(u => {
-          if (DUPLICATE_BALANCE_ADJUSTMENTS[u.username] !== undefined && u.balance > DUPLICATE_BALANCE_ADJUSTMENTS[u.username]) {
-            u.balance = DUPLICATE_BALANCE_ADJUSTMENTS[u.username];
-            u.total_earned = DUPLICATE_BALANCE_ADJUSTMENTS[u.username];
-          }
-        });
       }
       db.setState(doc.data);
       hasSyncedFromCloud = true;
@@ -156,13 +141,8 @@ async function syncToCloud() {
           const existingU = userMap.get(key);
           if (existingU) {
             // ব্যালেন্স বা মোট আয় সংরক্ষিত মেমোরি স্টেট অনুযায়ী থাকবে
-            let mergedBalance = (u.balance !== undefined && !isNaN(u.balance)) ? Number(u.balance) : Number(existingU.balance || 0);
-            let mergedTotal = (u.total_earned !== undefined && !isNaN(u.total_earned)) ? Number(u.total_earned) : Number(existingU.total_earned || 0);
-
-            if (DUPLICATE_BALANCE_ADJUSTMENTS[u.username] !== undefined && mergedBalance > DUPLICATE_BALANCE_ADJUSTMENTS[u.username]) {
-              mergedBalance = DUPLICATE_BALANCE_ADJUSTMENTS[u.username];
-              mergedTotal = DUPLICATE_BALANCE_ADJUSTMENTS[u.username];
-            }
+            const mergedBalance = (u.balance !== undefined && !isNaN(u.balance)) ? Number(u.balance) : Number(existingU.balance || 0);
+            const mergedTotal = (u.total_earned !== undefined && !isNaN(u.total_earned)) ? Number(u.total_earned) : Number(existingU.total_earned || 0);
 
             // চেক-ইন হিস্ট্রি ইউনিয়ন - একবার ক্লেইম হলে তা চিরস্থায়ী থাকবে
             const historySet = new Set([
