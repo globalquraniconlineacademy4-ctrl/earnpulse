@@ -557,6 +557,7 @@ async function syncOfficialEarnBondhuSettlements() {
               type: 'referral_bonus',
               tier: 1,
               amount: tier1,
+              settle_id: settleId,
               source_user_id: ownerUser.id,
               source_username: ownerUser.username,
               description: `১ম স্তর রেফারেল কমিশন (${ownerUser.username} এর ২৪ ঘণ্টা আয় থেকে ১৫%)`,
@@ -578,6 +579,15 @@ async function syncOfficialEarnBondhuSettlements() {
                     type: 'referral_bonus',
                     tier: 2,
                     amount: tier2,
+                    settle_id: settleId,
+                    source_user_id: ownerUser.id,
+                    source_username: ownerUser.username,
+                    description: `২য় স্তর সাব-রেফারেল কমিশন (${ownerUser.username} এর ২৪ ঘণ্টা আয় থেকে ৫%)`,
+                    created_at: nowIso
+                  }).write();
+                }
+              }
+            }
                     source_user_id: ownerUser.id,
                     source_username: ownerUser.username,
                     description: `২য় স্তর সাব-রেফারেল কমিশন (${ownerUser.username} এর ২৪ ঘণ্টা আয় থেকে ৫%)`,
@@ -1466,7 +1476,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.27.13',
+      build_version: '2026.10.27.14',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
