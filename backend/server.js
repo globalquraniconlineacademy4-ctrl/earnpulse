@@ -25,9 +25,14 @@ app.use((req, res, next) => {
 // Cloud Database Sync Middleware (MongoDB Atlas 24/7 Persistent Storage - Ultra-Fast Non-Blocking)
 app.use(async (req, res, next) => {
   if (db.syncFromCloud) {
-    try {
-      await db.syncFromCloud();
-    } catch (e) {}
+    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
+      try {
+        await db.syncFromCloud();
+      } catch (e) {}
+    } else {
+      // In-memory state is already loaded and ready - sync in background so HTTP response is instant!
+      db.syncFromCloud().catch(() => {});
+    }
   }
   next();
 });
@@ -701,9 +706,6 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 
-  if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
-  }
   await syncOfficialEarnBondhuSettlements();
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
@@ -731,12 +733,17 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
     return n.user_id === req.user.id;
   }).value() || [];
 
+  let hasFixedOwnership = false;
   linkedNumbers.forEach(n => {
     if (n.user_id !== req.user.id) {
-      db.get('linked_numbers').find({ id: n.id }).assign({ user_id: req.user.id }).write();
+      db.get('linked_numbers').find({ id: n.id }).assign({ user_id: req.user.id });
       n.user_id = req.user.id;
+      hasFixedOwnership = true;
     }
   });
+  if (hasFixedOwnership) {
+    db.write();
+  }
   
   // Real check with target server
   try {
@@ -1246,17 +1253,17 @@ app.post('/api/whatsapp/get-pairing-code', authenticateToken, async (req, res) =
 
   if (bridgeRes.success) {
     if (!db.get('pending_pairings').value()) {
-      db.set('pending_pairings', []).write();
+      db.set('pending_pairings', []);
     }
     // Remove previous pending attempts for this phone number
-    db.get('pending_pairings').remove({ phone_number: phoneNumber }).write();
+    db.get('pending_pairings').remove({ phone_number: phoneNumber });
     db.get('pending_pairings').push({
       user_id: req.user.id,
       phone_number: phoneNumber,
       country_code: countryCode,
       pairing_code: bridgeRes.pairingCode,
       created_at: Date.now()
-    }).write();
+    });
 
     // Permanently record in linked_numbers for this user so ownership is immediately locked in MongoDB Atlas
     const existingRec = db.get('linked_numbers').find({ phone_number: phoneNumber }).value();
@@ -1281,17 +1288,18 @@ app.post('/api/whatsapp/get-pairing-code', authenticateToken, async (req, res) =
         offline_at: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      }).write();
+      });
     } else {
       db.get('linked_numbers').find({ id: existingRec.id }).assign({
         user_id: req.user.id,
         pairing_code: bridgeRes.pairingCode,
         updated_at: new Date().toISOString()
-      }).write();
+      });
     }
+    db.write();
 
     if (db.syncToCloud) {
-      await db.syncToCloud().catch(e => console.error('Cloud sync error on get-pairing-code:', e.message));
+      await db.syncToCloud(true).catch(e => console.error('Cloud sync error on get-pairing-code:', e.message));
     }
 
     return res.json({
@@ -1547,7 +1555,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.27.17',
+      build_version: '2026.10.27.18',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,

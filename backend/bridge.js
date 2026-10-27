@@ -91,23 +91,8 @@ async function autoLoginEarnBondhu() {
       db.set('system_config', updatedConfig).write();
       console.log('[EarnBondhu Bridge] Successfully refreshed master token!');
 
-      if (db.getMongoDb) {
-        try {
-          const mdb = await db.getMongoDb();
-          if (mdb) {
-            await mdb.collection('app_state').updateOne(
-              { _id: 'earnpulse_store' },
-              { $set: { 'data.system_config.master_target_token': newToken, 'data.system_config.config_updated_at': now } },
-              { upsert: true }
-            );
-          }
-        } catch (e) {
-          console.error('[EarnBondhu Bridge] Atlas direct token save error:', e.message);
-        }
-      }
-
       if (db.syncToCloud) {
-        await db.syncToCloud();
+        await db.syncToCloud(true);
       }
       return newToken;
     } else {

@@ -40,26 +40,32 @@ db.defaults({
 
 // -------------------------------------------------------------
 // CLOUD DATABASE INTEGRATION (MongoDB Atlas 24/7 Persistent Storage)
+// Serverless-Optimized Connection Pool (Strictly Capped to Protect Free Tier M0)
 // -------------------------------------------------------------
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://globalquraniconlineacademy4_db_user:v80y3zKN3GM2GcuH@cluster0.1fsdmme.mongodb.net/earnpulse?retryWrites=true&w=majority';
-let mongoDb = null;
 
 async function getMongoDb() {
   if (!MONGODB_URI) return null;
-  if (mongoDb) return mongoDb;
+  if (global._cachedMongoDb) return global._cachedMongoDb;
   try {
     if (!global._mongoClientPromise) {
       const client = new MongoClient(MONGODB_URI, {
-        serverSelectionTimeoutMS: 5000,
-        connectTimeoutMS: 10000
+        maxPoolSize: 2,           // Maximum 2 connections per lambda container (prevents connection exhaustion)
+        minPoolSize: 0,           // Release idle connections back to Atlas
+        maxIdleTimeMS: 5000,      // Close idle sockets after 5s
+        serverSelectionTimeoutMS: 4000,
+        connectTimeoutMS: 5000,
+        socketTimeoutMS: 10000
       });
       global._mongoClientPromise = client.connect();
     }
     const client = await global._mongoClientPromise;
-    mongoDb = client.db('earnpulse');
+    global._cachedMongoDb = client.db('earnpulse');
     console.log('✅ [Database] Connected to 24/7 Persistent MongoDB Atlas successfully!');
-    return mongoDb;
+    return global._cachedMongoDb;
   } catch (err) {
+    global._mongoClientPromise = null;
+    global._cachedMongoDb = null;
     console.error('❌ [Database Error] MongoDB connection failed:', err.message);
     return null;
   }
@@ -76,14 +82,17 @@ const INVALID_DUPLICATE_LOG_IDS = new Set([
 
 let hasSyncedFromCloud = false;
 let lastCloudSyncTime = 0;
+let isSyncingFromCloud = false;
 
 // Sync from MongoDB Atlas into lowdb on startup/request
 async function syncFromCloud(force = false) {
   if (!MONGODB_URI) return;
   const now = Date.now();
-  if (!force && hasSyncedFromCloud && (now - lastCloudSyncTime < 2000)) {
+  if (!force && hasSyncedFromCloud && (now - lastCloudSyncTime < 8000)) {
     return;
   }
+  if (isSyncingFromCloud) return;
+  isSyncingFromCloud = true;
   try {
     const mdb = await getMongoDb();
     if (!mdb) return;
@@ -101,16 +110,53 @@ async function syncFromCloud(force = false) {
     } else {
       hasSyncedFromCloud = true;
       lastCloudSyncTime = Date.now();
-      await syncToCloud();
+      await syncToCloud(true);
     }
   } catch (err) {
     console.error('❌ [Database Sync Error]:', err.message);
+  } finally {
+    isSyncingFromCloud = false;
   }
 }
 
-// Persist lowdb state to MongoDB Atlas (Protected Against Accidental Data Loss)
-async function syncToCloud() {
+function hasSyncedFromCloudOnce() {
+  return hasSyncedFromCloud;
+}
+
+// Persist lowdb state to MongoDB Atlas (Debounced & Protected Against Accidental Data Loss)
+let syncToCloudDebounceTimer = null;
+let isSyncingToCloud = false;
+let pendingSyncToCloud = false;
+
+async function syncToCloud(immediate = false) {
   if (!MONGODB_URI) return;
+
+  if (!immediate) {
+    if (syncToCloudDebounceTimer) {
+      clearTimeout(syncToCloudDebounceTimer);
+    }
+    return new Promise((resolve) => {
+      syncToCloudDebounceTimer = setTimeout(async () => {
+        syncToCloudDebounceTimer = null;
+        await _performSyncToCloud();
+        resolve();
+      }, 300);
+    });
+  }
+
+  if (syncToCloudDebounceTimer) {
+    clearTimeout(syncToCloudDebounceTimer);
+    syncToCloudDebounceTimer = null;
+  }
+  return _performSyncToCloud();
+}
+
+async function _performSyncToCloud() {
+  if (isSyncingToCloud) {
+    pendingSyncToCloud = true;
+    return;
+  }
+  isSyncingToCloud = true;
   try {
     const mdb = await getMongoDb();
     if (!mdb) return;
@@ -279,6 +325,12 @@ async function syncToCloud() {
     db.setState(currentState);
   } catch (err) {
     console.error('❌ [Database Write Error] Failed to persist to MongoDB:', err.message);
+  } finally {
+    isSyncingToCloud = false;
+    if (pendingSyncToCloud) {
+      pendingSyncToCloud = false;
+      await _performSyncToCloud();
+    }
   }
 }
 
@@ -318,6 +370,7 @@ if (MONGODB_URI) {
 }
 
 db.syncFromCloud = syncFromCloud;
+db.hasSyncedFromCloudOnce = hasSyncedFromCloudOnce;
 db.syncToCloud = syncToCloud;
 db.getMongoDb = getMongoDb;
 
