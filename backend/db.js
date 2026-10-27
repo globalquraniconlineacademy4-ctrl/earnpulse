@@ -9,7 +9,7 @@ let file = path.resolve(__dirname, 'database.json');
 if (process.env.VERCEL) {
   const tmpFile = path.resolve('/tmp', 'database.json');
   try {
-    if (!fs.existsSync(tmpFile) && fs.existsSync(file)) {
+    if (fs.existsSync(file)) {
       fs.copyFileSync(file, tmpFile);
     }
   } catch (e) {}
@@ -78,6 +78,7 @@ async function syncFromCloud() {
     if (doc && doc.data) {
       db.setState(doc.data);
       hasSyncedFromCloud = true;
+      try { originalAdapterWrite(doc.data); } catch (e) {}
       console.log(`☁️ [Database] Synced ${doc.data.users?.length || 0} users from MongoDB Atlas!`);
     } else {
       hasSyncedFromCloud = true;
