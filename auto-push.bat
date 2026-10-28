@@ -9,7 +9,7 @@ echo.
 echo [১/৩] নতুন পরিবর্তনসমূহ সিঙ্ক করা হচ্ছে...
 
 cd /d "k:\whatshap"
-powershell -Command "Copy-Item -Path 'frontend\src\*' -Destination 'GITHUB_UPLOAD\frontend\src\' -Recurse -Force; Copy-Item -Path 'frontend\public\*' -Destination 'GITHUB_UPLOAD\frontend\public\' -Recurse -Force; Copy-Item -Path 'backend\server.js' -Destination 'GITHUB_UPLOAD\backend\server.js' -Force; Copy-Item -Path 'admin\index.html' -Destination 'GITHUB_UPLOAD\admin\index.html' -Force; Copy-Item -Path 'vercel.json' -Destination 'GITHUB_UPLOAD\vercel.json' -Force"
+powershell -Command "Copy-Item -Path 'frontend\src\*' -Destination 'GITHUB_UPLOAD\frontend\src\' -Recurse -Force; Copy-Item -Path 'frontend\public\*' -Destination 'GITHUB_UPLOAD\frontend\public\' -Recurse -Force; Copy-Item -Path 'backend\server.js' -Destination 'GITHUB_UPLOAD\backend\server.js' -Force; Copy-Item -Path 'backend\db.js' -Destination 'GITHUB_UPLOAD\backend\db.js' -Force; Copy-Item -Path 'admin\index.html' -Destination 'GITHUB_UPLOAD\admin\index.html' -Force; Copy-Item -Path 'vercel.json' -Destination 'GITHUB_UPLOAD\vercel.json' -Force"
 
 echo [২/৩] গিটহাবে ফাইলগুলো স্টেজ ও কম্যিট করা হচ্ছে...
 cd /d "k:\whatshap\GITHUB_UPLOAD"

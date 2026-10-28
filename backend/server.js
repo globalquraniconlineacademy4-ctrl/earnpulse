@@ -1555,7 +1555,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.27.18',
+      build_version: '2026.10.28.01',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1570,10 +1570,6 @@ app.get('/api/config', async (req, res) => {
 // 6. WITHDRAWALS
 // -------------------------------------------------------------
 app.post('/api/withdraw', authenticateToken, async (req, res) => {
-  if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
-  }
-  db.read();
   const { amount, method, accountNumber } = req.body;
   const withdrawAmount = parseFloat(amount);
   const minWithdraw = parseFloat(bridge.getConfig('min_withdraw_amount') || 100);
@@ -1592,17 +1588,20 @@ app.post('/api/withdraw', authenticateToken, async (req, res) => {
   }
 
   // Deduct user balance
+  const updatedBalance = parseFloat((user.balance - withdrawAmount).toFixed(2));
+  const updatedTotalWithdrawn = parseFloat(((user.total_withdrawn || 0) + withdrawAmount).toFixed(2));
+
   db.get('users')
     .find({ id: req.user.id })
     .assign({
-      balance: user.balance - withdrawAmount,
-      total_withdrawn: (user.total_withdrawn || 0) + withdrawAmount
-    })
-    .write();
+      balance: updatedBalance,
+      total_withdrawn: updatedTotalWithdrawn
+    });
 
   // Create withdrawal record
+  const withdrawId = Date.now();
   const newWithdraw = {
-    id: Date.now(),
+    id: withdrawId,
     user_id: req.user.id,
     username: user.username,
     amount: withdrawAmount,
@@ -1613,11 +1612,31 @@ app.post('/api/withdraw', authenticateToken, async (req, res) => {
     created_at: new Date().toISOString()
   };
 
-  db.get('withdrawals').push(newWithdraw).write();
-  await db.syncToCloud();
+  db.get('withdrawals').push(newWithdraw);
+
+  // Add debit transaction to earnings_log
+  try {
+    const earningsLog = db.get('earnings_log').value() || [];
+    earningsLog.unshift({
+      id: withdrawId + 1,
+      user_id: req.user.id,
+      type: 'withdraw',
+      isCredit: false,
+      amount: withdrawAmount,
+      description: `উত্তোলন আবেদন (${method.toUpperCase()} - ${accountNumber})`,
+      created_at: new Date().toISOString()
+    });
+    db.set('earnings_log', earningsLog);
+  } catch (e) {}
+
+  // Single batch write & immediate cloud sync
+  db.write();
+  await db.syncToCloud(true);
 
   return res.json({
     success: true,
+    newBalance: updatedBalance,
+    withdrawal: newWithdraw,
     msg: 'উত্তোলন আবেদনটি সফলভাবে জমা নেওয়া হয়েছে! অ্যাডমিন কিছুক্ষণের মধ্যে পর্যালোচনা করে পেমেন্ট করবে।'
   });
 });
@@ -1979,7 +1998,7 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
     }
   }
 
-  await db.syncToCloud();
+  await db.syncToCloud(true);
 
   return res.json({
     success: true,

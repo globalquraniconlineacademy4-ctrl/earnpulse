@@ -189,6 +189,7 @@ async function _performSyncToCloud() {
             // ব্যালেন্স বা মোট আয় সংরক্ষিত মেমোরি স্টেট অনুযায়ী থাকবে
             const mergedBalance = (u.balance !== undefined && !isNaN(u.balance)) ? Number(u.balance) : Number(existingU.balance || 0);
             const mergedTotal = (u.total_earned !== undefined && !isNaN(u.total_earned)) ? Number(u.total_earned) : Number(existingU.total_earned || 0);
+            const mergedWithdrawn = Math.max(Number(existingU.total_withdrawn || 0), Number(u.total_withdrawn || 0));
 
             // চেক-ইন হিস্ট্রি ইউনিয়ন - একবার ক্লেইম হলে তা চিরস্থায়ী থাকবে
             const historySet = new Set([
@@ -208,6 +209,7 @@ async function _performSyncToCloud() {
               ...u,
               balance: mergedBalance,
               total_earned: mergedTotal,
+              total_withdrawn: mergedWithdrawn,
               checkin_history: mergedHistory,
               checkin_count: mergedCount,
               last_checkin_date: lastDate
@@ -271,10 +273,12 @@ async function _performSyncToCloud() {
       currentState.linked_numbers = Array.from(numMap.values());
 
       // ৪. ট্রানজ্যাকশন ও আয়ের হিসাব (earnings_log) - ডুপ্লিকেট চিরতরে ফিল্টার
-      const mergedLogs = (Array.isArray(currentState.earnings_log) && currentState.earnings_log.length > 0)
-        ? currentState.earnings_log
-        : (existing.data.earnings_log || []);
-      currentState.earnings_log = mergedLogs
+      const cloudLogs = existing.data.earnings_log || [];
+      const currentLogs = currentState.earnings_log || [];
+      const logMap = new Map();
+      cloudLogs.forEach(l => { if (l && l.id) logMap.set(String(l.id), l); });
+      currentLogs.forEach(l => { if (l && l.id) logMap.set(String(l.id), l); });
+      currentState.earnings_log = Array.from(logMap.values())
         .filter(l => !INVALID_DUPLICATE_LOG_IDS.has(Number(l.id)))
         .sort((a, b) => b.id - a.id);
 

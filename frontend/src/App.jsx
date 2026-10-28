@@ -749,6 +749,11 @@ export default function App() {
       return;
     }
 
+    if (user && user.balance < parsedAmount) {
+      setWithdrawMsg(lang === 'bn' ? 'আপনার অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স নেই' : 'Insufficient balance');
+      return;
+    }
+
     setWithdrawLoading(true);
     setWithdrawMsg('');
 
@@ -766,15 +771,25 @@ export default function App() {
         })
       });
       const data = await res.json();
-      setWithdrawMsg(data?.msg || '');
       if (data && data.success) {
+        if (data.newBalance !== undefined) {
+          setUser(prev => prev ? {
+            ...prev,
+            balance: Number(data.newBalance),
+            total_withdrawn: (Number(prev.total_withdrawn) || 0) + parsedAmount
+          } : prev);
+        }
         setWithdrawAmount('');
         setWithdrawAccount('');
-        fetchUserData();
-        setTimeout(() => setShowWithdrawModal(false), 1500);
+        setWithdrawMsg('');
+        setShowWithdrawModal(false);
+        fetchUserData(true);
+        alert(data?.msg || (lang === 'bn' ? 'উত্তোলন আবেদনটি সফলভাবে জমা নেওয়া হয়েছে!' : 'Withdrawal request submitted!'));
+      } else {
+        setWithdrawMsg(data?.msg || (lang === 'bn' ? 'উত্তোলন ব্যর্থ হয়েছে' : 'Withdrawal failed'));
       }
     } catch (err) {
-      setWithdrawMsg(lang === 'bn' ? 'উত্তোলন ব্যর্থ হয়েছে' : 'Withdrawal failed');
+      setWithdrawMsg(lang === 'bn' ? 'নেটওয়ার্ক সমস্যা বা উত্তোলন ব্যর্থ হয়েছে' : 'Network error or withdrawal failed');
     } finally {
       setWithdrawLoading(false);
     }
@@ -3082,9 +3097,31 @@ export default function App() {
                 type="submit"
                 disabled={withdrawLoading}
                 className="action-btn-green"
-                style={{ width: '100%', marginTop: '6px' }}
+                style={{
+                  width: '100%',
+                  marginTop: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  opacity: withdrawLoading ? 0.75 : 1,
+                  cursor: withdrawLoading ? 'not-allowed' : 'pointer'
+                }}
               >
-                {withdrawLoading ? (lang === 'bn' ? 'উত্তোলন হচ্ছে...' : 'Processing...') : (lang === 'bn' ? 'উত্তোলন নিশ্চিত করুন' : 'Confirm Withdrawal')}
+                {withdrawLoading && (
+                  <span style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid rgba(255,255,255,0.4)',
+                    borderTopColor: '#ffffff',
+                    borderRadius: '50%',
+                    display: 'inline-block',
+                    animation: 'spin 0.8s linear infinite'
+                  }} />
+                )}
+                <span>
+                  {withdrawLoading ? (lang === 'bn' ? 'উত্তোলন জমা হচ্ছে...' : 'Submitting...') : (lang === 'bn' ? 'উত্তোলন নিশ্চিত করুন' : 'Confirm Withdrawal')}
+                </span>
               </button>
             </form>
           </div>
