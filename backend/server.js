@@ -500,12 +500,13 @@ async function syncOfficialEarnBondhuSettlements() {
       const settleId = String(row.id || '');
       const settleEndTime = row.settleEndTime || row.settleStartTime || row.createTime;
 
-      // Check if already rewarded (by unique settleId or phone + settle_time / day)
+      // Check if already rewarded (by unique settleId or phone + settle_time / day / within 22 hours)
       const alreadyRewarded = earningsLog.some(l => 
         (settleId && String(l.settle_id) === settleId) ||
         (l.type === 'whatsapp_online' && String(l.phone_number || '').replace(/^[0+]/, '').replace(/^880/, '') === cleanPhone && (
           (l.settle_time && l.settle_time === settleEndTime) ||
-          (settleEndTime && String(l.created_at || '').slice(0, 10) === String(settleEndTime).slice(0, 10))
+          (settleEndTime && String(l.created_at || '').slice(0, 10) === String(settleEndTime).slice(0, 10)) ||
+          (Date.now() - new Date(l.created_at).getTime() < 22 * 3600 * 1000)
         ))
       );
 
@@ -802,6 +803,8 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
               remaining_seconds: remaining,
               last_settle_time: lastSettleTime || record.last_settle_time || record.login_date,
               today_online_seconds: todayOnlineSec !== null ? todayOnlineSec : record.today_online_seconds,
+              last_rewarded_at: record.last_rewarded_at || null,
+              reward_cycles_count: record.reward_cycles_count || 0,
               frozen_elapsed_seconds: null,
               offline_at: null,
               updated_at: new Date().toISOString()
@@ -1061,11 +1064,26 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
     const isGenuinely24h = (activeSecInCycle >= 86400);
 
     if (isGenuinely24h) {
+      // 🛡️ UNBREAKABLE ANTI-DUPLICATE GUARD:
+      // Check earnings_log directly: Has this user ALREADY received a 24h reward for this phone in the last 22 hours?
+      const cleanNPhone = String(n.phone_number).replace(/^[0+]/, '').replace(/^880/, '').trim();
+      const allCurrentLogs = db.get('earnings_log').value() || [];
+      const alreadyRewardedInLast22h = allCurrentLogs.some(l => 
+        l.user_id === user.id &&
+        l.type === 'whatsapp_online' &&
+        String(l.phone_number || '').replace(/^[0+]/, '').replace(/^880/, '').trim() === cleanNPhone &&
+        (Date.now() - new Date(l.created_at).getTime() < 22 * 3600 * 1000)
+      );
+
+      if (alreadyRewardedInLast22h) {
+        continue;
+      }
+
       const lastRewardTime = n.last_rewarded_at ? new Date(n.last_rewarded_at).getTime() : 0;
       const timeSinceLastReward = Date.now() - lastRewardTime;
 
-      // Allow once per 24-hour cycle (safety guard against duplicate calls within 23 hours):
-      if (!n.last_rewarded_at || timeSinceLastReward >= 23 * 3600 * 1000) {
+      // Allow once per 24-hour cycle (safety guard against duplicate calls within 22 hours):
+      if (!n.last_rewarded_at || timeSinceLastReward >= 22 * 3600 * 1000) {
         const rewardAmount = 32.0;
         const grossAmount = 40.0;
         const nowIso = new Date().toISOString();
@@ -1555,7 +1573,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.28.05',
+      build_version: '2026.10.28.06',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
