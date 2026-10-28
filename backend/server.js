@@ -707,6 +707,9 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
 
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(); } catch (e) {}
+  }
   await syncOfficialEarnBondhuSettlements();
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
@@ -1581,7 +1584,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.28.08',
+      build_version: '2026.10.28.09',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1653,9 +1656,14 @@ app.post('/api/withdraw', authenticateToken, async (req, res) => {
 });
 
 app.get('/api/withdraw/history', authenticateToken, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    try { await db.syncFromCloud(true); } catch (e) {}
   }
+  db.read();
   const history = db.get('withdrawals')
     .filter({ user_id: req.user.id })
     .orderBy(['id'], ['desc'])
@@ -1668,10 +1676,14 @@ app.get('/api/withdraw/history', authenticateToken, async (req, res) => {
 // 6.1 EARNINGS / TRANSACTIONS HISTORY (লেনদেনের ইতিহাস ও আয়ের বিবরণ)
 // -------------------------------------------------------------
 app.get('/api/user/transactions', authenticateToken, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    try { await db.syncFromCloud(true); } catch (e) {}
   }
-  const logs = db.get('earnings_log')
+  db.read();
     .filter(l => l && l.user_id === req.user.id && l.type !== 'withdraw')
     .orderBy(['id'], ['desc'])
     .value() || [];

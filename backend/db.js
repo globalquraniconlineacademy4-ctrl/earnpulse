@@ -134,6 +134,18 @@ async function syncFromCloud(force = false) {
       if (Array.isArray(doc.data.earnings_log)) {
         doc.data.earnings_log = doc.data.earnings_log.filter(l => !INVALID_DUPLICATE_LOG_IDS.has(Number(l.id)));
       }
+      if (Array.isArray(doc.data.withdrawals)) {
+        // টার্মিনাল স্ট্যাটাস সুরক্ষা: লোকাল মেমোরিতে যদি ইতিমধ্যে 'approved' বা 'rejected' থাকে, তবে ক্লাউডের স্টেল 'pending' দ্বারা যেন তা ওভাররাইট না হয়
+        const currentW = db.getState().withdrawals || [];
+        const wMap = new Map();
+        doc.data.withdrawals.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
+        currentW.forEach(w => {
+          if (w && w.id && (w.status === 'approved' || w.status === 'rejected')) {
+            wMap.set(String(w.id), w);
+          }
+        });
+        doc.data.withdrawals = Array.from(wMap.values()).sort((a, b) => b.id - a.id);
+      }
       if (Array.isArray(doc.data.users)) {
         const u = doc.data.users.find(x => x.username === '01356690484');
         if (u) {
@@ -211,7 +223,33 @@ async function _performSyncToCloud() {
     // কোনো মেম্বার অ্যাকাউন্ট, ব্যালেন্স, বা দৈনিক চেক-ইন কখনো মোছা বা কমে যাওয়া যাবে না!
     const existing = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
     if (existing && existing.data) {
-      // ১. মেম্বার অ্যাকাউন্ট শতভাগ সুরক্ষা ও ব্যালেন্স/চেকইন আপগ্রেড মার্জ
+      // ১. উত্তোলন হিস্ট্রি (withdrawals) পার্মানেন্ট ইউনিয়ন (টার্মিনাল স্ট্যাটাস একমুখী সুরক্ষা)
+      // আগে উইথড্রয়াল স্ট্যাটাস চূড়ান্ত করা হবে, যাতে প্রতিটি মেম্বারের ব্যালেন্স সঠিকভাবে গাণিতিকভাবে নির্ধারণ করা যায়
+      const cloudW = existing.data.withdrawals || [];
+      const currentW = currentState.withdrawals || [];
+      const wMap = new Map();
+      cloudW.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
+      currentW.forEach(w => {
+        if (w && w.id) {
+          const key = String(w.id);
+          const existingW = wMap.get(key);
+          if (existingW) {
+            // টার্মিনাল স্ট্যাটাস ('approved' বা 'rejected') কখনোই স্টেল ইনস্ট্যান্সের 'pending' দ্বারা রিভার্ট হবে না
+            const isCloudTerminal = existingW.status === 'approved' || existingW.status === 'rejected';
+            const isCurrentTerminal = w.status === 'approved' || w.status === 'rejected';
+            if (isCloudTerminal && !isCurrentTerminal) {
+              wMap.set(key, existingW);
+            } else {
+              wMap.set(key, { ...existingW, ...w });
+            }
+          } else {
+            wMap.set(key, w);
+          }
+        }
+      });
+      currentState.withdrawals = Array.from(wMap.values()).sort((a, b) => b.id - a.id);
+
+      // ২. মেম্বার অ্যাকাউন্ট শতভাগ সুরক্ষা ও ব্যালেন্স/চেকইন আপগ্রেড মার্জ
       const cloudUsers = existing.data.users || [];
       const currentUsers = currentState.users || [];
       const userMap = new Map();
@@ -230,16 +268,25 @@ async function _performSyncToCloud() {
           const key = String(u.username || u.id);
           const existingU = userMap.get(key);
           if (existingU) {
-            // মোট অর্জিত আয় ও মোট উত্তোলনের সমন্বয়ে প্রকৃত ব্যালেন্স গাণিতিকভাবে নিশ্চিত রাখা
+            // মোট অর্জিত আয় সুরক্ষা
             let mergedTotal = Math.max(Number(existingU.total_earned || existingU.balance || 0), Number(u.total_earned || u.balance || 0));
-            let mergedWithdrawn = Math.max(Number(existingU.total_withdrawn || 0), Number(u.total_withdrawn || 0));
-            let mergedBalance = parseFloat(Math.max(0, mergedTotal - mergedWithdrawn).toFixed(2));
 
-            // 🛡️ যদি কোনো উইথড্রয়াল বাতিল হয়ে মেম্বারকে টাকা রিফান্ড করা হয় (total_withdrawn হ্রাস ও balance বৃদ্ধি):
-            if (Number(u.total_withdrawn || 0) < Number(existingU.total_withdrawn || 0) && Number(u.balance || 0) > Number(existingU.balance || 0)) {
-              mergedWithdrawn = Number(u.total_withdrawn || 0);
-              mergedBalance = parseFloat(Number(u.balance || 0).toFixed(2));
-            }
+            // এই মেম্বারের আসল উইথড্রয়াল হিসাব (অনুমোদিত ও পেন্ডিং থেকে সরাসরি গাণিতিক ব্যালেন্স নিশ্চিতকরণ)
+            const uPhoneClean = String(u.username || key).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+            const memberWList = currentState.withdrawals.filter(w => 
+              w && (
+                w.user_id === u.id || 
+                (existingU && w.user_id === existingU.id) || 
+                String(w.username || '').replace(/^\+?880/, '').replace(/^0+/, '').trim() === uPhoneClean
+              )
+            );
+
+            const approvedAmount = memberWList.filter(w => w.status === 'approved').reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
+            const pendingAmount = memberWList.filter(w => w.status === 'pending').reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
+            const totalLockedOrPaid = parseFloat((approvedAmount + pendingAmount).toFixed(2));
+
+            let mergedWithdrawn = parseFloat(approvedAmount.toFixed(2));
+            let mergedBalance = parseFloat(Math.max(0, mergedTotal - totalLockedOrPaid).toFixed(2));
 
             // 🛡️ Correction for duplicate-inflated account 01356690484:
             if (key === '01356690484' || String(u.username) === '01356690484' || String(existingU.username) === '01356690484') {
@@ -339,15 +386,7 @@ async function _performSyncToCloud() {
         .filter(l => !INVALID_DUPLICATE_LOG_IDS.has(Number(l.id)))
         .sort((a, b) => b.id - a.id);
 
-      // ৫. উত্তোলন হিস্ট্রি (withdrawals) পার্মানেন্ট ইউনিয়ন
-      const cloudW = existing.data.withdrawals || [];
-      const currentW = currentState.withdrawals || [];
-      const wMap = new Map();
-      cloudW.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
-      currentW.forEach(w => { if (w && w.id) wMap.set(String(w.id), w); });
-      currentState.withdrawals = Array.from(wMap.values()).sort((a, b) => b.id - a.id);
-
-      // ৬. সিস্টেম কনফিগারেশন (system_config) মার্জ ও স্থায়ী সুরক্ষা:
+      // ৫. সিস্টেম কনফিগারেশন (system_config) মার্জ ও স্থায়ী সুরক্ষা:
       // অ্যাডমিন প্যানেল থেকে কনফিগারেশন পরিবর্তন ক্লাউডে অগ্রাধিকার পাবে এবং
       // কোনো স্টেল বা কোল্ড-স্টার্ট ইনস্ট্যান্স যেন অ্যাডমিনের সেভ করা মান মুছে না ফেলে!
       const cloudConfig = existing.data.system_config || {};
