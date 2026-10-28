@@ -167,7 +167,7 @@ async function calculateMemberTodayOnlineHours(userId, todayStr, todayMidnightMs
 
 app.get('/api/checkin/status', authenticateToken, async (req, res) => {
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    try { await db.syncFromCloud(true); } catch (e) {}
   }
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
@@ -708,7 +708,7 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   res.setHeader('Expires', '0');
 
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    try { await db.syncFromCloud(true); } catch (e) {}
   }
   await syncOfficialEarnBondhuSettlements();
   db.read();
@@ -1517,7 +1517,7 @@ app.post('/api/whatsapp/sync-earnings', authenticateToken, async (req, res) => {
 // -------------------------------------------------------------
 app.get('/api/referrals', authenticateToken, async (req, res) => {
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    try { await db.syncFromCloud(true); } catch (e) {}
   }
   db.read();
   const referrals = db.get('users')
@@ -1573,7 +1573,7 @@ app.get('/api/referrals', authenticateToken, async (req, res) => {
 // -------------------------------------------------------------
 app.get('/api/config', async (req, res) => {
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    try { await db.syncFromCloud(true); } catch (e) {}
   }
   db.read();
   const config = db.get('system_config').value() || {};
@@ -1584,7 +1584,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.28.09',
+      build_version: '2026.10.28.10',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1611,14 +1611,31 @@ app.post('/api/withdraw', authenticateToken, async (req, res) => {
     return res.status(400).json({ success: false, msg: 'পেমেন্ট মেথড এবং অ্যাকাউন্ট নম্বর প্রদান করুন' });
   }
 
+  // সর্বদা ক্লাউড থেকে সর্বশেষ লাইভ ব্যালেন্স ও হিস্ট্রি রিড করুন
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(true); } catch (e) {}
+  }
+  db.read();
+
+  // পূর্ববর্তী কোনো উত্তোলন এখনও অপেক্ষমান (pending) থাকলে নতুন আবেদন নেওয়া হবে না
+  const activePending = db.get('withdrawals')
+    .filter({ user_id: req.user.id, status: 'pending' })
+    .value() || [];
+  if (activePending.length > 0) {
+    return res.status(400).json({
+      success: false,
+      msg: 'আপনার একটি উত্তোলন রিকোয়েস্ট ইতোমধ্যেই অপেক্ষমান আছে। অ্যাডমিন কর্তৃক সেটি অনুমোদন বা বাতিল হওয়ার পর পুনরায় আবেদন করতে পারবেন।'
+    });
+  }
+
   const user = db.get('users').find({ id: req.user.id }).value();
-  if (!user || user.balance < withdrawAmount) {
+  if (!user || Number(user.balance || 0) < withdrawAmount) {
     return res.status(400).json({ success: false, msg: 'আপনার অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স নেই' });
   }
 
-  // Deduct user balance
-  const updatedBalance = parseFloat((user.balance - withdrawAmount).toFixed(2));
-  const updatedTotalWithdrawn = parseFloat(((user.total_withdrawn || 0) + withdrawAmount).toFixed(2));
+  // Deduct user balance & add to total_withdrawn (তাৎক্ষণিক উত্তোলনে স্থানান্তর)
+  const updatedBalance = parseFloat(Math.max(0, Number(user.balance || 0) - withdrawAmount).toFixed(2));
+  const updatedTotalWithdrawn = parseFloat(((Number(user.total_withdrawn) || 0) + withdrawAmount).toFixed(2));
 
   db.get('users')
     .find({ id: req.user.id })
@@ -1629,6 +1646,7 @@ app.post('/api/withdraw', authenticateToken, async (req, res) => {
 
   // Create withdrawal record
   const withdrawId = Date.now();
+  const nowIso = new Date().toISOString();
   const newWithdraw = {
     id: withdrawId,
     user_id: req.user.id,
@@ -1638,14 +1656,38 @@ app.post('/api/withdraw', authenticateToken, async (req, res) => {
     account_number: accountNumber,
     status: 'pending',
     admin_note: '',
-    created_at: new Date().toISOString()
+    created_at: nowIso
   };
 
   db.get('withdrawals').push(newWithdraw);
-
-  // Single batch write & immediate cloud sync
   db.write();
-  await db.syncToCloud(true);
+
+  // 🛡️ সরাসরি মোঙ্গোডিবি অ্যাটলাসে ইনস্ট্যান্ট ও পার্মানেন্ট অ্যাটমিক রাইট
+  if (db.getMongoDb) {
+    try {
+      const mdb = await db.getMongoDb();
+      if (mdb) {
+        await mdb.collection('app_state').updateOne(
+          { _id: 'earnpulse_store' },
+          { 
+            $push: { 'data.withdrawals': newWithdraw },
+            $set: { 
+              'data.users.$[u].balance': updatedBalance,
+              'data.users.$[u].total_withdrawn': updatedTotalWithdrawn,
+              updated_at: new Date()
+            } 
+          },
+          { arrayFilters: [{ 'u.id': req.user.id }] }
+        );
+      }
+    } catch (e) {
+      console.error('Direct Atlas withdraw create error:', e.message);
+    }
+  }
+
+  if (db.syncToCloud) {
+    try { await db.syncToCloud(true); } catch (e) {}
+  }
 
   return res.json({
     success: true,
@@ -1760,8 +1802,12 @@ app.post('/api/user/change-password', authenticateToken, (req, res) => {
 // 7. ADMIN DASHBOARD & CONTROLS
 // -------------------------------------------------------------
 app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    try { await db.syncFromCloud(true); } catch (e) {}
   }
   await syncOfficialEarnBondhuSettlements();
   db.read();
@@ -1986,7 +2032,7 @@ app.post('/api/admin/config', authenticateToken, requireAdmin, async (req, res) 
 
   // ১. সবার আগে ক্লাউড থেকে সর্বশেষ লাইভ কনফিগ লোড করা
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    try { await db.syncFromCloud(true); } catch (e) {}
   }
   db.read();
   const current = db.get('system_config').value() || {};

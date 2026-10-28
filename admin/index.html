@@ -764,8 +764,13 @@
     if (!adminToken) return;
 
     try {
-      const res = await fetch(`${API_BASE}/admin/overview`, {
-        headers: { Authorization: `Bearer ${adminToken}` }
+      const res = await fetch(`${API_BASE}/admin/overview?_t=${Date.now()}`, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache'
+        },
+        cache: 'no-store'
       });
 
       if (res.status === 401 || res.status === 403) {

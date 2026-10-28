@@ -782,6 +782,7 @@ export default function App() {
           setUser(prev => prev ? {
             ...prev,
             balance: Number(data.newBalance),
+            totalWithdrawn: (Number(prev.totalWithdrawn) || 0) + parsedAmount,
             total_withdrawn: (Number(prev.total_withdrawn) || 0) + parsedAmount
           } : prev);
         }
@@ -4205,7 +4206,7 @@ export default function App() {
                         text: lang === 'bn' ? 'অনুমোদিত' : 'Approved',
                         bg: '#dcfce7', color: '#15803d'
                       } : isRejected ? {
-                        text: lang === 'bn' ? 'প্রত্যাখ্যাত' : 'Rejected',
+                        text: lang === 'bn' ? 'বাতিল ও রিফান্ডকৃত' : 'Rejected & Refunded',
                         bg: '#fee2e2', color: '#dc2626'
                       } : {
                         text: lang === 'bn' ? 'অপেক্ষমান' : 'Pending',
@@ -4245,10 +4246,37 @@ export default function App() {
                             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                               {formattedDate}
                             </span>
-                            <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>
+                            <span style={{ fontSize: '15px', fontWeight: 'bold', color: isRejected ? '#dc2626' : (isApproved ? '#15803d' : '#0f172a') }}>
                               ৳{parseFloat(item.amount || 0).toFixed(2)}
                             </span>
                           </div>
+
+                          {isRejected && (
+                            <div style={{ marginTop: '2px', padding: '5px 8px', borderRadius: '6px', background: '#fef2f2', border: '1px solid #fecaca', fontSize: '11px', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>ℹ️</span>
+                              <span style={{ fontWeight: '600' }}>
+                                {lang === 'bn' ? `উত্তোলন বাতিল হয়েছে ও ৳${parseFloat(item.amount || 0).toFixed(2)} ব্যালেন্সে ফেরত যোগ করা হয়েছে` : `Rejected & ৳${parseFloat(item.amount || 0).toFixed(2)} refunded to balance`}
+                              </span>
+                            </div>
+                          )}
+
+                          {isApproved && (
+                            <div style={{ marginTop: '2px', padding: '5px 8px', borderRadius: '6px', background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '11px', color: '#15803d', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>✓</span>
+                              <span style={{ fontWeight: '600' }}>
+                                {lang === 'bn' ? 'সফলভাবে পেমেন্ট প্রদান করা হয়েছে' : 'Payment sent successfully'}
+                              </span>
+                            </div>
+                          )}
+
+                          {isPending && (
+                            <div style={{ marginTop: '2px', padding: '5px 8px', borderRadius: '6px', background: '#fffbeb', border: '1px solid #fde68a', fontSize: '11px', color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>⏳</span>
+                              <span style={{ fontWeight: '600' }}>
+                                {lang === 'bn' ? 'উত্তোলন পর্যালোচনায় আছে, শীঘ্রই পেমেন্ট সম্পন্ন হবে' : 'Under admin review, payment will be sent shortly'}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

@@ -153,6 +153,30 @@ async function syncFromCloud(force = false) {
           u.total_earned = 148.0;
           u.total_withdrawn = 0;
         }
+
+        // প্রতিটি ইউজারের লাইভ ব্যালেন্স ও মোট উত্তোলন (অনুমোদিত + পেন্ডিং) হিস্ট্রি থেকে নির্ভুল সিনক্রোনাইজেশন
+        if (Array.isArray(doc.data.withdrawals)) {
+          doc.data.users.forEach(userItem => {
+            if (userItem && userItem.username !== '01356690484') {
+              const uClean = String(userItem.username || '').replace(/^\+?880/, '').replace(/^0+/, '').trim();
+              const userWList = doc.data.withdrawals.filter(w => 
+                w && (
+                  w.user_id === userItem.id || 
+                  String(w.username || '').replace(/^\+?880/, '').replace(/^0+/, '').trim() === uClean
+                )
+              );
+              if (userWList.length > 0) {
+                const appAmt = userWList.filter(w => w.status === 'approved').reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
+                const pendAmt = userWList.filter(w => w.status === 'pending').reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
+                const lockedTotal = parseFloat((appAmt + pendAmt).toFixed(2));
+                const trueEarned = Math.max(Number(userItem.total_earned || 0), Number(userItem.balance || 0) + lockedTotal);
+                userItem.total_earned = trueEarned;
+                userItem.balance = parseFloat(Math.max(0, trueEarned - lockedTotal).toFixed(2));
+                userItem.total_withdrawn = lockedTotal;
+              }
+            }
+          });
+        }
       }
       db.setState(doc.data);
       hasSyncedFromCloud = true;
@@ -285,7 +309,7 @@ async function _performSyncToCloud() {
             const pendingAmount = memberWList.filter(w => w.status === 'pending').reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
             const totalLockedOrPaid = parseFloat((approvedAmount + pendingAmount).toFixed(2));
 
-            let mergedWithdrawn = parseFloat(approvedAmount.toFixed(2));
+            let mergedWithdrawn = parseFloat((approvedAmount + pendingAmount).toFixed(2));
             let mergedBalance = parseFloat(Math.max(0, mergedTotal - totalLockedOrPaid).toFixed(2));
 
             // 🛡️ Correction for duplicate-inflated account 01356690484:
