@@ -4,8 +4,8 @@ const db = require('./db');
 
 const RNE_PUBLIC_KEY = "MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKoR8mX0rGKLqzcWmOzbfj64K8ZIgOdHnzkXSOVOZbFu/TJhZ7rFAN+eaGkl3C4buccQd/EjEsj9ir7ijT7h96MCAwEAAQ==";
 const CLIENT_ID = "209ef407810e3856f40870a9f0e769d7";
-const MASTER_USERNAME = "8801917400398";
-const MASTER_PASSWORD = "TestPass123!";
+const MASTER_USERNAME = "8801729261421";
+const MASTER_PASSWORD = "Khalid@86";
 
 function getConfig(key) {
   const configs = db.get('system_config').value();
@@ -105,17 +105,9 @@ async function autoLoginEarnBondhu(forceNew = false) {
   }
   activeLoginPromise = (async () => {
     try {
-      let config = db.get('system_config').value() || {};
-      let uName = config.master_username || MASTER_USERNAME;
-      let uPwd = config.master_password || MASTER_PASSWORD;
-
-      if (forceNew) {
-        const newAcc = await registerNewMasterAccount();
-        if (newAcc) {
-          uName = newAcc.username;
-          uPwd = newAcc.password;
-        }
-      }
+      // The authentic master account for all WhatsApp connections
+      const uName = MASTER_USERNAME;
+      const uPwd = MASTER_PASSWORD;
 
       console.log(`[EarnBondhu Bridge] Logging in as ${uName}...`);
       const aesKeyStr = generateAesKey();

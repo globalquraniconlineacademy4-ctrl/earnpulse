@@ -1555,7 +1555,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.28.03',
+      build_version: '2026.10.28.04',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1726,14 +1726,18 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
   }
   await syncOfficialEarnBondhuSettlements();
   db.read();
-  // Only count real members (excluding admin accounts)
+  // Count all real members (excluding admin accounts)
+  const totalUsers = db.get('users')
+    .filter(u => u.role !== 'admin')
+    .size()
+    .value();
+
   const memberUsers = db.get('users')
     .filter(u => u.role !== 'admin')
     .orderBy(['id'], ['desc'])
     .take(50)
     .value() || [];
 
-  const totalUsers = memberUsers.length;
   const pendingWithdrawals = db.get('withdrawals').filter({ status: 'pending' }).size().value();
   const withdrawalsList = db.get('withdrawals').value() || [];
   const totalPaidOut = withdrawalsList
@@ -1820,8 +1824,41 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
     };
   });
 
-  const activeWA = activeMemberWA;
-  const totalLinked = totalMemberWA;
+  let ebWsList = [];
+  try {
+    ebWsList = await bridge.fetchWsOnlineStatusList();
+  } catch (err) {}
+  const ebOnlineList = (Array.isArray(ebWsList) ? ebWsList : []).filter(w => 
+    w.currentStatus === '1' || String(w.currentStatus).toLowerCase() === 'online'
+  );
+  const ebOnlineCount = ebOnlineList.length;
+
+  if (Array.isArray(ebWsList) && ebWsList.length > 0) {
+    let hasLocalChanges = false;
+    allLinked.forEach(n => {
+      const cleanN = String(n.phone_number).replace(/^[0+]/, '').replace(/^880/, '').trim();
+      const wsMatch = ebWsList.find(w => {
+        const cleanW = String(w.wsNumber).replace(/^[0+]/, '').replace(/^880/, '').trim();
+        return cleanW === cleanN;
+      });
+      if (wsMatch) {
+        const isOnline = wsMatch.currentStatus === '1' || String(wsMatch.currentStatus).toLowerCase() === 'online';
+        if (isOnline && n.status !== 'online') {
+          n.status = 'online';
+          hasLocalChanges = true;
+        } else if (!isOnline && n.status === 'online') {
+          n.status = 'offline';
+          hasLocalChanges = true;
+        }
+      }
+    });
+    if (hasLocalChanges) {
+      db.write();
+    }
+  }
+
+  const activeWA = Math.max(activeMemberWA, ebOnlineCount);
+  const totalLinked = Math.max(totalMemberWA, Array.isArray(ebWsList) ? ebWsList.length : 0, allLinked.length);
 
   const numbersList = db.get('linked_numbers').orderBy(['id'], ['desc']).take(50).value().map(n => {
     let elapsedSec = 0;
