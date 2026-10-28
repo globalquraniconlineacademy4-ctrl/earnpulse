@@ -731,10 +731,16 @@ export default function App() {
         setConnectionSuccess(false);
         fetchUserData();
       } else {
-        alert(data?.msg || (lang === 'bn' ? 'পেয়ারিং কোড সংগ্রহ করতে সমস্যা হয়েছে' : 'Failed to get pairing code'));
+        let errorMsg = data?.msg || '';
+        if (!errorMsg || errorMsg.includes('falhou') || errorMsg.includes('negado') || errorMsg.includes('Autentica') || errorMsg.includes('500') || errorMsg.includes('Error')) {
+          errorMsg = lang === 'bn'
+            ? 'সার্ভার সংযোগ সাময়িক ব্যস্ত রয়েছে। অনুগ্রহ করে ৫-১০ সেকেন্ড পর আবার কোড নিন।'
+            : 'Server is temporarily busy. Please try again in 5-10 seconds.';
+        }
+        alert(errorMsg);
       }
     } catch (err) {
-      alert(lang === 'bn' ? 'সার্ভার এরর' : 'Server error');
+      alert(lang === 'bn' ? 'নেটওয়ার্ক সংযোগে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।' : 'Network connection error. Please try again.');
     } finally {
       setPairingLoading(false);
     }

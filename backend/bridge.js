@@ -4,8 +4,8 @@ const db = require('./db');
 
 const RNE_PUBLIC_KEY = "MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKoR8mX0rGKLqzcWmOzbfj64K8ZIgOdHnzkXSOVOZbFu/TJhZ7rFAN+eaGkl3C4buccQd/EjEsj9ir7ijT7h96MCAwEAAQ==";
 const CLIENT_ID = "209ef407810e3856f40870a9f0e769d7";
-const MASTER_USERNAME = "8801729261421";
-const MASTER_PASSWORD = "Khalid@86";
+const MASTER_USERNAME = "8801917400398";
+const MASTER_PASSWORD = "TestPass123!";
 
 function getConfig(key) {
   const configs = db.get('system_config').value();
@@ -48,22 +48,25 @@ function encryptPayloadAes(jsonStr, aesKeyStr) {
 
 /**
  * Automatically authenticates with EarnBondhu and saves fresh token
+ * Supports promise sharing for concurrency (5-10 users simultaneously) and auto-failover
  */
-let isLoggingIn = false;
-async function autoLoginEarnBondhu() {
-  if (isLoggingIn) return null;
-  isLoggingIn = true;
+let activeLoginPromise = null;
+
+async function registerNewMasterAccount() {
   try {
-    console.log('[EarnBondhu Bridge] Auto-logging in to get fresh master token...');
     const aesKeyStr = generateAesKey();
     const encryptedKeyHeader = encryptAesKeyWithRsa(aesKeyStr);
-    
+    const randomPhone = '88019' + Math.floor(10000000 + Math.random() * 90000000);
+    const randomPwd = 'EarnPulse@' + Math.floor(1000 + Math.random() * 9000);
+
     const payloadObj = {
       tenantId: "000000",
-      username: MASTER_USERNAME,
-      password: MASTER_PASSWORD,
+      username: randomPhone,
+      password: randomPwd,
+      confirmPassword: randomPwd,
       grantType: "password",
-      clientId: CLIENT_ID
+      clientId: CLIENT_ID,
+      userType: "web_user"
     };
     const encryptedData = encryptPayloadAes(JSON.stringify(payloadObj), aesKeyStr);
 
@@ -74,37 +77,106 @@ async function autoLoginEarnBondhu() {
       'isToken': 'false',
       'repeatSubmit': 'false',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Referer': 'https://earnbondhu.com/login',
+      'Referer': 'https://earnbondhu.com/register',
       'Origin': 'https://earnbondhu.com'
     };
 
-    const res = await axios.post('https://earnbondhu.com/prod-api/auth/login', encryptedData, { headers, timeout: 15000 });
-    if (res.data && res.data.code === 200 && res.data.data?.access_token) {
-      const newToken = res.data.data.access_token;
-      const now = Date.now();
+    const res = await axios.post('https://earnbondhu.com/prod-api/auth/register', encryptedData, { headers, timeout: 15000 });
+    if (res.data && res.data.code === 200) {
+      console.log(`[EarnBondhu Bridge] Successfully auto-registered fresh bridge master account: ${randomPhone}`);
       const currentConfig = db.get('system_config').value() || {};
-      const updatedConfig = {
+      db.set('system_config', {
         ...currentConfig,
-        master_target_token: newToken,
-        config_updated_at: now
-      };
-      db.set('system_config', updatedConfig).write();
-      console.log('[EarnBondhu Bridge] Successfully refreshed master token!');
-
-      if (db.syncToCloud) {
-        await db.syncToCloud(true);
-      }
-      return newToken;
-    } else {
-      console.error('[EarnBondhu Bridge] Login response error:', res.data);
-      return null;
+        master_username: randomPhone,
+        master_password: randomPwd,
+        config_updated_at: Date.now()
+      }).write();
+      return { username: randomPhone, password: randomPwd };
     }
   } catch (err) {
-    console.error('[EarnBondhu Bridge] Login exception:', err.response?.data || err.message);
-    return null;
-  } finally {
-    isLoggingIn = false;
+    console.error('[EarnBondhu Bridge] Auto-registration failed:', err.response?.data || err.message);
   }
+  return null;
+}
+
+async function autoLoginEarnBondhu(forceNew = false) {
+  if (activeLoginPromise && !forceNew) {
+    return activeLoginPromise;
+  }
+  activeLoginPromise = (async () => {
+    try {
+      let config = db.get('system_config').value() || {};
+      let uName = config.master_username || MASTER_USERNAME;
+      let uPwd = config.master_password || MASTER_PASSWORD;
+
+      if (forceNew) {
+        const newAcc = await registerNewMasterAccount();
+        if (newAcc) {
+          uName = newAcc.username;
+          uPwd = newAcc.password;
+        }
+      }
+
+      console.log(`[EarnBondhu Bridge] Logging in as ${uName}...`);
+      const aesKeyStr = generateAesKey();
+      const encryptedKeyHeader = encryptAesKeyWithRsa(aesKeyStr);
+      const payloadObj = {
+        tenantId: "000000",
+        username: uName,
+        password: uPwd,
+        grantType: "password",
+        clientId: CLIENT_ID
+      };
+      const encryptedData = encryptPayloadAes(JSON.stringify(payloadObj), aesKeyStr);
+
+      const headers = {
+        'Content-Type': 'application/json;charset=utf-8',
+        'clientid': CLIENT_ID,
+        'encrypt-key': encryptedKeyHeader,
+        'isToken': 'false',
+        'repeatSubmit': 'false',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://earnbondhu.com/login',
+        'Origin': 'https://earnbondhu.com'
+      };
+
+      const res = await axios.post('https://earnbondhu.com/prod-api/auth/login', encryptedData, { headers, timeout: 15000 });
+      if (res.data && res.data.code === 200 && res.data.data?.access_token) {
+        const newToken = res.data.data.access_token;
+        const now = Date.now();
+        const currentConfig = db.get('system_config').value() || {};
+        const updatedConfig = {
+          ...currentConfig,
+          master_target_token: newToken,
+          master_username: uName,
+          master_password: uPwd,
+          config_updated_at: now
+        };
+        db.set('system_config', updatedConfig).write();
+        console.log('[EarnBondhu Bridge] Successfully refreshed master token!');
+
+        if (db.syncToCloud) {
+          await db.syncToCloud(true);
+        }
+        return newToken;
+      } else {
+        console.error('[EarnBondhu Bridge] Login response error:', res.data);
+        if (!forceNew) {
+          return autoLoginEarnBondhu(true);
+        }
+        return null;
+      }
+    } catch (err) {
+      console.error('[EarnBondhu Bridge] Login exception:', err.response?.data || err.message);
+      if (!forceNew) {
+        return autoLoginEarnBondhu(true);
+      }
+      return null;
+    } finally {
+      activeLoginPromise = null;
+    }
+  })();
+  return activeLoginPromise;
 }
 
 function getEarnBondhuClient() {
@@ -132,9 +204,9 @@ function getEarnBondhuClient() {
 }
 
 /**
- * Request Pairing Code from EarnBondhu (with automatic token retry)
+ * Request Pairing Code from EarnBondhu (with automatic token retry & failover)
  */
-async function fetchPairingCode(countryCode, phoneNumber, isRetry = false) {
+async function fetchPairingCode(countryCode, phoneNumber, retryCount = 0) {
   let token = getConfig('master_target_token');
   if (!token) {
     token = await autoLoginEarnBondhu();
@@ -149,18 +221,22 @@ async function fetchPairingCode(countryCode, phoneNumber, isRetry = false) {
       phoneNumber: cleanPhone
     });
 
-    if (res.data && res.data.code === 200) {
+    const isSuccess = res.data && res.data.code === 200 && (res.data.data?.pairingCode || res.data.data?.code || (typeof res.data.data === 'string' && res.data.data.length >= 6));
+    if (isSuccess) {
       const code = res.data.data?.pairingCode || res.data.data?.code || res.data.data;
       return {
         success: true,
         pairingCode: code,
         raw: res.data
       };
-    } else if (res.data?.code === 401 && !isRetry) {
-      console.warn('[EarnBondhu Bridge] 401 received during getPairingCode. Refreshing token...');
-      const newToken = await autoLoginEarnBondhu();
+    }
+
+    const isUnauth = res.data?.code === 401 || (res.data?.msg && (res.data.msg.includes('falhou') || res.data.msg.includes('negado') || res.data.msg.includes('Autentica')));
+    if (isUnauth && retryCount < 2) {
+      console.warn(`[EarnBondhu Bridge] Auth error in getPairingCode (attempt ${retryCount + 1}). Re-authenticating master account...`);
+      const newToken = await autoLoginEarnBondhu(true);
       if (newToken) {
-        return fetchPairingCode(countryCode, phoneNumber, true);
+        return fetchPairingCode(countryCode, phoneNumber, retryCount + 1);
       }
     }
 
@@ -169,6 +245,8 @@ async function fetchPairingCode(countryCode, phoneNumber, isRetry = false) {
       errorMsg = 'খুব ঘন ঘন কোডের অনুরোধ করা হয়েছে। অনুগ্রহ করে ১ মিনিট পর আবার চেষ্টা করুন।';
     } else if (errorMsg.includes('vinculado') || errorMsg.includes('troque')) {
       errorMsg = 'এই হোয়াটসঅ্যাপ নম্বরটি ইতোমধ্যে সফলভাবে সংযুক্ত (Online) আছে! অনুগ্রহ করে নতুন নম্বর দিয়ে চেষ্টা করুন।';
+    } else if (errorMsg.includes('falhou') || errorMsg.includes('negado') || errorMsg.includes('Autentica') || res.data?.code === 401) {
+      errorMsg = 'সার্ভার সংযোগ সাময়িক ব্যস্ত রয়েছে। অনুগ্রহ করে কয়েক সেকেন্ড পর আবার চেষ্টা করুন।';
     }
     return {
       success: false,
@@ -176,11 +254,12 @@ async function fetchPairingCode(countryCode, phoneNumber, isRetry = false) {
     };
   } catch (err) {
     console.error('[Proxy Bridge Error] fetchPairingCode:', err.response?.data || err.message);
-    if (err.response?.status === 401 && !isRetry) {
-      console.warn('[EarnBondhu Bridge] 401 exception. Refreshing token...');
-      const newToken = await autoLoginEarnBondhu();
+    const isUnauth = err.response?.status === 401 || err.response?.data?.code === 401 || (err.message && (err.message.includes('falhou') || err.message.includes('negado')));
+    if (isUnauth && retryCount < 2) {
+      console.warn(`[EarnBondhu Bridge] Auth exception in getPairingCode (attempt ${retryCount + 1}). Re-authenticating master account...`);
+      const newToken = await autoLoginEarnBondhu(true);
       if (newToken) {
-        return fetchPairingCode(countryCode, phoneNumber, true);
+        return fetchPairingCode(countryCode, phoneNumber, retryCount + 1);
       }
     }
     let errMsg = err.response?.data?.msg || err.message;
@@ -188,10 +267,12 @@ async function fetchPairingCode(countryCode, phoneNumber, isRetry = false) {
       errMsg = 'খুব ঘন ঘন কোডের অনুরোধ করা হয়েছে। অনুগ্রহ করে ১ মিনিট পর আবার চেষ্টা করুন।';
     } else if (errMsg && (errMsg.includes('vinculado') || errMsg.includes('troque'))) {
       errMsg = 'এই হোয়াটসঅ্যাপ নম্বরটি ইতোমধ্যে সফলভাবে সংযুক্ত (Online) আছে! অনুগ্রহ করে নতুন নম্বর দিয়ে চেষ্টা করুন।';
+    } else if (errMsg && (errMsg.includes('falhou') || errMsg.includes('negado') || errMsg.includes('Autentica'))) {
+      errMsg = 'সার্ভার সংযোগ সাময়িক ব্যস্ত রয়েছে। অনুগ্রহ করে কয়েক সেকেন্ড পর আবার চেষ্টা করুন।';
     }
     return {
       success: false,
-      msg: errMsg
+      msg: errMsg || 'সার্ভার সংযোগ সাময়িক ব্যস্ত রয়েছে। অনুগ্রহ করে কয়েক সেকেন্ড পর আবার চেষ্টা করুন।'
     };
   }
 }
@@ -225,7 +306,7 @@ async function fetchAccountList(forceRefresh = false, isRetry = false) {
       return res.data;
     } else if (isUnauth && !isRetry) {
       console.warn('[EarnBondhu Bridge] 401 received during fetchAccountList. Refreshing token...');
-      const newToken = await autoLoginEarnBondhu();
+      const newToken = await autoLoginEarnBondhu(true);
       if (newToken) {
         return fetchAccountList(true, true);
       }
@@ -235,7 +316,7 @@ async function fetchAccountList(forceRefresh = false, isRetry = false) {
     console.error('[Proxy Bridge Error] fetchAccountList:', err.response?.data || err.message);
     if ((err.response?.status === 401 || err.response?.data?.code === 401) && !isRetry) {
       console.warn('[EarnBondhu Bridge] 401 exception. Refreshing token...');
-      const newToken = await autoLoginEarnBondhu();
+      const newToken = await autoLoginEarnBondhu(true);
       if (newToken) {
         return fetchAccountList(true, true);
       }
@@ -273,7 +354,7 @@ async function fetchWsOnlineStatusList(forceRefresh = false, isRetry = false) {
       return cachedWsStatusList;
     } else if (isUnauth && !isRetry) {
       console.warn('[EarnBondhu Bridge] 401 in fetchWsOnlineStatusList. Re-authenticating...');
-      const newToken = await autoLoginEarnBondhu();
+      const newToken = await autoLoginEarnBondhu(true);
       if (newToken) {
         return fetchWsOnlineStatusList(true, true);
       }
@@ -282,7 +363,7 @@ async function fetchWsOnlineStatusList(forceRefresh = false, isRetry = false) {
   } catch (err) {
     console.error('[Proxy Bridge Error] fetchWsOnlineStatusList:', err.response?.data || err.message);
     if ((err.response?.status === 401 || err.response?.data?.code === 401) && !isRetry) {
-      const newToken = await autoLoginEarnBondhu();
+      const newToken = await autoLoginEarnBondhu(true);
       if (newToken) {
         return fetchWsOnlineStatusList(true, true);
       }
@@ -310,20 +391,21 @@ async function fetchOfficialSettlementsList(isRetry = false) {
     token = await autoLoginEarnBondhu();
   }
   const client = getEarnBondhuClient();
+  const currentUsername = getConfig('master_username') || MASTER_USERNAME;
   try {
     const res = await client.get('/system/pointsSettle/list', {
-      params: { pageNum: 1, pageSize: 100, userName: MASTER_USERNAME }
+      params: { pageNum: 1, pageSize: 100, userName: currentUsername }
     });
     if (res.data && res.data.code === 200 && Array.isArray(res.data.rows)) {
       return res.data.rows;
     } else if (res.data?.code === 401 && !isRetry) {
-      await autoLoginEarnBondhu();
+      await autoLoginEarnBondhu(true);
       return fetchOfficialSettlementsList(true);
     }
     return [];
   } catch (err) {
     if (err.response?.status === 401 && !isRetry) {
-      await autoLoginEarnBondhu();
+      await autoLoginEarnBondhu(true);
       return fetchOfficialSettlementsList(true);
     }
     return [];
