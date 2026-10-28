@@ -485,21 +485,69 @@
 
   <!-- Section 2: Registered Users (মেম্বার তালিকা) -->
   <div class="section-card">
-    <div class="section-header">
-      <div class="section-title">👥 সাম্প্রতিক নিবন্ধিত মেম্বারবৃন্দ</div>
+    <div class="section-header" style="flex-wrap: wrap; gap: 10px;">
+      <div>
+        <div class="section-title">👥 মেম্বার তালিকা ও হোয়াটসঅ্যাপ সংযোগ</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">কানেক্টেড মেম্বাররা তালিকার শীর্ষে প্রদর্শিত হচ্ছে</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <button id="filterConnectedBtn" onclick="setMemberFilter('connected')" class="action-btn" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);">🟢 শুধু কানেক্টেড মেম্বার</button>
+        <button id="filterAllBtn" onclick="setMemberFilter('all')" class="action-btn" style="background: rgba(255,255,255,0.08); color: #fff;">👥 সকল মেম্বার</button>
+      </div>
     </div>
+
+    <!-- Search Input for Members -->
+    <div style="margin-bottom: 12px;">
+      <input type="text" id="memberSearchInput" oninput="filterMembersList()" placeholder="🔍 মেম্বারের ফোন নম্বর দিয়ে খুঁজুন (যেমন: 017...)" style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.12); color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 13px;">
+    </div>
+
     <div class="table-container">
       <table>
         <thead>
           <tr>
             <th>ফোন নম্বর</th>
             <th>ব্যালেন্স</th>
-            <th>WP</th>
+            <th>সংযুক্ত WA</th>
             <th>জয়েনিং তারিখ</th>
           </tr>
         </thead>
         <tbody id="usersTable">
           <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">লোড হচ্ছে...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section 3: All Active WhatsApp Accounts (লাইভ সকল সক্রিয় হোয়াটসঅ্যাপ মনিটর) -->
+  <div class="section-card">
+    <div class="section-header" style="flex-wrap: wrap; gap: 10px;">
+      <div>
+        <div class="section-title">📱 সকল লাইভ সক্রিয় WhatsApp অ্যাকাউন্ট মনিটর</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">EarnBondhu ও EarnPulse-এ সংযুক্ত সকল নম্বরের লাইভ তালিকা</div>
+      </div>
+      <div id="waBadgeCount" class="badge-status" style="font-size: 12px;">
+        ● লাইভ মনিটর
+      </div>
+    </div>
+
+    <!-- Search Input for WhatsApp Numbers -->
+    <div style="margin-bottom: 12px;">
+      <input type="text" id="waSearchInput" oninput="filterWaList()" placeholder="🔍 হোয়াটসঅ্যাপ নম্বর খুঁজুন..." style="width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.12); color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 13px;">
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>WhatsApp নম্বর</th>
+            <th>মালিক (মেম্বার)</th>
+            <th>স্ট্যাটাস</th>
+            <th>লাইভ সময়</th>
+            <th>লগইন সময়</th>
+          </tr>
+        </thead>
+        <tbody id="waTable">
+          <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">লোড হচ্ছে...</td></tr>
         </tbody>
       </table>
     </div>
@@ -821,43 +869,141 @@
         if (wCards) wCards.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো উইথড্রয়াল রিকোয়েস্ট নেই</div>';
       }
 
-      // Users Table (Only real registered members with live balance and connected WhatsApp)
+      // Users Table
       currentUsersList = d.usersList || [];
-      const uTable = document.getElementById('usersTable');
-      if (d.usersList && d.usersList.length > 0) {
-        uTable.innerHTML = d.usersList.map((u, idx) => {
-          const wpNums = (u.wp_numbers && Array.isArray(u.wp_numbers)) ? u.wp_numbers : [];
-          const onlineCount = (u.online_count !== undefined) 
-            ? u.online_count 
-            : wpNums.filter(n => String(n.status || '').toLowerCase() === 'online').length;
-          const totalCount = wpNums.length;
-
-          const wpBtn = onlineCount > 0 
-            ? `<button onclick="openWpModal(${idx})" class="btn-3d-connected" title="মেম্বারের হোয়াটসঅ্যাপ তালিকা ও লাইভ টাইমার দেখতে ক্লিক করুন">🟢 Connected ${onlineCount}</button>`
-            : (totalCount > 0 
-                ? `<button onclick="openWpModal(${idx})" class="btn-3d-zero" style="cursor: pointer;" title="মেম্বারের হোয়াটসঅ্যাপ তালিকা দেখতে ক্লিক করুন">⚪ 0 Connected</button>` 
-                : `<span class="btn-3d-zero">⚪ 0 Connected</span>`);
-
-          return `
-            <tr>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <button onclick="openPasswordModal(${idx})" class="btn-p-badge" title="মেম্বারের পাসওয়ার্ড দেখতে ক্লিক করুন">P</button>
-                  <strong>${u.username}</strong>
-                </div>
-              </td>
-              <td style="color: #34d399; font-weight: 800; font-size: 14px;">৳ ${(parseFloat(u.balance) || 0).toFixed(2)}</td>
-              <td>${wpBtn}</td>
-              <td style="font-size: 11px; color: var(--text-muted);">${(u.created_at || '').substring(0, 16).replace('T', ' ')}</td>
-            </tr>
-          `;
-        }).join('');
-      } else {
-        uTable.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো মেম্বার নেই</td></tr>';
-      }
+      currentNumbersList = d.numbersList || [];
+      renderUsersTable();
+      renderWaTable();
 
     } catch (e) {
       console.error('loadAdminData error:', e);
+    }
+  }
+
+  let memberFilterMode = 'connected';
+
+  function setMemberFilter(mode) {
+    memberFilterMode = mode;
+    const btnConn = document.getElementById('filterConnectedBtn');
+    const btnAll = document.getElementById('filterAllBtn');
+    if (btnConn && btnAll) {
+      if (mode === 'connected') {
+        btnConn.style.background = 'rgba(16, 185, 129, 0.25)';
+        btnConn.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+        btnAll.style.background = 'rgba(255,255,255,0.08)';
+        btnAll.style.borderColor = 'transparent';
+      } else {
+        btnAll.style.background = 'rgba(56, 189, 248, 0.25)';
+        btnAll.style.borderColor = 'rgba(56, 189, 248, 0.5)';
+        btnConn.style.background = 'rgba(255,255,255,0.08)';
+        btnConn.style.borderColor = 'transparent';
+      }
+    }
+    renderUsersTable();
+  }
+
+  function filterMembersList() {
+    renderUsersTable();
+  }
+
+  function renderUsersTable() {
+    const uTable = document.getElementById('usersTable');
+    if (!uTable) return;
+    const query = (document.getElementById('memberSearchInput')?.value || '').trim().toLowerCase();
+
+    let filtered = currentUsersList.slice();
+    if (memberFilterMode === 'connected') {
+      filtered = filtered.filter(u => (u.online_count > 0 || (u.wp_numbers && u.wp_numbers.length > 0)));
+    }
+    if (query) {
+      filtered = filtered.filter(u => String(u.username || '').toLowerCase().includes(query));
+    }
+
+    if (filtered.length > 0) {
+      uTable.innerHTML = filtered.map(u => {
+        const originalIdx = currentUsersList.indexOf(u);
+        const wpNums = (u.wp_numbers && Array.isArray(u.wp_numbers)) ? u.wp_numbers : [];
+        const onlineCount = (u.online_count !== undefined) 
+          ? u.online_count 
+          : wpNums.filter(n => String(n.status || '').toLowerCase() === 'online').length;
+        const totalCount = wpNums.length;
+
+        const wpBtn = onlineCount > 0 
+          ? `<button onclick="openWpModal(${originalIdx})" class="btn-3d-connected" title="মেম্বারের হোয়াটসঅ্যাপ তালিকা ও লাইভ টাইমার দেখতে ক্লিক করুন">🟢 Connected ${onlineCount}</button>`
+          : (totalCount > 0 
+              ? `<button onclick="openWpModal(${originalIdx})" class="btn-3d-zero" style="cursor: pointer;" title="মেম্বারের হোয়াটসঅ্যাপ তালিকা দেখতে ক্লিক করুন">⚪ 0 Connected</button>` 
+              : `<span class="btn-3d-zero">⚪ 0 Connected</span>`);
+
+        return `
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button onclick="openPasswordModal(${originalIdx})" class="btn-p-badge" title="মেম্বারের পাসওয়ার্ড দেখতে ক্লিক করুন">P</button>
+                <strong>${u.username}</strong>
+              </div>
+            </td>
+            <td style="color: #34d399; font-weight: 800; font-size: 14px;">৳ ${(parseFloat(u.balance) || 0).toFixed(2)}</td>
+            <td>${wpBtn}</td>
+            <td style="font-size: 11px; color: var(--text-muted);">${(u.created_at || '').substring(0, 16).replace('T', ' ')}</td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      uTable.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">${memberFilterMode === 'connected' ? 'কোনো কানেক্টেড মেম্বার পাওয়া যায়নি (উপরে "সকল মেম্বার" বাটনে চাপুন)' : 'কোনো মেম্বার নেই'}</td></tr>`;
+    }
+  }
+
+  function filterWaList() {
+    renderWaTable();
+  }
+
+  function renderWaTable() {
+    const waT = document.getElementById('waTable');
+    if (!waT) return;
+    const query = (document.getElementById('waSearchInput')?.value || '').trim().toLowerCase();
+
+    let filtered = currentNumbersList.slice();
+    if (query) {
+      filtered = filtered.filter(n => 
+        String(n.phone_number || '').toLowerCase().includes(query) ||
+        String(n.owner_username || '').toLowerCase().includes(query)
+      );
+    }
+
+    const badge = document.getElementById('waBadgeCount');
+    const onlineCount = currentNumbersList.filter(n => n.status === 'online').length;
+    if (badge) {
+      badge.innerHTML = `<span style="font-size: 8px;">●</span> লাইভ: <strong style="color: #34d399; margin: 0 4px;">${onlineCount} টি সক্রিয়</strong> (মোট ${currentNumbersList.length} টি)`;
+    }
+
+    if (filtered.length > 0) {
+      waT.innerHTML = filtered.map(n => {
+        const isOnline = n.status === 'online';
+        const rawPhone = String(n.phone_number || '');
+        const cleanPhone = rawPhone.startsWith('0') ? rawPhone : ('0' + rawPhone);
+        return `
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 14px;">${isOnline ? '🟢' : '🔴'}</span>
+                <strong style="color: #fff; font-family: monospace; font-size: 13px;">${cleanPhone}</strong>
+              </div>
+            </td>
+            <td><strong style="color: #38bdf8;">${n.owner_username || 'মাস্টার'}</strong></td>
+            <td>
+              <span class="pill ${isOnline ? 'pill-green' : 'pill-red'}">
+                ${isOnline ? 'অনলাইন' : 'অফলাইন'}
+              </span>
+            </td>
+            <td>
+              <strong style="color: #fbbf24; font-family: monospace;">${n.online_duration_str || '00:00:00'}</strong>
+            </td>
+            <td style="font-size: 11px; color: var(--text-muted);">${(n.login_date || '').substring(0, 16).replace('T', ' ')}</td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      waT.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো হোয়াটসঅ্যাপ নম্বর পাওয়া যায়নি</td></tr>';
     }
   }
 

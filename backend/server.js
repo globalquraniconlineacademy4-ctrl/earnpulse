@@ -1555,7 +1555,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.28.04',
+      build_version: '2026.10.28.05',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1726,17 +1726,12 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
   }
   await syncOfficialEarnBondhuSettlements();
   db.read();
-  // Count all real members (excluding admin accounts)
-  const totalUsers = db.get('users')
-    .filter(u => u.role !== 'admin')
-    .size()
-    .value();
 
-  const memberUsers = db.get('users')
+  // All real members (excluding admin accounts)
+  const allMembers = db.get('users')
     .filter(u => u.role !== 'admin')
-    .orderBy(['id'], ['desc'])
-    .take(50)
     .value() || [];
+  const totalUsers = allMembers.length;
 
   const pendingWithdrawals = db.get('withdrawals').filter({ status: 'pending' }).size().value();
   const withdrawalsList = db.get('withdrawals').value() || [];
@@ -1751,45 +1746,96 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
   };
   const recentWithdrawals = db.get('withdrawals').orderBy(['id'], ['desc']).take(50).value();
   const allLinked = db.get('linked_numbers').value() || [];
+  const pendingPairings = db.get('pending_pairings').value() || [];
 
+  // 1. Fetch real-time live WhatsApp numbers from EarnBondhu
+  let ebWsList = [];
+  try {
+    ebWsList = await bridge.fetchWsOnlineStatusList();
+  } catch (err) {}
+  const ebOnlineList = (Array.isArray(ebWsList) ? ebWsList : []).filter(w => 
+    w.currentStatus === '1' || String(w.currentStatus).toLowerCase() === 'online'
+  );
+  const ebOnlineCount = ebOnlineList.length;
+
+  // 2. Sync all numbers from EarnBondhu into local linked_numbers
+  if (Array.isArray(ebWsList) && ebWsList.length > 0) {
+    let hasLocalChanges = false;
+    for (const w of ebWsList) {
+      const cleanW = String(w.wsNumber).replace(/^[0+]/, '').replace(/^880/, '').trim();
+      if (!cleanW) continue;
+      const isOnline = w.currentStatus === '1' || String(w.currentStatus).toLowerCase() === 'online';
+
+      let existing = allLinked.find(l => {
+        const cleanL = String(l.phone_number).replace(/^[0+]/, '').replace(/^880/, '').trim();
+        return cleanL === cleanW;
+      });
+
+      if (existing) {
+        if (isOnline && existing.status !== 'online') {
+          existing.status = 'online';
+          hasLocalChanges = true;
+        } else if (!isOnline && existing.status === 'online') {
+          existing.status = 'offline';
+          hasLocalChanges = true;
+        }
+      } else {
+        const pMatch = pendingPairings.find(p => String(p.phone_number).replace(/^[0+]/, '').replace(/^880/, '').trim() === cleanW);
+        const uMatch = allMembers.find(u => String(u.username).replace(/^[0+]/, '').replace(/^880/, '').trim() === cleanW);
+        const ownerId = (pMatch && pMatch.user_id) || (uMatch && uMatch.id);
+
+        const newRec = {
+          id: Date.now() + Math.floor(Math.random() * 10000),
+          user_id: ownerId || null,
+          phone_number: cleanW,
+          country_code: '880',
+          pairing_code: 'CONNECTED',
+          status: isOnline ? 'online' : 'offline',
+          login_date: w.lastOnlineTime || w.lastSettleTime || w.updateTime,
+          create_time: w.createTime || new Date().toISOString(),
+          raw_status: isOnline ? 'Online' : 'Offline',
+          created_at: new Date().toISOString()
+        };
+        allLinked.push(newRec);
+        db.get('linked_numbers').push(newRec);
+        hasLocalChanges = true;
+      }
+    }
+    if (hasLocalChanges) {
+      db.write();
+    }
+  }
+
+  // 3. Map WhatsApp numbers for each user and compute counts
   let activeMemberWA = 0;
   let totalMemberWA = 0;
 
-  // List only members with their live balance and connected WhatsApp numbers
-  const pendingPairings = db.get('pending_pairings').value() || [];
-  const usersList = memberUsers.map(u => {
-    // Find all WhatsApp numbers linked to this member
+  const usersWithNumbers = allMembers.map(u => {
     const cleanU = String(u.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
     const userWpNumbers = allLinked.filter(n => {
       const cleanN = String(n.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
 
-      // 1. If paired by this user in pending_pairings
+      // Paired by this user in pending_pairings
       const pairedByThisUser = pendingPairings.some(p => {
         const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
         return pClean === cleanN && p.user_id === u.id;
       });
       if (pairedByThisUser) return true;
 
-      // 2. If paired by ANOTHER user in pending_pairings, strictly exclude!
+      // Paired by ANOTHER user in pending_pairings -> strictly exclude
       const pairedByOtherUser = pendingPairings.some(p => {
         const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
         return pClean === cleanN && p.user_id !== u.id;
       });
       if (pairedByOtherUser) return false;
 
-      // 3. Username match
+      // User ID match
+      if (n.user_id === u.id) return true;
+
+      // Username match
       if (cleanN && cleanN === cleanU) return true;
 
-      // 4. Matches another user's username, exclude!
-      const belongsToOtherUser = memberUsers.some(other => {
-        if (other.id === u.id) return false;
-        const otherClean = String(other.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
-        return otherClean && otherClean === cleanN;
-      });
-      if (belongsToOtherUser) return false;
-
-      // 5. User ID match
-      return n.user_id === u.id;
+      return false;
     });
 
     const onlineCount = userWpNumbers.filter(n => n.status === 'online').length;
@@ -1824,43 +1870,20 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
     };
   });
 
-  let ebWsList = [];
-  try {
-    ebWsList = await bridge.fetchWsOnlineStatusList();
-  } catch (err) {}
-  const ebOnlineList = (Array.isArray(ebWsList) ? ebWsList : []).filter(w => 
-    w.currentStatus === '1' || String(w.currentStatus).toLowerCase() === 'online'
-  );
-  const ebOnlineCount = ebOnlineList.length;
+  // 4. Sort: Connected members FIRST (by online_count desc, then wp_numbers.length desc), then recent registrations
+  usersWithNumbers.sort((a, b) => {
+    if (b.online_count !== a.online_count) return b.online_count - a.online_count;
+    if (b.wp_numbers.length !== a.wp_numbers.length) return b.wp_numbers.length - a.wp_numbers.length;
+    return b.id - a.id;
+  });
 
-  if (Array.isArray(ebWsList) && ebWsList.length > 0) {
-    let hasLocalChanges = false;
-    allLinked.forEach(n => {
-      const cleanN = String(n.phone_number).replace(/^[0+]/, '').replace(/^880/, '').trim();
-      const wsMatch = ebWsList.find(w => {
-        const cleanW = String(w.wsNumber).replace(/^[0+]/, '').replace(/^880/, '').trim();
-        return cleanW === cleanN;
-      });
-      if (wsMatch) {
-        const isOnline = wsMatch.currentStatus === '1' || String(wsMatch.currentStatus).toLowerCase() === 'online';
-        if (isOnline && n.status !== 'online') {
-          n.status = 'online';
-          hasLocalChanges = true;
-        } else if (!isOnline && n.status === 'online') {
-          n.status = 'offline';
-          hasLocalChanges = true;
-        }
-      }
-    });
-    if (hasLocalChanges) {
-      db.write();
-    }
-  }
+  const usersList = usersWithNumbers.slice(0, 150);
 
   const activeWA = Math.max(activeMemberWA, ebOnlineCount);
   const totalLinked = Math.max(totalMemberWA, Array.isArray(ebWsList) ? ebWsList.length : 0, allLinked.length);
 
-  const numbersList = db.get('linked_numbers').orderBy(['id'], ['desc']).take(50).value().map(n => {
+  // 5. Complete numbers list with owner username and live elapsed duration
+  const numbersList = allLinked.map(n => {
     let elapsedSec = 0;
     if (n.status === 'online') {
       const dStr = n.login_date || n.create_time;
@@ -1875,11 +1898,29 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
     const m = Math.floor((elapsedSec % 3600) / 60);
     const s = elapsedSec % 60;
     const durationStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+    // Find owner
+    let owner = allMembers.find(u => u.id === n.user_id);
+    if (!owner) {
+      const cleanN = String(n.phone_number).replace(/^[0+]/, '').replace(/^880/, '').trim();
+      const pMatch = pendingPairings.find(p => String(p.phone_number).replace(/^[0+]/, '').replace(/^880/, '').trim() === cleanN);
+      if (pMatch) owner = allMembers.find(u => u.id === pMatch.user_id);
+      if (!owner) owner = allMembers.find(u => String(u.username).replace(/^[0+]/, '').replace(/^880/, '').trim() === cleanN);
+    }
+
     return {
-      ...n,
+      id: n.id,
+      phone_number: n.phone_number,
+      owner_username: owner ? owner.username : 'মাস্টার অ্যাকাউন্ট',
+      status: n.status,
+      login_date: n.login_date || n.create_time || '-',
       online_duration_str: durationStr,
       online_duration_sec: elapsedSec
     };
+  }).sort((a, b) => {
+    if (a.status === 'online' && b.status !== 'online') return -1;
+    if (a.status !== 'online' && b.status === 'online') return 1;
+    return b.id - a.id;
   });
 
   return res.json({
