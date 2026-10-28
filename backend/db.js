@@ -237,9 +237,7 @@ async function _performSyncToCloud() {
     const mdb = await getMongoDb();
     if (!mdb) return;
 
-    if (!hasSyncedFromCloud) {
-      try { await syncFromCloud(true); } catch (e) {}
-    }
+    hasSyncedFromCloud = true;
 
     const currentState = db.getState();
 

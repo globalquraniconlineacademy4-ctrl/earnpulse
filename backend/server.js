@@ -167,7 +167,7 @@ async function calculateMemberTodayOnlineHours(userId, todayStr, todayMidnightMs
 
 app.get('/api/checkin/status', authenticateToken, async (req, res) => {
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(true); } catch (e) {}
+    try { await db.syncFromCloud(); } catch (e) {}
   }
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
@@ -708,9 +708,9 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   res.setHeader('Expires', '0');
 
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(true); } catch (e) {}
+    try { await db.syncFromCloud(); } catch (e) {}
   }
-  await syncOfficialEarnBondhuSettlements();
+  syncOfficialEarnBondhuSettlements().catch(() => {});
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
   if (!user) return res.status(404).json({ success: false, msg: 'User not found' });
@@ -1517,7 +1517,7 @@ app.post('/api/whatsapp/sync-earnings', authenticateToken, async (req, res) => {
 // -------------------------------------------------------------
 app.get('/api/referrals', authenticateToken, async (req, res) => {
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(true); } catch (e) {}
+    try { await db.syncFromCloud(); } catch (e) {}
   }
   db.read();
   const referrals = db.get('users')
@@ -1573,7 +1573,7 @@ app.get('/api/referrals', authenticateToken, async (req, res) => {
 // -------------------------------------------------------------
 app.get('/api/config', async (req, res) => {
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(true); } catch (e) {}
+    try { await db.syncFromCloud(); } catch (e) {}
   }
   db.read();
   const config = db.get('system_config').value() || {};
@@ -1584,7 +1584,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.28.10',
+      build_version: '2026.10.28.11',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1703,7 +1703,7 @@ app.get('/api/withdraw/history', authenticateToken, async (req, res) => {
   res.setHeader('Expires', '0');
 
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(true); } catch (e) {}
+    try { await db.syncFromCloud(); } catch (e) {}
   }
   db.read();
   const history = db.get('withdrawals')
@@ -1723,7 +1723,7 @@ app.get('/api/user/transactions', authenticateToken, async (req, res) => {
   res.setHeader('Expires', '0');
 
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(true); } catch (e) {}
+    try { await db.syncFromCloud(); } catch (e) {}
   }
   db.read();
   const logs = db.get('earnings_log')
@@ -1807,9 +1807,9 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
   res.setHeader('Expires', '0');
 
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(true); } catch (e) {}
+    try { await db.syncFromCloud(); } catch (e) {}
   }
-  await syncOfficialEarnBondhuSettlements();
+  syncOfficialEarnBondhuSettlements().catch(() => {});
   db.read();
 
   // All real members (excluding admin accounts)
@@ -1818,7 +1818,12 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
     .value() || [];
   const totalUsers = allMembers.length;
 
-  const pendingWithdrawals = db.get('withdrawals').filter({ status: 'pending' }).size().value();
+  const pendingWithdrawalsList = db.get('withdrawals')
+    .filter({ status: 'pending' })
+    .orderBy(['id'], ['desc'])
+    .value() || [];
+  const pendingWithdrawals = pendingWithdrawalsList.length;
+
   const withdrawalsList = db.get('withdrawals').value() || [];
   const totalPaidOut = withdrawalsList
     .filter(w => w.status === 'approved')
@@ -1829,7 +1834,8 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
     ...rawConfigs,
     user_reward_ratio: getRewardPercentage()
   };
-  const recentWithdrawals = db.get('withdrawals').orderBy(['id'], ['desc']).take(50).value();
+  // এডমিন একশন তালিকায় শুধুমাত্র অপেক্ষমান (pending) উইথড্রয়াল প্রদর্শিত হবে
+  const recentWithdrawals = pendingWithdrawalsList;
   const allLinked = db.get('linked_numbers').value() || [];
   const pendingPairings = db.get('pending_pairings').value() || [];
 
@@ -2032,7 +2038,7 @@ app.post('/api/admin/config', authenticateToken, requireAdmin, async (req, res) 
 
   // ১. সবার আগে ক্লাউড থেকে সর্বশেষ লাইভ কনফিগ লোড করা
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(true); } catch (e) {}
+    try { await db.syncFromCloud(); } catch (e) {}
   }
   db.read();
   const current = db.get('system_config').value() || {};
@@ -2105,7 +2111,7 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
 
   // সর্বদা ক্লাউড অ্যাটলাস থেকে ফ্রেশ ডেটা নিশ্চিত করুন
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(true); } catch (e) {}
+    try { await db.syncFromCloud(); } catch (e) {}
   }
   db.read();
 
@@ -2174,40 +2180,44 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
     }
   }
 
-  // 🛡️ সরাসরি মোঙ্গোডিবি অ্যাটলাসে ইনস্ট্যান্ট ও পার্মানেন্ট অ্যাটমিক আপডেট
+  // 🛡️ সরাসরি মোঙ্গোডিবি অ্যাটলাসে সুপার-ফাস্ট প্যারালাল অ্যাটমিক আপডেট
   if (db.getMongoDb) {
     try {
       const mdb = await db.getMongoDb();
       if (mdb) {
-        // ১. উত্তোলন স্ট্যাটাস আপডেট
-        await mdb.collection('app_state').updateOne(
-          { _id: 'earnpulse_store', 'data.withdrawals.id': id },
-          { 
-            $set: { 
-              'data.withdrawals.$.status': status,
-              'data.withdrawals.$.admin_note': adminNote || '',
-              'data.withdrawals.$.processed_at': nowIso,
-              updated_at: new Date()
-            } 
-          }
-        );
-
-        // ২. যদি বাতিল হয়, ইউজারের ব্যালেন্স রিফান্ড ও রিফান্ড লগ পুশ
-        if (status === 'rejected' && refundedUser && refundLog) {
-          await mdb.collection('app_state').updateOne(
-            { _id: 'earnpulse_store', 'data.users.id': withdraw.user_id },
+        const updateTasks = [
+          mdb.collection('app_state').updateOne(
+            { _id: 'earnpulse_store', 'data.withdrawals.id': id },
             { 
               $set: { 
-                'data.users.$.balance': refundedUser.balance,
-                'data.users.$.total_withdrawn': refundedUser.total_withdrawn,
+                'data.withdrawals.$.status': status,
+                'data.withdrawals.$.admin_note': adminNote || '',
+                'data.withdrawals.$.processed_at': nowIso,
                 updated_at: new Date()
-              },
-              $push: {
-                'data.earnings_log': refundLog
-              }
+              } 
             }
+          )
+        ];
+
+        if (status === 'rejected' && refundedUser && refundLog) {
+          updateTasks.push(
+            mdb.collection('app_state').updateOne(
+              { _id: 'earnpulse_store', 'data.users.id': withdraw.user_id },
+              { 
+                $set: { 
+                  'data.users.$.balance': refundedUser.balance,
+                  'data.users.$.total_withdrawn': refundedUser.total_withdrawn,
+                  updated_at: new Date()
+                },
+                $push: {
+                  'data.earnings_log': refundLog
+                }
+              }
+            )
           );
         }
+
+        await Promise.all(updateTasks);
       }
     } catch (e) {
       console.error('❌ Direct Atlas withdrawal status update error:', e.message);
@@ -2215,7 +2225,7 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
   }
 
   if (db.syncToCloud) {
-    try { await db.syncToCloud(true); } catch (e) {}
+    db.syncToCloud(true).catch(() => {});
   }
 
   return res.json({
