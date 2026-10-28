@@ -1684,6 +1684,7 @@ app.get('/api/user/transactions', authenticateToken, async (req, res) => {
     try { await db.syncFromCloud(true); } catch (e) {}
   }
   db.read();
+  const logs = db.get('earnings_log')
     .filter(l => l && l.user_id === req.user.id && l.type !== 'withdraw')
     .orderBy(['id'], ['desc'])
     .value() || [];
