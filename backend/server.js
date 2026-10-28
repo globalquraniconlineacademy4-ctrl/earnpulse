@@ -1581,7 +1581,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.28.07',
+      build_version: '2026.10.28.08',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -2044,6 +2044,12 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
     return res.status(400).json({ success: false, msg: 'অবৈধ স্ট্যাটাস' });
   }
 
+  // সর্বদা ক্লাউড অ্যাটলাস থেকে ফ্রেশ ডেটা নিশ্চিত করুন
+  if (db.syncFromCloud) {
+    try { await db.syncFromCloud(true); } catch (e) {}
+  }
+  db.read();
+
   const withdraw = db.get('withdrawals').find({ id }).value();
   if (!withdraw) {
     return res.status(404).json({ success: false, msg: 'উত্তোলন রিকোয়েস্ট পাওয়া যায়নি' });
@@ -2053,45 +2059,110 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
     return res.status(400).json({ success: false, msg: `এই রিকোয়েস্টটি ইতোমধ্যেই ${withdraw.status === 'approved' ? 'অনুমোদিত' : 'বাতিল'} করা হয়েছে` });
   }
 
-  // Update status
+  const nowIso = new Date().toISOString();
+  const updatedWithdrawal = {
+    ...withdraw,
+    status,
+    admin_note: adminNote || '',
+    processed_at: nowIso
+  };
+
+  // Update status in lowdb
   db.get('withdrawals')
     .find({ id })
     .assign({
       status,
       admin_note: adminNote || '',
-      processed_at: new Date().toISOString()
+      processed_at: nowIso
     })
     .write();
+
+  let refundedUser = null;
+  let refundLog = null;
 
   // If rejected, refund balance to user
   if (status === 'rejected') {
     const user = db.get('users').find({ id: withdraw.user_id }).value();
     if (user) {
+      const newBal = parseFloat(((user.balance || 0) + withdraw.amount).toFixed(2));
+      const newWithdrawn = parseFloat(Math.max(0, (user.total_withdrawn || 0) - withdraw.amount).toFixed(2));
+
+      refundedUser = {
+        ...user,
+        balance: newBal,
+        total_withdrawn: newWithdrawn
+      };
+
       db.get('users')
         .find({ id: withdraw.user_id })
         .assign({
-          balance: (user.balance || 0) + withdraw.amount,
-          total_withdrawn: Math.max(0, (user.total_withdrawn || 0) - withdraw.amount)
+          balance: newBal,
+          total_withdrawn: newWithdrawn
         })
         .write();
 
       // Log transaction for refund
-      db.get('earnings_log').push({
+      refundLog = {
         id: Date.now(),
         user_id: withdraw.user_id,
         type: 'withdraw_refund',
         amount: withdraw.amount,
         description: `উত্তোলন বাতিলজনিত রিফান্ড (আইডি #${withdraw.id})`,
-        created_at: new Date().toISOString()
-      }).write();
+        created_at: nowIso
+      };
+
+      db.get('earnings_log').push(refundLog).write();
     }
   }
 
-  await db.syncToCloud(true);
+  // 🛡️ সরাসরি মোঙ্গোডিবি অ্যাটলাসে ইনস্ট্যান্ট ও পার্মানেন্ট অ্যাটমিক আপডেট
+  if (db.getMongoDb) {
+    try {
+      const mdb = await db.getMongoDb();
+      if (mdb) {
+        // ১. উত্তোলন স্ট্যাটাস আপডেট
+        await mdb.collection('app_state').updateOne(
+          { _id: 'earnpulse_store', 'data.withdrawals.id': id },
+          { 
+            $set: { 
+              'data.withdrawals.$.status': status,
+              'data.withdrawals.$.admin_note': adminNote || '',
+              'data.withdrawals.$.processed_at': nowIso,
+              updated_at: new Date()
+            } 
+          }
+        );
+
+        // ২. যদি বাতিল হয়, ইউজারের ব্যালেন্স রিফান্ড ও রিফান্ড লগ পুশ
+        if (status === 'rejected' && refundedUser && refundLog) {
+          await mdb.collection('app_state').updateOne(
+            { _id: 'earnpulse_store', 'data.users.id': withdraw.user_id },
+            { 
+              $set: { 
+                'data.users.$.balance': refundedUser.balance,
+                'data.users.$.total_withdrawn': refundedUser.total_withdrawn,
+                updated_at: new Date()
+              },
+              $push: {
+                'data.earnings_log': refundLog
+              }
+            }
+          );
+        }
+      }
+    } catch (e) {
+      console.error('❌ Direct Atlas withdrawal status update error:', e.message);
+    }
+  }
+
+  if (db.syncToCloud) {
+    try { await db.syncToCloud(true); } catch (e) {}
+  }
 
   return res.json({
     success: true,
-    msg: `উত্তোলন সফলভাবে ${status === 'approved' ? 'অনুমোদন' : 'বাতিল'} করা হয়েছে!`
+    msg: `উত্তোলন সফলভাবে ${status === 'approved' ? 'অনুমোদন' : 'বাতিল'} করা হয়েছে!`,
+    withdrawal: updatedWithdrawal
   });
 });
 

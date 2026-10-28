@@ -235,6 +235,12 @@ async function _performSyncToCloud() {
             let mergedWithdrawn = Math.max(Number(existingU.total_withdrawn || 0), Number(u.total_withdrawn || 0));
             let mergedBalance = parseFloat(Math.max(0, mergedTotal - mergedWithdrawn).toFixed(2));
 
+            // 🛡️ যদি কোনো উইথড্রয়াল বাতিল হয়ে মেম্বারকে টাকা রিফান্ড করা হয় (total_withdrawn হ্রাস ও balance বৃদ্ধি):
+            if (Number(u.total_withdrawn || 0) < Number(existingU.total_withdrawn || 0) && Number(u.balance || 0) > Number(existingU.balance || 0)) {
+              mergedWithdrawn = Number(u.total_withdrawn || 0);
+              mergedBalance = parseFloat(Number(u.balance || 0).toFixed(2));
+            }
+
             // 🛡️ Correction for duplicate-inflated account 01356690484:
             if (key === '01356690484' || String(u.username) === '01356690484' || String(existingU.username) === '01356690484') {
               mergedTotal = 148.0;
