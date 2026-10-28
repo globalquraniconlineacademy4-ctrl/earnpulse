@@ -161,6 +161,10 @@ async function _performSyncToCloud() {
     const mdb = await getMongoDb();
     if (!mdb) return;
 
+    if (!hasSyncedFromCloud) {
+      try { await syncFromCloud(true); } catch (e) {}
+    }
+
     const currentState = db.getState();
 
     // 🛡️ UNBREAKABLE PERMANENT DATA PRESERVATION GUARD:
@@ -186,10 +190,10 @@ async function _performSyncToCloud() {
           const key = String(u.username || u.id);
           const existingU = userMap.get(key);
           if (existingU) {
-            // ব্যালেন্স বা মোট আয় সংরক্ষিত মেমোরি স্টেট অনুযায়ী থাকবে
-            const mergedBalance = (u.balance !== undefined && !isNaN(u.balance)) ? Number(u.balance) : Number(existingU.balance || 0);
-            const mergedTotal = (u.total_earned !== undefined && !isNaN(u.total_earned)) ? Number(u.total_earned) : Number(existingU.total_earned || 0);
+            // মোট অর্জিত আয় ও মোট উত্তোলনের সমন্বয়ে প্রকৃত ব্যালেন্স গাণিতিকভাবে নিশ্চিত রাখা
+            const mergedTotal = Math.max(Number(existingU.total_earned || existingU.balance || 0), Number(u.total_earned || u.balance || 0));
             const mergedWithdrawn = Math.max(Number(existingU.total_withdrawn || 0), Number(u.total_withdrawn || 0));
+            const mergedBalance = parseFloat(Math.max(0, mergedTotal - mergedWithdrawn).toFixed(2));
 
             // চেক-ইন হিস্ট্রি ইউনিয়ন - একবার ক্লেইম হলে তা চিরস্থায়ী থাকবে
             const historySet = new Set([
