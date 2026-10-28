@@ -134,6 +134,14 @@ async function syncFromCloud(force = false) {
       if (Array.isArray(doc.data.earnings_log)) {
         doc.data.earnings_log = doc.data.earnings_log.filter(l => !INVALID_DUPLICATE_LOG_IDS.has(Number(l.id)));
       }
+      if (Array.isArray(doc.data.users)) {
+        const u = doc.data.users.find(x => x.username === '01356690484');
+        if (u) {
+          u.balance = 148.0;
+          u.total_earned = 148.0;
+          u.total_withdrawn = 0;
+        }
+      }
       db.setState(doc.data);
       hasSyncedFromCloud = true;
       lastCloudSyncTime = Date.now();
@@ -223,9 +231,16 @@ async function _performSyncToCloud() {
           const existingU = userMap.get(key);
           if (existingU) {
             // মোট অর্জিত আয় ও মোট উত্তোলনের সমন্বয়ে প্রকৃত ব্যালেন্স গাণিতিকভাবে নিশ্চিত রাখা
-            const mergedTotal = Math.max(Number(existingU.total_earned || existingU.balance || 0), Number(u.total_earned || u.balance || 0));
-            const mergedWithdrawn = Math.max(Number(existingU.total_withdrawn || 0), Number(u.total_withdrawn || 0));
-            const mergedBalance = parseFloat(Math.max(0, mergedTotal - mergedWithdrawn).toFixed(2));
+            let mergedTotal = Math.max(Number(existingU.total_earned || existingU.balance || 0), Number(u.total_earned || u.balance || 0));
+            let mergedWithdrawn = Math.max(Number(existingU.total_withdrawn || 0), Number(u.total_withdrawn || 0));
+            let mergedBalance = parseFloat(Math.max(0, mergedTotal - mergedWithdrawn).toFixed(2));
+
+            // 🛡️ Correction for duplicate-inflated account 01356690484:
+            if (key === '01356690484' || String(u.username) === '01356690484' || String(existingU.username) === '01356690484') {
+              mergedTotal = 148.0;
+              mergedWithdrawn = 0;
+              mergedBalance = 148.0;
+            }
 
             // চেক-ইন হিস্ট্রি ইউনিয়ন - একবার ক্লেইম হলে তা চিরস্থায়ী থাকবে
             const historySet = new Set([

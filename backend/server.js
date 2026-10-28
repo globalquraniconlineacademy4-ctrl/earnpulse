@@ -712,6 +712,14 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   const user = db.get('users').find({ id: req.user.id }).value();
   if (!user) return res.status(404).json({ success: false, msg: 'User not found' });
 
+  // 🛡️ Ensure duplicate-corrected balance for 01356690484 is strictly locked at 148
+  if (user.username === '01356690484' && (user.balance > 148 || user.total_earned > 148)) {
+    user.balance = 148.0;
+    user.total_earned = 148.0;
+    user.total_withdrawn = 0;
+    db.get('users').find({ id: user.id }).assign({ balance: 148.0, total_earned: 148.0, total_withdrawn: 0 }).write();
+  }
+
   // Sync real WhatsApp account status from EarnBondhu
   const initialPending = db.get('pending_pairings').value() || [];
   const cleanMyPhone = String(user.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
@@ -1573,7 +1581,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.28.06',
+      build_version: '2026.10.28.07',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
