@@ -1555,7 +1555,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.28.01',
+      build_version: '2026.10.28.02',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1614,21 +1614,6 @@ app.post('/api/withdraw', authenticateToken, async (req, res) => {
 
   db.get('withdrawals').push(newWithdraw);
 
-  // Add debit transaction to earnings_log
-  try {
-    const earningsLog = db.get('earnings_log').value() || [];
-    earningsLog.unshift({
-      id: withdrawId + 1,
-      user_id: req.user.id,
-      type: 'withdraw',
-      isCredit: false,
-      amount: withdrawAmount,
-      description: `উত্তোলন আবেদন (${method.toUpperCase()} - ${accountNumber})`,
-      created_at: new Date().toISOString()
-    });
-    db.set('earnings_log', earningsLog);
-  } catch (e) {}
-
   // Single batch write & immediate cloud sync
   db.write();
   await db.syncToCloud(true);
@@ -1661,12 +1646,12 @@ app.get('/api/user/transactions', authenticateToken, async (req, res) => {
     try { await db.syncFromCloud(); } catch (e) {}
   }
   const logs = db.get('earnings_log')
-    .filter({ user_id: req.user.id })
+    .filter(l => l && l.user_id === req.user.id && l.type !== 'withdraw')
     .orderBy(['id'], ['desc'])
     .value() || [];
 
   const withdrawals = db.get('withdrawals')
-    .filter({ user_id: req.user.id })
+    .filter(w => w && w.user_id === req.user.id)
     .orderBy(['id'], ['desc'])
     .value() || [];
 
