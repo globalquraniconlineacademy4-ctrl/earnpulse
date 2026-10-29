@@ -1224,14 +1224,6 @@
       console.error('Withdraw action error:', err);
     }
   }
-    } catch (e) {
-      if (actionBtn) {
-        actionBtn.disabled = false;
-        actionBtn.innerText = 'পুনরায় চেষ্টা করুন';
-      }
-      showToast('সার্ভার সংযোগে সমস্যা হয়েছে!', 'error');
-    }
-  }
 
   // Legacy fallback
   function updateWithdraw(id, status) {
