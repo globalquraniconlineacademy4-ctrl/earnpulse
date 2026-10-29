@@ -559,14 +559,30 @@ export default function App() {
     }
   }, [token]);
 
-  // Periodic Live Background Sync for WhatsApp List & Balance (3s on whatsapp tab for instant live state)
+  // Periodic Live Background Sync for WhatsApp List & Balance (Optimized to prevent excessive bandwidth)
   useEffect(() => {
     if (!token) return;
-    const intervalMs = activeTab === 'whatsapp' ? 3000 : 8000;
+    const intervalMs = activeTab === 'whatsapp' ? 8000 : 20000;
     const syncInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       fetchUserData(activeTab === 'whatsapp');
     }, intervalMs);
-    return () => clearInterval(syncInterval);
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchUserData(activeTab === 'whatsapp');
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
+    return () => {
+      clearInterval(syncInterval);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+    };
   }, [token, activeTab]);
 
   // Real-time WhatsApp connection listener (স্বয়ংক্রিয় লাইভ চেকার)

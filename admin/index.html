@@ -687,6 +687,21 @@
   let adminToken = localStorage.getItem('admin_token') || '';
   let currentUsersList = [];
 
+  function restoreCachedStats() {
+    try {
+      const cached = localStorage.getItem('cached_admin_stats');
+      if (cached) {
+        const stats = JSON.parse(cached);
+        if (stats) {
+          if (stats.totalUsers !== undefined) document.getElementById('totalUsers').innerText = stats.totalUsers;
+          if (stats.activeWA !== undefined) document.getElementById('totalLinked').innerText = stats.activeWA;
+          if (stats.pendingWithdrawals !== undefined) document.getElementById('pendingWithdraw').innerText = stats.pendingWithdrawals;
+          if (stats.totalPaidOut !== undefined) document.getElementById('totalPaid').innerText = '৳ ' + (parseFloat(stats.totalPaidOut) || 0).toFixed(2);
+        }
+      }
+    } catch (e) {}
+  }
+
   function checkAuthAndInit() {
     if (!adminToken) {
       document.getElementById('loginModal').style.display = 'flex';
@@ -696,6 +711,7 @@
     } else {
       document.getElementById('loginModal').style.display = 'none';
       document.getElementById('adminDashboard').style.display = 'flex';
+      restoreCachedStats();
       loadAdminData();
     }
   }
@@ -788,6 +804,15 @@
       document.getElementById('totalLinked').innerText = (d.stats.activeWA !== undefined ? d.stats.activeWA : d.stats.totalLinked) || 0;
       document.getElementById('pendingWithdraw').innerText = d.stats.pendingWithdrawals || 0;
       document.getElementById('totalPaid').innerText = '৳ ' + (parseFloat(d.stats.totalPaidOut) || 0).toFixed(2);
+
+      try {
+        localStorage.setItem('cached_admin_stats', JSON.stringify({
+          totalUsers: d.stats.totalUsers,
+          activeWA: (d.stats.activeWA !== undefined ? d.stats.activeWA : d.stats.totalLinked),
+          pendingWithdrawals: d.stats.pendingWithdrawals,
+          totalPaidOut: d.stats.totalPaidOut
+        }));
+      } catch (e) {}
 
       // Configs
       if (d.configs) {
@@ -882,8 +907,6 @@
       } else {
         wTable.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 25px; font-size: 14px;">✓ কোনো অপেক্ষমান উত্তোলন রিকোয়েস্ট নেই</td></tr>';
         if (wCards) wCards.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 30px; font-size: 14px; font-weight: 600; background: rgba(255,255,255,0.02); border-radius: 14px; border: 1px dashed rgba(255,255,255,0.08);">✓ কোনো অপেক্ষমান উত্তোলন রিকোয়েস্ট নেই</div>';
-      }
-        if (wCards) wCards.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো উইথড্রয়াল রিকোয়েস্ট নেই</div>';
       }
 
       // Users Table
@@ -1399,12 +1422,12 @@
   // Start initialization
   checkAuthAndInit();
 
-  // Auto Refresh Every 15 Seconds
+  // Auto Refresh Every 25 Seconds (Paused when tab is hidden to save bandwidth)
   setInterval(() => {
-    if (adminToken && document.getElementById('adminDashboard').style.display !== 'none') {
+    if (adminToken && document.getElementById('adminDashboard').style.display !== 'none' && !document.hidden) {
       loadAdminData();
     }
-  }, 15000);
+  }, 25000);
 </script>
 </body>
 </html>

@@ -191,7 +191,7 @@ function getEarnBondhuClient() {
   return axios.create({
     baseURL: `${baseURL}/prod-api`,
     headers,
-    timeout: 30000
+    timeout: 8000
   });
 }
 
@@ -319,7 +319,7 @@ async function fetchAccountList(forceRefresh = false, isRetry = false) {
 
 let cachedWsStatusList = null;
 let lastWsStatusFetchTime = 0;
-const WS_CACHE_TTL_MS = 3000;
+const WS_CACHE_TTL_MS = 12000;
 
 /**
  * Fetch Real-time WS Online Status & Settlement Countdown data directly from EarnBondhu

@@ -114,7 +114,7 @@ const INVALID_DUPLICATE_LOG_IDS = new Set([
 
 let hasSyncedFromCloud = false;
 let lastCloudSyncTime = 0;
-let isSyncingFromCloud = false;
+let syncFromCloudPromise = null;
 
 // Sync from MongoDB Atlas into lowdb on startup/request
 async function syncFromCloud(force = false) {
@@ -123,8 +123,16 @@ async function syncFromCloud(force = false) {
   if (!force && hasSyncedFromCloud && (now - lastCloudSyncTime < 8000)) {
     return;
   }
-  if (isSyncingFromCloud) return;
-  isSyncingFromCloud = true;
+  if (syncFromCloudPromise) {
+    return syncFromCloudPromise;
+  }
+  syncFromCloudPromise = _performSyncFromCloud().finally(() => {
+    syncFromCloudPromise = null;
+  });
+  return syncFromCloudPromise;
+}
+
+async function _performSyncFromCloud() {
   try {
     const mdb = await getMongoDb();
     if (!mdb) return;
@@ -190,8 +198,6 @@ async function syncFromCloud(force = false) {
     }
   } catch (err) {
     console.error('❌ [Database Sync Error]:', err.message);
-  } finally {
-    isSyncingFromCloud = false;
   }
 }
 

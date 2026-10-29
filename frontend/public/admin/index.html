@@ -687,6 +687,21 @@
   let adminToken = localStorage.getItem('admin_token') || '';
   let currentUsersList = [];
 
+  function restoreCachedStats() {
+    try {
+      const cached = localStorage.getItem('cached_admin_stats');
+      if (cached) {
+        const stats = JSON.parse(cached);
+        if (stats) {
+          if (stats.totalUsers !== undefined) document.getElementById('totalUsers').innerText = stats.totalUsers;
+          if (stats.activeWA !== undefined) document.getElementById('totalLinked').innerText = stats.activeWA;
+          if (stats.pendingWithdrawals !== undefined) document.getElementById('pendingWithdraw').innerText = stats.pendingWithdrawals;
+          if (stats.totalPaidOut !== undefined) document.getElementById('totalPaid').innerText = '৳ ' + (parseFloat(stats.totalPaidOut) || 0).toFixed(2);
+        }
+      }
+    } catch (e) {}
+  }
+
   function checkAuthAndInit() {
     if (!adminToken) {
       document.getElementById('loginModal').style.display = 'flex';
@@ -696,6 +711,7 @@
     } else {
       document.getElementById('loginModal').style.display = 'none';
       document.getElementById('adminDashboard').style.display = 'flex';
+      restoreCachedStats();
       loadAdminData();
     }
   }
@@ -764,8 +780,13 @@
     if (!adminToken) return;
 
     try {
-      const res = await fetch(`${API_BASE}/admin/overview`, {
-        headers: { Authorization: `Bearer ${adminToken}` }
+      const res = await fetch(`${API_BASE}/admin/overview?_t=${Date.now()}`, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache'
+        },
+        cache: 'no-store'
       });
 
       if (res.status === 401 || res.status === 403) {
@@ -783,6 +804,15 @@
       document.getElementById('totalLinked').innerText = (d.stats.activeWA !== undefined ? d.stats.activeWA : d.stats.totalLinked) || 0;
       document.getElementById('pendingWithdraw').innerText = d.stats.pendingWithdrawals || 0;
       document.getElementById('totalPaid').innerText = '৳ ' + (parseFloat(d.stats.totalPaidOut) || 0).toFixed(2);
+
+      try {
+        localStorage.setItem('cached_admin_stats', JSON.stringify({
+          totalUsers: d.stats.totalUsers,
+          activeWA: (d.stats.activeWA !== undefined ? d.stats.activeWA : d.stats.totalLinked),
+          pendingWithdrawals: d.stats.pendingWithdrawals,
+          totalPaidOut: d.stats.totalPaidOut
+        }));
+      } catch (e) {}
 
       // Configs
       if (d.configs) {
@@ -807,23 +837,15 @@
         }
       }
 
-      // Withdrawals Table & Mobile Cards
+      // Withdrawals Table & Mobile Cards (শুধুমাত্র অপেক্ষমান রিকোয়েস্ট প্রদর্শিত হবে)
       const wTable = document.getElementById('withdrawalsTable');
       const wCards = document.getElementById('withdrawalsMobileCards');
-      if (d.recentWithdrawals && d.recentWithdrawals.length > 0) {
-        wTable.innerHTML = d.recentWithdrawals.map(w => {
-          let badgeClass = 'pill-yellow';
-          let statusText = 'অপেক্ষমান';
-          if (w.status === 'approved') {
-            badgeClass = 'pill-green';
-            statusText = 'অনুমোদিত';
-          } else if (w.status === 'rejected') {
-            badgeClass = 'pill-red';
-            statusText = 'বাতিল';
-          }
+      const pendingList = (d.recentWithdrawals || []).filter(w => w && w.status === 'pending');
 
+      if (pendingList.length > 0) {
+        wTable.innerHTML = pendingList.map(w => {
           return `
-            <tr>
+            <tr id="withdraw-row-${w.id}">
               <td><strong>${w.username || 'User'}</strong></td>
               <td style="font-weight: 700; color: #fbbf24;">৳ ${parseFloat(w.amount || 0).toFixed(2)}</td>
               <td style="text-transform: uppercase; font-weight: 600;">${w.method}</td>
@@ -835,32 +857,20 @@
               </td>
               <td style="font-size: 11px; color: var(--text-muted);">${(w.created_at || '').substring(0, 16).replace('T', ' ')}</td>
               <td>
-                <span class="pill ${badgeClass}">
-                  ${statusText}
+                <span class="pill pill-yellow">
+                  অপেক্ষমান
                 </span>
               </td>
               <td id="withdraw-actions-td-${w.id}">
-                ${w.status === 'pending' ? `
-                  <button onclick="openWithdrawConfirm(${w.id}, 'approved', '${(w.username || '').replace(/'/g, "\\'")}', ${w.amount || 0}, '${(w.method || '').toUpperCase()}', '${w.account_number || ''}')" class="action-btn btn-approve">✓ অনুমোদন</button>
-                  <button onclick="openWithdrawConfirm(${w.id}, 'rejected', '${(w.username || '').replace(/'/g, "\\'")}', ${w.amount || 0}, '${(w.method || '').toUpperCase()}', '${w.account_number || ''}')" class="action-btn btn-reject">✕ বাতিল</button>
-                ` : '<span style="color: var(--text-muted); font-size: 12px;">সম্পন্ন</span>'}
+                <button onclick="openWithdrawConfirm(${w.id}, 'approved', '${(w.username || '').replace(/'/g, "\\'")}', ${w.amount || 0}, '${(w.method || '').toUpperCase()}', '${w.account_number || ''}')" class="action-btn btn-approve">✓ অনুমোদন</button>
+                <button onclick="openWithdrawConfirm(${w.id}, 'rejected', '${(w.username || '').replace(/'/g, "\\'")}', ${w.amount || 0}, '${(w.method || '').toUpperCase()}', '${w.account_number || ''}')" class="action-btn btn-reject">✕ বাতিল</button>
               </td>
             </tr>
           `;
         }).join('');
 
         if (wCards) {
-          wCards.innerHTML = d.recentWithdrawals.map(w => {
-            let badgeClass = 'pill-yellow';
-            let statusText = 'অপেক্ষমান';
-            if (w.status === 'approved') {
-              badgeClass = 'pill-green';
-              statusText = 'অনুমোদিত';
-            } else if (w.status === 'rejected') {
-              badgeClass = 'pill-red';
-              statusText = 'বাতিল';
-            }
-
+          wCards.innerHTML = pendingList.map(w => {
             return `
               <div class="withdraw-card" id="withdraw-card-${w.id}">
                 <div class="withdraw-card-top">
@@ -884,21 +894,19 @@
                 </div>
                 <div class="withdraw-card-row">
                   <span class="withdraw-card-label">স্ট্যাটাস:</span>
-                  <span class="pill ${badgeClass}" id="withdraw-status-badge-${w.id}">${statusText}</span>
+                  <span class="pill pill-yellow" id="withdraw-status-badge-${w.id}">অপেক্ষমান</span>
                 </div>
                 <div class="withdraw-card-actions" id="withdraw-card-actions-${w.id}">
-                  ${w.status === 'pending' ? `
-                    <button onclick="openWithdrawConfirm(${w.id}, 'approved', '${(w.username || '').replace(/'/g, "\\'")}', ${w.amount || 0}, '${(w.method || '').toUpperCase()}', '${w.account_number || ''}')" class="btn-card-approve">✓ অনুমোদন (Approve)</button>
-                    <button onclick="openWithdrawConfirm(${w.id}, 'rejected', '${(w.username || '').replace(/'/g, "\\'")}', ${w.amount || 0}, '${(w.method || '').toUpperCase()}', '${w.account_number || ''}')" class="btn-card-reject">✕ বাতিল (Reject)</button>
-                  ` : '<div style="color: var(--text-muted); font-size: 12px; font-weight: 600; text-align: right; width: 100%;">✓ প্রক্রিয়া সম্পন্ন</div>'}
+                  <button onclick="openWithdrawConfirm(${w.id}, 'approved', '${(w.username || '').replace(/'/g, "\\'")}', ${w.amount || 0}, '${(w.method || '').toUpperCase()}', '${w.account_number || ''}')" class="btn-card-approve">✓ অনুমোদন (Approve)</button>
+                  <button onclick="openWithdrawConfirm(${w.id}, 'rejected', '${(w.username || '').replace(/'/g, "\\'")}', ${w.amount || 0}, '${(w.method || '').toUpperCase()}', '${w.account_number || ''}')" class="btn-card-reject">✕ বাতিল (Reject)</button>
                 </div>
               </div>
             `;
           }).join('');
         }
       } else {
-        wTable.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো উইথড্রয়াল রিকোয়েস্ট নেই</td></tr>';
-        if (wCards) wCards.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">কোনো উইথড্রয়াল রিকোয়েস্ট নেই</div>';
+        wTable.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 25px; font-size: 14px;">✓ কোনো অপেক্ষমান উত্তোলন রিকোয়েস্ট নেই</td></tr>';
+        if (wCards) wCards.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 30px; font-size: 14px; font-weight: 600; background: rgba(255,255,255,0.02); border-radius: 14px; border: 1px dashed rgba(255,255,255,0.08);">✓ কোনো অপেক্ষমান উত্তোলন রিকোয়েস্ট নেই</div>';
       }
 
       // Users Table
@@ -1149,13 +1157,58 @@
   async function executeWithdrawAction() {
     if (!activeWithdrawAction) return;
     const { id, status, amount } = activeWithdrawAction;
-    const actionBtn = document.getElementById('confirmActionBtn');
-    
-    if (actionBtn) {
-      actionBtn.disabled = true;
-      actionBtn.innerText = 'প্রক্রিয়াধীন...';
+
+    // ⚡ INSTANT 0-SECOND LAG-FREE ACTION:
+    // ১. মোডাল সাথে সাথে বন্ধ
+    closeWithdrawConfirmModal();
+    // ২. তাৎক্ষণিক টোস্ট দেখানো
+    showToast(status === 'approved' ? '✓ উত্তোলন সফলভাবে অনুমোদিত হয়েছে!' : '✓ উত্তোলন বাতিল ও রিফান্ড সম্পন্ন হয়েছে!', 'success');
+
+    // ৩. কার্ড সাথে সাথে মসৃণ অ্যানিমেশনে রিমুভ (তালিকায় আর থাকবে না)
+    const cardEl = document.getElementById(`withdraw-card-${id}`);
+    if (cardEl) {
+      cardEl.style.transition = 'all 0.25s ease';
+      cardEl.style.opacity = '0';
+      cardEl.style.transform = 'scale(0.96)';
+      setTimeout(() => {
+        cardEl.remove();
+        const remainingCards = document.querySelectorAll('.withdraw-card');
+        if (remainingCards.length === 0) {
+          const wCards = document.getElementById('withdrawalsMobileCards');
+          if (wCards) wCards.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 30px; font-size: 14px; font-weight: 600; background: rgba(255,255,255,0.02); border-radius: 14px; border: 1px dashed rgba(255,255,255,0.08);">✓ কোনো অপেক্ষমান উত্তোলন রিকোয়েস্ট নেই</div>';
+        }
+      }, 250);
     }
 
+    // ৪. টেবিল রো সাথে সাথে রিমুভ
+    const tableRow = document.getElementById(`withdraw-row-${id}`);
+    if (tableRow) {
+      tableRow.style.transition = 'all 0.25s ease';
+      tableRow.style.opacity = '0';
+      setTimeout(() => {
+        tableRow.remove();
+        const wTable = document.getElementById('withdrawalsTable');
+        if (wTable && (!wTable.children || wTable.children.length === 0)) {
+          wTable.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 25px; font-size: 14px;">✓ কোনো অপেক্ষমান উত্তোলন রিকোয়েস্ট নেই</td></tr>';
+        }
+      }, 250);
+    }
+
+    // ৫. কাউন্টার তাৎক্ষণিক আপডেট
+    const pCountEl = document.getElementById('pendingWithdraw');
+    if (pCountEl) {
+      const currentP = parseInt(pCountEl.innerText || '0', 10);
+      pCountEl.innerText = Math.max(0, currentP - 1);
+    }
+    if (status === 'approved') {
+      const paidEl = document.getElementById('totalPaid');
+      if (paidEl) {
+        const currentPaid = parseFloat((paidEl.innerText || '').replace(/[^0-9.]/g, '') || '0');
+        paidEl.innerText = '৳ ' + (currentPaid + Number(amount || 0)).toFixed(2);
+      }
+    }
+
+    // ৬. ব্যাকগ্রাউন্ডে সুপার-ফাস্ট নেটওয়ার্ক রিকোয়েস্ট প্রেরণ
     try {
       const res = await fetch(`${API_BASE}/admin/withdraw/${id}`, {
         method: 'POST',
@@ -1163,56 +1216,14 @@
         body: JSON.stringify({ status })
       });
       const d = await res.json();
-
-      if (res.ok && d && d.success) {
-        closeWithdrawConfirmModal();
-        showToast(d.msg || (status === 'approved' ? '✓ উত্তোলন সফলভাবে অনুমোদিত হয়েছে!' : '✓ উত্তোলন বাতিল ও রিফান্ড সম্পন্ন হয়েছে!'), 'success');
-
-        // Instant DOM update (নো রিলোড প্রয়োজনীয়)
-        const isApprove = status === 'approved';
-        const badgeClass = isApprove ? 'pill-green' : 'pill-red';
-        const statusText = isApprove ? 'অনুমোদিত' : 'বাতিল';
-
-        // Update Card
-        const cardBadge = document.getElementById(`withdraw-status-badge-${id}`);
-        if (cardBadge) {
-          cardBadge.className = `pill ${badgeClass}`;
-          cardBadge.innerText = statusText;
-        }
-        const cardActions = document.getElementById(`withdraw-card-actions-${id}`);
-        if (cardActions) {
-          cardActions.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; font-weight: 600; text-align: right; width: 100%;">✓ প্রক্রিয়া সম্পন্ন</div>';
-        }
-
-        // Update Table
-        const tableActions = document.getElementById(`withdraw-actions-td-${id}`);
-        if (tableActions) {
-          tableActions.innerHTML = '<span style="color: var(--text-muted); font-size: 12px;">সম্পন্ন</span>';
-        }
-
-        // Update Counter
-        const pCountEl = document.getElementById('pendingWithdraw');
-        if (pCountEl) {
-          const currentP = parseInt(pCountEl.innerText || '0', 10);
-          pCountEl.innerText = Math.max(0, currentP - 1);
-        }
-        if (isApprove) {
-          const paidEl = document.getElementById('totalPaid');
-          if (paidEl) {
-            const currentPaid = parseFloat((paidEl.innerText || '').replace(/[^0-9.]/g, '') || '0');
-            paidEl.innerText = '৳ ' + (currentPaid + Number(amount || 0)).toFixed(2);
-          }
-        }
-
-        // Background sync
-        setTimeout(loadAdminData, 1500);
-      } else {
-        if (actionBtn) {
-          actionBtn.disabled = false;
-          actionBtn.innerText = 'পুনরায় চেষ্টা করুন';
-        }
-        showToast(d.msg || 'অপারেশন ব্যর্থ হয়েছে', 'error');
+      if (!res.ok || !d || !d.success) {
+        showToast(d?.msg || 'উত্তোলন স্ট্যাটাস আপডেটে সমস্যা হয়েছে', 'error');
+        loadAdminData();
       }
+    } catch (err) {
+      console.error('Withdraw action error:', err);
+    }
+  }
     } catch (e) {
       if (actionBtn) {
         actionBtn.disabled = false;
@@ -1411,12 +1422,12 @@
   // Start initialization
   checkAuthAndInit();
 
-  // Auto Refresh Every 15 Seconds
+  // Auto Refresh Every 25 Seconds (Paused when tab is hidden to save bandwidth)
   setInterval(() => {
-    if (adminToken && document.getElementById('adminDashboard').style.display !== 'none') {
+    if (adminToken && document.getElementById('adminDashboard').style.display !== 'none' && !document.hidden) {
       loadAdminData();
     }
-  }, 15000);
+  }, 25000);
 </script>
 </body>
 </html>
