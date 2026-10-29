@@ -99,7 +99,23 @@ async function registerNewMasterAccount() {
   return null;
 }
 
+let lastUnauthDetectedTime = 0;
+const ADMIN_LOGIN_COOLDOWN_MS = 90 * 1000; // 90 seconds cooldown so admin can withdraw on phone without session conflict
+
+function recordUnauthDetected() {
+  lastUnauthDetectedTime = Date.now();
+  console.log('⚠️ [EarnBondhu Bridge] 401 detected. Entering 90s cooldown to allow Admin phone withdrawal.');
+}
+
+function isLoginCooldownActive() {
+  return (Date.now() - lastUnauthDetectedTime) < ADMIN_LOGIN_COOLDOWN_MS;
+}
+
 async function autoLoginEarnBondhu(forceNew = false) {
+  if (isLoginCooldownActive() && !forceNew) {
+    console.log('[EarnBondhu Bridge] Admin withdrawal session active on phone. Skipping auto-login.');
+    return null;
+  }
   if (activeLoginPromise && !forceNew) {
     return activeLoginPromise;
   }
@@ -297,21 +313,24 @@ async function fetchAccountList(forceRefresh = false, isRetry = false) {
       lastAccountFetchTime = now;
       return res.data;
     } else if (isUnauth && !isRetry) {
-      console.warn('[EarnBondhu Bridge] 401 received during fetchAccountList. Refreshing token...');
-      const newToken = await autoLoginEarnBondhu(true);
-      if (newToken) {
-        return fetchAccountList(true, true);
+      if (isLoginCooldownActive()) {
+        console.log('[EarnBondhu Bridge] 401 in fetchAccountList but admin cooldown active. Skipping login.');
+        return cachedAccountList || { rows: [] };
       }
+      recordUnauthDetected();
+      console.warn('[EarnBondhu Bridge] 401 in fetchAccountList. Pausing auto-login for 90s.');
+      return cachedAccountList || { rows: [] };
     }
     return cachedAccountList || { rows: [] };
   } catch (err) {
     console.error('[Proxy Bridge Error] fetchAccountList:', err.response?.data || err.message);
     if ((err.response?.status === 401 || err.response?.data?.code === 401) && !isRetry) {
-      console.warn('[EarnBondhu Bridge] 401 exception. Refreshing token...');
-      const newToken = await autoLoginEarnBondhu(true);
-      if (newToken) {
-        return fetchAccountList(true, true);
+      if (isLoginCooldownActive()) {
+        return cachedAccountList || { rows: [] };
       }
+      recordUnauthDetected();
+      console.warn('[EarnBondhu Bridge] 401 exception in fetchAccountList. Pausing auto-login for 90s.');
+      return cachedAccountList || { rows: [] };
     }
     return cachedAccountList || { rows: [] };
   }
@@ -345,20 +364,24 @@ async function fetchWsOnlineStatusList(forceRefresh = false, isRetry = false) {
       lastWsStatusFetchTime = now;
       return cachedWsStatusList;
     } else if (isUnauth && !isRetry) {
-      console.warn('[EarnBondhu Bridge] 401 in fetchWsOnlineStatusList. Re-authenticating...');
-      const newToken = await autoLoginEarnBondhu(true);
-      if (newToken) {
-        return fetchWsOnlineStatusList(true, true);
+      if (isLoginCooldownActive()) {
+        console.log('[EarnBondhu Bridge] 401 in fetchWsOnlineStatusList but admin cooldown active. Skipping login.');
+        return cachedWsStatusList || [];
       }
+      recordUnauthDetected();
+      console.warn('[EarnBondhu Bridge] 401 in fetchWsOnlineStatusList. Pausing auto-login for 90s.');
+      return cachedWsStatusList || [];
     }
     return cachedWsStatusList || [];
   } catch (err) {
     console.error('[Proxy Bridge Error] fetchWsOnlineStatusList:', err.response?.data || err.message);
     if ((err.response?.status === 401 || err.response?.data?.code === 401) && !isRetry) {
-      const newToken = await autoLoginEarnBondhu(true);
-      if (newToken) {
-        return fetchWsOnlineStatusList(true, true);
+      if (isLoginCooldownActive()) {
+        return cachedWsStatusList || [];
       }
+      recordUnauthDetected();
+      console.warn('[EarnBondhu Bridge] 401 exception in fetchWsOnlineStatusList. Pausing auto-login for 90s.');
+      return cachedWsStatusList || [];
     }
     return cachedWsStatusList || [];
   }
@@ -391,14 +414,16 @@ async function fetchOfficialSettlementsList(isRetry = false) {
     if (res.data && res.data.code === 200 && Array.isArray(res.data.rows)) {
       return res.data.rows;
     } else if (res.data?.code === 401 && !isRetry) {
-      await autoLoginEarnBondhu(true);
-      return fetchOfficialSettlementsList(true);
+      if (isLoginCooldownActive()) return [];
+      recordUnauthDetected();
+      return [];
     }
     return [];
   } catch (err) {
     if (err.response?.status === 401 && !isRetry) {
-      await autoLoginEarnBondhu(true);
-      return fetchOfficialSettlementsList(true);
+      if (isLoginCooldownActive()) return [];
+      recordUnauthDetected();
+      return [];
     }
     return [];
   }
