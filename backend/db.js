@@ -52,10 +52,10 @@ async function getMongoDb() {
       const client = new MongoClient(MONGODB_URI, {
         maxPoolSize: 2,           // Maximum 2 connections per lambda container (prevents connection exhaustion)
         minPoolSize: 0,           // Release idle connections back to Atlas
-        maxIdleTimeMS: 5000,      // Close idle sockets after 5s
-        serverSelectionTimeoutMS: 4000,
-        connectTimeoutMS: 5000,
-        socketTimeoutMS: 10000
+        maxIdleTimeMS: 10000,     // Close idle sockets after 10s
+        serverSelectionTimeoutMS: 20000,
+        connectTimeoutMS: 20000,
+        socketTimeoutMS: 45000
       });
       global._mongoClientPromise = client.connect();
     }
