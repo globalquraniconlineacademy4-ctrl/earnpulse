@@ -120,7 +120,7 @@ let syncFromCloudPromise = null;
 async function syncFromCloud(force = false) {
   if (!MONGODB_URI) return;
   const now = Date.now();
-  if (!force && hasSyncedFromCloud && (now - lastCloudSyncTime < 8000)) {
+  if (!force && hasSyncedFromCloud && (now - lastCloudSyncTime < 15000)) {
     return;
   }
   if (syncFromCloudPromise) {

@@ -1584,7 +1584,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.29.02',
+      build_version: '2026.10.29.03',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1897,38 +1897,46 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
     }
   }
 
-  // 3. Map WhatsApp numbers for each user and compute counts
+  // 3. Pre-index pendingPairings and members for O(1) lightning-fast lookup
+  const pairingByCleanPhone = new Map();
+  pendingPairings.forEach(p => {
+    if (p && p.phone_number) {
+      const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+      if (pClean) pairingByCleanPhone.set(pClean, p.user_id);
+    }
+  });
+
+  const memberByCleanUsername = new Map();
+  const memberById = new Map();
+  allMembers.forEach(u => {
+    memberById.set(u.id, u);
+    const cleanU = String(u.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+    if (cleanU) memberByCleanUsername.set(cleanU, u.id);
+  });
+
+  // Assign each linked number to owner in O(N) instead of O(N*M*P)
+  const userNumbersMap = new Map();
+  allLinked.forEach(n => {
+    const cleanN = String(n.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
+    let ownerId = pairingByCleanPhone.get(cleanN);
+    if (!ownerId && n.user_id) ownerId = n.user_id;
+    if (!ownerId && cleanN) ownerId = memberByCleanUsername.get(cleanN);
+
+    if (ownerId) {
+      let list = userNumbersMap.get(ownerId);
+      if (!list) {
+        list = [];
+        userNumbersMap.set(ownerId, list);
+      }
+      list.push(n);
+    }
+  });
+
   let activeMemberWA = 0;
   let totalMemberWA = 0;
 
   const usersWithNumbers = allMembers.map(u => {
-    const cleanU = String(u.username).replace(/^\+?880/, '').replace(/^0+/, '').trim();
-    const userWpNumbers = allLinked.filter(n => {
-      const cleanN = String(n.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
-
-      // Paired by this user in pending_pairings
-      const pairedByThisUser = pendingPairings.some(p => {
-        const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
-        return pClean === cleanN && p.user_id === u.id;
-      });
-      if (pairedByThisUser) return true;
-
-      // Paired by ANOTHER user in pending_pairings -> strictly exclude
-      const pairedByOtherUser = pendingPairings.some(p => {
-        const pClean = String(p.phone_number).replace(/^\+?880/, '').replace(/^0+/, '').trim();
-        return pClean === cleanN && p.user_id !== u.id;
-      });
-      if (pairedByOtherUser) return false;
-
-      // User ID match
-      if (n.user_id === u.id) return true;
-
-      // Username match
-      if (cleanN && cleanN === cleanU) return true;
-
-      return false;
-    });
-
+    const userWpNumbers = userNumbersMap.get(u.id) || [];
     const onlineCount = userWpNumbers.filter(n => n.status === 'online').length;
     activeMemberWA += onlineCount;
     totalMemberWA += userWpNumbers.length;
@@ -1990,14 +1998,11 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
     const s = elapsedSec % 60;
     const durationStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 
-    // Find owner
-    let owner = allMembers.find(u => u.id === n.user_id);
-    if (!owner) {
-      const cleanN = String(n.phone_number).replace(/^[0+]/, '').replace(/^880/, '').trim();
-      const pMatch = pendingPairings.find(p => String(p.phone_number).replace(/^[0+]/, '').replace(/^880/, '').trim() === cleanN);
-      if (pMatch) owner = allMembers.find(u => u.id === pMatch.user_id);
-      if (!owner) owner = allMembers.find(u => String(u.username).replace(/^[0+]/, '').replace(/^880/, '').trim() === cleanN);
-    }
+    // Fast O(1) owner lookup
+    const cleanN = String(n.phone_number).replace(/^[0+]/, '').replace(/^880/, '').trim();
+    let owner = (n.user_id && memberById.get(n.user_id)) ||
+                (pairingByCleanPhone.has(cleanN) && memberById.get(pairingByCleanPhone.get(cleanN))) ||
+                (memberByCleanUsername.has(cleanN) && memberById.get(memberByCleanUsername.get(cleanN))) || null;
 
     return {
       id: n.id,
