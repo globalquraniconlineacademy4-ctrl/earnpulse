@@ -528,9 +528,9 @@ export default function App() {
     }
   };
 
-  // Immediate APK Direct Download Trigger
+  // Immediate APK Direct Download Trigger (সর্বদা নতুন ৩D লোগোসহ লেটেস্ট APK ডাউনলোড নিশ্চিত)
   const handleDownloadApp = () => {
-    const url = appDownloadUrl || '/downloads/EarnPulse.apk';
+    const url = '/downloads/EarnPulse.apk';
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', 'EarnPulse.apk');
