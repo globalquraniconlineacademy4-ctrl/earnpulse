@@ -218,6 +218,8 @@ export default function App() {
 
   // Withdraw State
   const [showNoticeModal, setShowNoticeModal] = useState(false);
+  const [showTelegramModal, setShowTelegramModal] = useState(false);
+  const [copiedTelegram, setCopiedTelegram] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showTransactionsModal, setShowTransactionsModal] = useState(false);
@@ -350,6 +352,7 @@ export default function App() {
   const modalsRef = React.useRef({});
   modalsRef.current = {
     showNoticeModal,
+    showTelegramModal,
     showWithdrawModal,
     showWithdrawHistoryModal,
     showShareModal,
@@ -379,7 +382,7 @@ export default function App() {
 
   // Check if any modal is currently visible
   const isAnyModalOpen = Boolean(
-    showNoticeModal || showWithdrawModal || showWithdrawHistoryModal || 
+    showNoticeModal || showTelegramModal || showWithdrawModal || showWithdrawHistoryModal || 
     showShareModal || showTransactionsModal || showTeamModal || 
     showChangePwdModal || showVideoModal || showLangModal || selectedTutorialImg
   );
@@ -415,6 +418,7 @@ export default function App() {
       setShowNoticeModal(false); 
       hadModal = true; 
     }
+    if (m.showTelegramModal) { setShowTelegramModal(false); hadModal = true; }
     if (m.showWithdrawModal) { setShowWithdrawModal(false); hadModal = true; }
     if (m.showWithdrawHistoryModal) { setShowWithdrawHistoryModal(false); hadModal = true; }
     if (m.showShareModal) { setShowShareModal(false); hadModal = true; }
@@ -2444,7 +2448,12 @@ export default function App() {
                 { 
                   title: 'অফিসিয়াল টেলিগ্রাম চ্যানেল', 
                   icon: '📢', 
-                  action: () => window.open('https://t.me/EarnPulse_Channel', '_blank') 
+                  action: () => {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      navigator.clipboard.writeText('EarnPulse_Channel').catch(() => {});
+                    }
+                    setShowTelegramModal(true);
+                  }
                 },
                 { 
                   title: t.myTeam, 
@@ -3977,15 +3986,18 @@ export default function App() {
                   </div>
                 </div>
 
-                <a
-                  href="https://t.me/EarnPulse_Channel"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      navigator.clipboard.writeText('EarnPulse_Channel').catch(() => {});
+                    }
+                    setShowTelegramModal(true);
+                  }}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                     width: '100%', height: '36px', borderRadius: '10px',
                     background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                    color: '#ffffff', textDecoration: 'none',
+                    color: '#ffffff',
                     fontSize: '12px', fontWeight: '900',
                     border: '1px solid rgba(255, 255, 255, 0.25)',
                     boxShadow: '0 3px 10px rgba(2, 132, 199, 0.45)',
@@ -3998,7 +4010,7 @@ export default function App() {
                 >
                   <span style={{ fontSize: '14px' }}>📢</span>
                   <span>নতুন অফিসিয়াল চ্যানেলে জয়েন করুন</span>
-                </a>
+                </button>
               </div>
               
               {/* Compact 2-Column Grid for Rules (ব্যান হলে নো টেনশন & ২৪ ঘণ্টায় ইনকাম) */}
@@ -4092,6 +4104,134 @@ export default function App() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* 10.2 TELEGRAM CHANNEL JOIN MODAL (নিরাপদ ও ইউনিভার্সাল) */}
+      {showTelegramModal && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0, 0, 0, 0.72)',
+          backdropFilter: 'blur(3px)',
+          WebkitBackdropFilter: 'blur(3px)',
+          zIndex: 10000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '16px 20px',
+          animation: 'vipModalFadeIn 0.2s ease-out'
+        }}>
+          <div style={{
+            position: 'relative',
+            width: '100%', maxWidth: '340px',
+            background: 'linear-gradient(160deg, #0f172a 0%, #090d16 100%)',
+            border: '1.5px solid rgba(56, 189, 248, 0.5)',
+            borderRadius: '22px',
+            boxShadow: '0 20px 50px -10px rgba(0, 0, 0, 0.95), 0 0 30px rgba(14, 165, 233, 0.25)',
+            padding: '18px 16px 16px',
+            color: '#ffffff',
+            boxSizing: 'border-box',
+            animation: 'vipModalZoom 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+            textAlign: 'center'
+          }}>
+            {/* Close Button */}
+            <button
+              onClick={() => setShowTelegramModal(false)}
+              style={{
+                position: 'absolute', top: '12px', right: '12px',
+                width: '28px', height: '28px', borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#94a3b8', fontSize: '14px', fontWeight: 'bold',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              ✕
+            </button>
+
+            {/* Telegram Icon */}
+            <div style={{
+              width: '54px', height: '54px', margin: '0 auto 10px',
+              borderRadius: '50%', background: '#229ED9',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 8px 24px rgba(34, 158, 217, 0.45)', fontSize: '26px'
+            }}>
+              ✈️
+            </div>
+
+            <h3 style={{ fontSize: '16.5px', fontWeight: '900', color: '#ffffff', margin: '0 0 4px' }}>
+              EarnPulse Official
+            </h3>
+            <p style={{ fontSize: '11px', color: '#94a3b8', margin: '0 0 12px' }}>
+              সকল জরুরি আপডেট ও পেমেন্ট প্রুফ পেতে যুক্ত হোন
+            </p>
+
+            {/* Username Pill */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              padding: '8px 12px', borderRadius: '12px',
+              background: 'rgba(34, 158, 217, 0.12)',
+              border: '1px dashed rgba(56, 189, 248, 0.6)',
+              marginBottom: '14px'
+            }}>
+              <span style={{ fontSize: '11px', color: '#94a3b8' }}>ইউজারনেম:</span>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: '#38bdf8', letterSpacing: '0.3px' }}>
+                @EarnPulse_Channel
+              </span>
+            </div>
+
+            {/* Main CTA: Copy Username */}
+            <button
+              onClick={() => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText('EarnPulse_Channel');
+                }
+                setCopiedTelegram(true);
+                setTimeout(() => setCopiedTelegram(false), 3000);
+              }}
+              style={{
+                width: '100%', height: '42px', borderRadius: '12px',
+                background: copiedTelegram
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                  : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                color: '#ffffff', fontSize: '13px', fontWeight: '900',
+                border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                boxShadow: copiedTelegram ? '0 4px 14px rgba(16, 185, 129, 0.4)' : '0 4px 14px rgba(2, 132, 199, 0.4)',
+                transition: 'all 0.2s ease', marginBottom: '12px'
+              }}
+            >
+              <span>{copiedTelegram ? '✅' : '📋'}</span>
+              <span>{copiedTelegram ? 'কপি হয়েছে! টেলিগ্রামে সার্চ করুন' : 'ইউজারনেম কপি করুন'}</span>
+            </button>
+
+            {/* 3 Step Instruction Guide */}
+            <div style={{
+              textAlign: 'left', padding: '10px 12px', borderRadius: '12px',
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid rgba(255, 255, 255, 0.07)',
+              fontSize: '11px', color: '#cbd5e1', lineHeight: 1.55, marginBottom: '12px'
+            }}>
+              <div style={{ fontWeight: '700', color: '#fcd34d', marginBottom: '4px' }}>
+                💡 কীভাবে সহজে জয়েন করবেন:
+              </div>
+              <div>১. উপরের বাটনে চেপে <strong>ইউজারনেম কপি</strong> করুন।</div>
+              <div>২. আপনার ফোনের <strong>Telegram অ্যাপ</strong> ওপেন করুন।</div>
+              <div>৩. সার্চ বারে পেস্ট করলেই চ্যানেল পেয়ে যাবেন।</div>
+            </div>
+
+            {/* Web View fallback (Pure HTTPS - Safe from ERR_UNKNOWN_URL_SCHEME) */}
+            <a
+              href="https://t.me/s/EarnPulse_Channel"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block', fontSize: '11px', color: '#38bdf8', textDecoration: 'underline',
+                cursor: 'pointer', padding: '4px'
+              }}
+            >
+              🌐 ব্রাউজারে প্রিভিউ দেখুন (Web Preview)
+            </a>
           </div>
         </div>
       )}
