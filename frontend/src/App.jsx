@@ -909,8 +909,13 @@ export default function App() {
 
   const fetchTransactions = async () => {
     try {
-      const res = await fetch(`${API_BASE}/user/transactions`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await fetch(`${API_BASE}/user/transactions?_t=${Date.now()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache'
+        },
+        cache: 'no-store'
       });
       const d = await res.json();
       if (d && d.success) {
