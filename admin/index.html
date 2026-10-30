@@ -954,11 +954,15 @@
     const query = (document.getElementById('memberSearchInput')?.value || '').trim().toLowerCase();
 
     let filtered = currentUsersList.slice();
-    if (memberFilterMode === 'connected') {
+    // If searching, search across all members so the admin always finds the requested member!
+    if (memberFilterMode === 'connected' && !query) {
       filtered = filtered.filter(u => (u.online_count > 0 || (u.wp_numbers && u.wp_numbers.length > 0)));
     }
     if (query) {
-      filtered = filtered.filter(u => String(u.username || '').toLowerCase().includes(query));
+      filtered = filtered.filter(u => 
+        String(u.username || '').toLowerCase().includes(query) ||
+        String(u.id || '').toLowerCase().includes(query)
+      );
     }
 
     if (filtered.length > 0) {
@@ -991,7 +995,7 @@
         `;
       }).join('');
     } else {
-      uTable.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">${memberFilterMode === 'connected' ? 'কোনো কানেক্টেড মেম্বার পাওয়া যায়নি (উপরে "সকল মেম্বার" বাটনে চাপুন)' : 'কোনো মেম্বার নেই'}</td></tr>`;
+      uTable.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">${query ? 'কোনো মেম্বার খুঁজে পাওয়া যায়নি' : (memberFilterMode === 'connected' ? 'কোনো কানেক্টেড মেম্বার পাওয়া যায়নি (উপরে "সকল মেম্বার" বাটনে চাপুন)' : 'কোনো মেম্বার নেই')}</td></tr>`;
     }
   }
 
