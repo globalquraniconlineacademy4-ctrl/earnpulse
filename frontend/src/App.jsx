@@ -3930,49 +3930,49 @@ export default function App() {
               
               {/* Card 0: Server Upgrade & Apology Message */}
               <div style={{
-                padding: '12px 13px', borderRadius: '15px',
-                background: 'rgba(16, 185, 129, 0.08)',
-                border: '1.5px solid rgba(16, 185, 129, 0.35)',
-                display: 'flex', alignItems: 'flex-start', gap: '11px'
+                padding: '13px 14px', borderRadius: '16px',
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1.5px solid rgba(16, 185, 129, 0.45)',
+                display: 'flex', alignItems: 'flex-start', gap: '12px'
               }}>
                 <div style={{
-                  width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
-                  background: 'rgba(16, 185, 129, 0.2)', border: '1px solid rgba(16, 185, 129, 0.4)',
+                  width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
+                  background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.5)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
                 }}>
                   🚀
                 </div>
                 <div>
-                  <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#6ee7b7', marginBottom: '2px' }}>
-                    হাই-স্পিড ক্লাউড আপগ্রেড সম্পন্ন!
+                  <div style={{ fontSize: '13px', fontWeight: '900', color: '#6ee7b7', marginBottom: '4px' }}>
+                    সিস্টেম আপডেট সফল ও দুঃখপ্রকাশ
                   </div>
-                  <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.45 }}>
-                    মেম্বার সংখ্যা দ্রুত বৃদ্ধি পাওয়ায় গতকাল সাইটে সাময়িক রক্ষণাবেক্ষণের জন্য <strong>আমরা আন্তরিকভাবে দুঃখিত</strong>। আমাদের সার্ভার সম্পূর্ণ আনলিমিটেড ক্লাউড ক্যাপাসিটিতে আপগ্রেড করা হয়েছে—এখন থেকে আর কোনোদিন কোনো সমস্যা হবে না, ইনশাআল্লাহ!
+                  <div style={{ fontSize: '11.5px', color: '#f1f5f9', lineHeight: 1.55, fontWeight: '500' }}>
+                    আমাদের প্ল্যাটফর্মে মেম্বার সংখ্যা অনেক বেড়ে যাওয়ায় এবং সিস্টেমের কিছু জরুরি আপডেটের জন্য গতকাল সাময়িক অসুবিধার কারণে <strong>আমরা আন্তরিকভাবে দুঃখ প্রকাশ করছি</strong>। এখন সকল সার্ভিস পুরোদমে দ্রুতগতিতে চালু রয়েছে। আপনার যেকোনো প্রয়োজনে পাশে আছি আমরা!
                   </div>
                 </div>
               </div>
 
-              {/* Card Official Telegram Channel */}
+              {/* Card Official Telegram Channel (New Channel Reassurance) */}
               <div style={{
-                padding: '12px 13px', borderRadius: '15px',
-                background: 'linear-gradient(135deg, rgba(34, 158, 217, 0.15) 0%, rgba(14, 116, 144, 0.15) 100%)',
-                border: '1.5px solid rgba(56, 189, 248, 0.45)',
-                boxShadow: '0 4px 16px rgba(14, 165, 233, 0.15)'
+                padding: '13px 14px', borderRadius: '16px',
+                background: 'linear-gradient(135deg, rgba(34, 158, 217, 0.18) 0%, rgba(14, 116, 144, 0.22) 100%)',
+                border: '1.5px solid rgba(56, 189, 248, 0.55)',
+                boxShadow: '0 4px 18px rgba(14, 165, 233, 0.2)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '11px', marginBottom: '10px' }}>
                   <div style={{
-                    width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
+                    width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
                     background: '#229ED9', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '18px'
+                    fontSize: '18px', boxShadow: '0 2px 8px rgba(34, 158, 217, 0.5)'
                   }}>
                     ✈️
                   </div>
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: '900', color: '#38bdf8' }}>
-                      EarnPulse অফিসিয়াল চ্যানেল
+                    <div style={{ fontSize: '13.5px', fontWeight: '900', color: '#38bdf8', marginBottom: '3px' }}>
+                      নতুন অফিসিয়াল টেলিগ্রাম চ্যানেল
                     </div>
-                    <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>
-                      সব নতুন আপডেট ও পেমেন্ট নোটিশ পেতে জয়েন থাকুন
+                    <div style={{ fontSize: '11.5px', color: '#e2e8f0', lineHeight: 1.5, fontWeight: '500' }}>
+                      আমাদের পূর্বের টেলিগ্রাম চ্যানেলটিতে টেকনিক্যাল সমস্যার কারণে এই <strong>নতুন অফিসিয়াল চ্যানেলটি চালু করা হয়েছে</strong>। পরবর্তী সব জরুরি আপডেট ও পেমেন্ট প্রুফ পেতে দ্রুত এই নতুন চ্যানেলে যুক্ত হয়ে নিন।
                     </div>
                   </div>
                 </div>
@@ -3982,18 +3982,22 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                    width: '100%', height: '38px', borderRadius: '12px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    width: '100%', height: '42px', borderRadius: '12px',
                     background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                     color: '#ffffff', textDecoration: 'none',
-                    fontSize: '12.5px', fontWeight: '800',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    boxShadow: '0 3px 10px rgba(2, 132, 199, 0.4)',
-                    boxSizing: 'border-box', cursor: 'pointer'
+                    fontSize: '13px', fontWeight: '900',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    boxShadow: '0 4px 14px rgba(2, 132, 199, 0.5)',
+                    boxSizing: 'border-box', cursor: 'pointer', transition: 'transform 0.15s ease'
                   }}
+                  onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.98)'; }}
+                  onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                  onTouchStart={(e) => { e.currentTarget.style.transform = 'scale(0.98)'; }}
+                  onTouchEnd={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                 >
-                  <span>📢</span>
-                  <span>অফিসিয়াল চ্যানেলে জয়েন করুন</span>
+                  <span style={{ fontSize: '16px' }}>📢</span>
+                  <span>নতুন অফিসিয়াল চ্যানেলে জয়েন করুন</span>
                 </a>
               </div>
               
