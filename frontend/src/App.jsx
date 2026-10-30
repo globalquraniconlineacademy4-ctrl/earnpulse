@@ -4254,7 +4254,7 @@ export default function App() {
                     অফার ১: ১০টি হোয়াটসঅ্যাপ মেগা বোনাস
                   </div>
                   <div style={{ fontSize: '10.5px', color: '#f1f5f9', lineHeight: 1.45, fontWeight: '500' }}>
-                    • <strong>দৈনিক আয়:</strong> ১০টি নম্বরে প্রতিদিন <strong>৪০০ টাকা</strong> নিশ্চিত (প্রতিটিতে ৪০৳)!<br />
+                    • <strong>দৈনিক আয়:</strong> ১০টি নম্বরে প্রতিদিন <strong>৩২০ টাকা</strong> নিশ্চিত (প্রতিটিতে ৩২৳)!<br />
                     • <strong>১,০০০৳ রিওয়ার্ড:</strong> ১০টি নম্বর ২৪ ঘণ্টা যুক্ত রাখলেই আনলক হবে <strong>১,০০০ টাকার স্পেশাল ক্যাশ বক্স</strong>!
                   </div>
                 </div>
