@@ -938,8 +938,9 @@ export default function App() {
             src="/brand/earnpulse-logo.png"
             alt="EarnPulse"
             style={{
-              width: '74px', height: '74px', borderRadius: '20px',
-              boxShadow: '0 8px 24px rgba(21, 128, 61, 0.25)', marginBottom: '14px',
+              width: '80px', height: '80px', borderRadius: '50%',
+              boxShadow: '0 8px 26px rgba(245, 158, 11, 0.45)', marginBottom: '14px',
+              border: '1.5px solid rgba(245, 158, 11, 0.35)',
               objectFit: 'cover', display: 'inline-block'
             }}
           />
@@ -1248,8 +1249,10 @@ export default function App() {
             src="/brand/earnpulse-logo.png"
             alt="EarnPulse"
             style={{
-              width: '42px', height: '42px', borderRadius: '12px',
-              boxShadow: '0 2px 8px rgba(14, 112, 51, 0.25)', objectFit: 'cover'
+              width: '44px', height: '44px', borderRadius: '50%',
+              boxShadow: '0 3px 12px rgba(245, 158, 11, 0.4)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              objectFit: 'cover'
             }}
           />
           <div>
@@ -2439,6 +2442,11 @@ export default function App() {
                   action: () => setShowNoticeModal(true) 
                 },
                 { 
+                  title: 'অফিসিয়াল টেলিগ্রাম চ্যানেল', 
+                  icon: '📢', 
+                  action: () => window.open('https://t.me/EarnPulse_Channel', '_blank') 
+                },
+                { 
                   title: t.myTeam, 
                   icon: '👥', 
                   action: () => {
@@ -3330,7 +3338,7 @@ export default function App() {
               <img
                 src="/brand/earnpulse-logo.png"
                 alt="Logo"
-                style={{ width: '28px', height: '28px', borderRadius: '8px', objectFit: 'contain' }}
+                style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover', boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)' }}
               />
               <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a' }}>
                 {lang === 'bn' ? 'লেনদেনের ইতিহাস' : 'Transaction History'}
@@ -3880,43 +3888,114 @@ export default function App() {
               </button>
             </div>
 
-            {/* Header / Title */}
+            {/* Header / Title with New 3D Brand Logo */}
             <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative', zIndex: 2 }}>
               <div style={{
-                width: '56px', height: '56px', margin: '0 auto 8px',
-                borderRadius: '16px', padding: '1.5px',
+                width: '68px', height: '68px', margin: '0 auto 8px',
+                borderRadius: '50%', padding: '2px',
                 background: 'linear-gradient(135deg, #fffbeb 0%, #fbbf24 40%, #d97706 100%)',
-                boxShadow: '0 8px 20px rgba(245, 158, 11, 0.35)',
+                boxShadow: '0 8px 24px rgba(245, 158, 11, 0.45)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                <div style={{
-                  width: '100%', height: '100%', borderRadius: '15px',
-                  background: '#0a0806', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '26px'
-                }}>
-                  📲
-                </div>
+                <img
+                  src="/brand/earnpulse-logo.png"
+                  alt="EarnPulse"
+                  style={{
+                    width: '100%', height: '100%', borderRadius: '50%',
+                    objectFit: 'cover', display: 'block'
+                  }}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
               </div>
 
               <h2 style={{
                 fontSize: '19px', fontWeight: '900', color: '#ffffff',
                 lineHeight: 1.3, margin: '0 0 3px', letterSpacing: '-0.3px'
               }}>
-                হোয়াটসঅ্যাপ সংযোগ ও <br />
+                সার্ভার আপগ্রেড নোটিশ ও <br />
                 <span style={{
                   background: 'linear-gradient(135deg, #fffbeb 0%, #fef08a 35%, #f59e0b 70%, #d97706 100%)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
                 }}>
-                  নিশ্চিত ইনকাম গাইড
+                  অফিসিয়াল চ্যানেল ঘোষণা
                 </span>
               </h2>
               <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0, fontWeight: '500' }}>
-                ২৪ ঘন্টা পূর্ণ করার সঠিক নিয়ম ও বোনাস পাওয়ার উপায়
+                EarnPulse এর সাথে নিশ্চিন্তে আয় ও সঠিক আপডেটের নিয়ম
               </p>
             </div>
 
             {/* Key Information Cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '16px', position: 'relative', zIndex: 2 }}>
+              
+              {/* Card 0: Server Upgrade & Apology Message */}
+              <div style={{
+                padding: '12px 13px', borderRadius: '15px',
+                background: 'rgba(16, 185, 129, 0.08)',
+                border: '1.5px solid rgba(16, 185, 129, 0.35)',
+                display: 'flex', alignItems: 'flex-start', gap: '11px'
+              }}>
+                <div style={{
+                  width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
+                  background: 'rgba(16, 185, 129, 0.2)', border: '1px solid rgba(16, 185, 129, 0.4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
+                }}>
+                  🚀
+                </div>
+                <div>
+                  <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#6ee7b7', marginBottom: '2px' }}>
+                    হাই-স্পিড ক্লাউড আপগ্রেড সম্পন্ন!
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.45 }}>
+                    মেম্বার সংখ্যা দ্রুত বৃদ্ধি পাওয়ায় গতকাল সাইটে সাময়িক রক্ষণাবেক্ষণের জন্য <strong>আমরা আন্তরিকভাবে দুঃখিত</strong>। আমাদের সার্ভার সম্পূর্ণ আনলিমিটেড ক্লাউড ক্যাপাসিটিতে আপগ্রেড করা হয়েছে—এখন থেকে আর কোনোদিন কোনো সমস্যা হবে না, ইনশাআল্লাহ!
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Official Telegram Channel */}
+              <div style={{
+                padding: '12px 13px', borderRadius: '15px',
+                background: 'linear-gradient(135deg, rgba(34, 158, 217, 0.15) 0%, rgba(14, 116, 144, 0.15) 100%)',
+                border: '1.5px solid rgba(56, 189, 248, 0.45)',
+                boxShadow: '0 4px 16px rgba(14, 165, 233, 0.15)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <div style={{
+                    width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
+                    background: '#229ED9', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '18px'
+                  }}>
+                    ✈️
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '900', color: '#38bdf8' }}>
+                      EarnPulse অফিসিয়াল চ্যানেল
+                    </div>
+                    <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>
+                      সব নতুন আপডেট ও পেমেন্ট নোটিশ পেতে জয়েন থাকুন
+                    </div>
+                  </div>
+                </div>
+
+                <a
+                  href="https://t.me/EarnPulse_Channel"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    width: '100%', height: '38px', borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    color: '#ffffff', textDecoration: 'none',
+                    fontSize: '12.5px', fontWeight: '800',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    boxShadow: '0 3px 10px rgba(2, 132, 199, 0.4)',
+                    boxSizing: 'border-box', cursor: 'pointer'
+                  }}
+                >
+                  <span>📢</span>
+                  <span>অফিসিয়াল চ্যানেলে জয়েন করুন</span>
+                </a>
+              </div>
               
               {/* Card 1: Rollover Guarantee */}
               <div style={{
@@ -4075,7 +4154,7 @@ export default function App() {
               <img
                 src="/brand/earnpulse-logo.png"
                 alt="EarnPulse"
-                style={{ width: '22px', height: '22px', borderRadius: '6px', objectFit: 'cover' }}
+                style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', boxShadow: '0 2px 6px rgba(245, 158, 11, 0.35)' }}
               />
               <span style={{ fontSize: '17px', fontWeight: 'bold', color: '#0f172a' }}>
                 {lang === 'bn' ? 'উত্তোলন' : 'Withdrawals'}

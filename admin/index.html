@@ -38,7 +38,7 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
     }
     .brand { display: flex; align-items: center; gap: 12px; }
-    .brand img { width: 38px; height: 38px; border-radius: 10px; }
+    .brand img { width: 42px; height: 42px; border-radius: 50%; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); border: 1px solid rgba(245, 158, 11, 0.3); }
     .brand h1 { font-size: 20px; font-weight: 800; background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .header-actions { display: flex; align-items: center; gap: 10px; }
     .badge-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #10b981; background: rgba(16, 185, 129, 0.12); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.25); font-weight: 600; }
@@ -377,12 +377,14 @@
       text-align: center;
     }
     .login-logo {
-      width: 56px;
-      height: 56px;
-      border-radius: 14px;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
       margin-bottom: 14px;
-      background: #15803d;
-      padding: 6px;
+      background: transparent;
+      padding: 0;
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+      border: 1px solid rgba(245, 158, 11, 0.3);
     }
   </style>
 </head>
