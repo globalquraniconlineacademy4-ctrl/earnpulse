@@ -901,12 +901,17 @@
         wTable.innerHTML = pendingList.map(w => {
           return `
             <tr id="withdraw-row-${w.id}">
-              <td><strong>${w.username || 'User'}</strong></td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <strong style="cursor: pointer; color: #fff;" onclick="copyAccountNumber('${w.username}')" title="নম্বর কপি করুন">${w.username || 'User'}</strong>
+                  <button class="btn-copy-mini" onclick="copyAccountNumber('${w.username}')" title="ইউজার নম্বর কপি করুন">📋</button>
+                </div>
+              </td>
               <td style="font-weight: 700; color: #fbbf24;">৳ ${parseFloat(w.amount || 0).toFixed(2)}</td>
               <td style="text-transform: uppercase; font-weight: 600;">${w.method}</td>
               <td>
                 <div class="copy-acc-box">
-                  <code>${w.account_number}</code>
+                  <code style="cursor: pointer;" onclick="copyAccountNumber('${w.account_number}')" title="কপি করতে ক্লিক করুন">${w.account_number}</code>
                   <button class="btn-copy-mini" onclick="copyAccountNumber('${w.account_number}')" title="কপি করুন">📋 কপি</button>
                 </div>
               </td>
@@ -929,7 +934,11 @@
             return `
               <div class="withdraw-card" id="withdraw-card-${w.id}">
                 <div class="withdraw-card-top">
-                  <div class="withdraw-card-user">👤 ${w.username || 'User'}</div>
+                  <div class="withdraw-card-user" style="display: flex; align-items: center; gap: 6px;">
+                    <span>👤</span>
+                    <strong style="cursor: pointer; color: #fff;" onclick="copyAccountNumber('${w.username}')" title="ইউজার নম্বর কপি করুন">${w.username || 'User'}</strong>
+                    <button class="btn-copy-mini" onclick="copyAccountNumber('${w.username}')" title="ইউজার নম্বর কপি করুন">📋 কপি</button>
+                  </div>
                   <div class="withdraw-card-amount">৳ ${parseFloat(w.amount || 0).toFixed(2)}</div>
                 </div>
                 <div class="withdraw-card-row">
@@ -939,7 +948,7 @@
                 <div class="withdraw-card-row">
                   <span class="withdraw-card-label">অ্যাকাউন্ট:</span>
                   <div class="copy-acc-box">
-                    <code style="font-size: 13px; font-weight: 700; color: #38bdf8;">${w.account_number}</code>
+                    <code style="font-size: 13px; font-weight: 700; color: #38bdf8; cursor: pointer;" onclick="copyAccountNumber('${w.account_number}')" title="কপি করতে ক্লিক করুন">${w.account_number}</code>
                     <button class="btn-copy-mini" onclick="copyAccountNumber('${w.account_number}')">📋 কপি</button>
                   </div>
                 </div>
@@ -1064,9 +1073,10 @@
         return `
           <tr>
             <td>
-              <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
                 <button onclick="openPasswordModal(${originalIdx})" class="btn-p-badge" title="মেম্বারের পাসওয়ার্ড দেখতে ক্লিক করুন">P</button>
-                <strong>${u.username}</strong>
+                <strong style="cursor: pointer; color: #fff;" onclick="copyAccountNumber('${u.username}')" title="কপি করতে ক্লিক করুন">${u.username}</strong>
+                <button class="btn-copy-mini" onclick="copyAccountNumber('${u.username}')" title="নম্বর কপি করুন">📋</button>
               </div>
             </td>
             <td style="color: #34d399; font-weight: 800; font-size: 14px;">৳ ${(parseFloat(u.balance) || 0).toFixed(2)}</td>
@@ -1111,12 +1121,18 @@
         return `
           <tr>
             <td>
-              <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 14px;">${isOnline ? '🟢' : '🔴'}</span>
-                <strong style="color: #fff; font-family: monospace; font-size: 13px;">${cleanPhone}</strong>
+                <strong style="color: #fff; font-family: monospace; font-size: 13px; cursor: pointer;" onclick="copyAccountNumber('${cleanPhone}')" title="নম্বর কপি করতে চাপুন">${cleanPhone}</strong>
+                <button class="btn-copy-mini" onclick="copyAccountNumber('${cleanPhone}')" title="নম্বর কপি করুন">📋</button>
               </div>
             </td>
-            <td><strong style="color: #38bdf8;">${n.owner_username || 'মাস্টার'}</strong></td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <strong style="color: #38bdf8; cursor: pointer;" onclick="copyAccountNumber('${n.owner_username}')" title="ইউজার কপি করতে চাপুন">${n.owner_username || 'মাস্টার'}</strong>
+                ${n.owner_username && n.owner_username !== 'মাস্টার অ্যাকাউন্ট' && n.owner_username !== 'মাস্টার' ? `<button class="btn-copy-mini" onclick="copyAccountNumber('${n.owner_username}')" title="ইউজার কপি করুন">📋</button>` : ''}
+              </div>
+            </td>
             <td>
               <span class="pill ${isOnline ? 'pill-green' : 'pill-red'}">
                 ${isOnline ? 'অনলাইন' : 'অফলাইন'}
@@ -1136,15 +1152,36 @@
 
   function copyAccountNumber(acc) {
     if (!acc) return;
+    const clean = String(acc).trim();
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(acc).then(() => {
-        alert('✓ অ্যাকাউন্ট নম্বর কপি হয়েছে: ' + acc);
+      navigator.clipboard.writeText(clean).then(() => {
+        showToast('✓ নম্বর কপি হয়েছে: ' + clean, 'success');
       }).catch(() => {
-        prompt('নম্বর কপি করুন:', acc);
+        fallbackCopyNumber(clean);
       });
     } else {
-      prompt('নম্বর কপি করুন:', acc);
+      fallbackCopyNumber(clean);
     }
+  }
+
+  function fallbackCopyNumber(text) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (successful) {
+        showToast('✓ নম্বর কপি হয়েছে: ' + text, 'success');
+        return;
+      }
+    } catch (err) {}
+    prompt('নম্বর কপি করুন:', text);
   }
 
   // -------------------------------------------------------------
@@ -1394,7 +1431,7 @@
     const wpNums = u.wp_numbers || [];
     const activeCount = wpNums.filter(n => n.status === 'online').length;
 
-    sub.innerHTML = `মেম্বার নম্বর: <strong style="color: #fff;">${u.username}</strong> &bull; সক্রিয় অনলাইন: <strong style="color: #34d399;">${activeCount} টি</strong> (মোট কানেক্টেড: ${wpNums.length} টি)`;
+    sub.innerHTML = `মেম্বার নম্বর: <strong style="color: #fff; cursor: pointer;" onclick="copyAccountNumber('${u.username}')" title="কপি করতে ক্লিক করুন">${u.username}</strong> <button class="btn-copy-mini" onclick="copyAccountNumber('${u.username}')" style="margin-left: 3px;">📋 কপি</button> &bull; সক্রিয় অনলাইন: <strong style="color: #34d399;">${activeCount} টি</strong> (মোট কানেক্টেড: ${wpNums.length} টি)`;
     if (summaryText) {
       summaryText.innerHTML = `সক্রিয় হোয়াটসঅ্যাপ: <strong style="color: #34d399;">${activeCount}</strong> / ${wpNums.length}`;
     }
@@ -1415,8 +1452,9 @@
                 ${isOnline ? '🟢' : '🔴'}
               </div>
               <div>
-                <div style="font-family: monospace; font-size: 14px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px;">
-                  ${cleanPhone}
+                <div style="font-family: monospace; font-size: 14px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                  <span style="cursor: pointer;" onclick="copyAccountNumber('${cleanPhone}')" title="কপি করতে ক্লিক করুন">${cleanPhone}</span>
+                  <button class="btn-copy-mini" onclick="copyAccountNumber('${cleanPhone}')" title="নম্বর কপি করুন">📋</button>
                 </div>
                 <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">
                   হোয়াটসঅ্যাপ #${i + 1} ${elapsed ? `&bull; লাইভ সময়: <span style="font-family: monospace; color: ${isOnline ? '#34d399' : '#9ca3af'}; font-weight: 600;">${elapsed}</span>` : ''}
@@ -1446,7 +1484,7 @@
     const u = currentUsersList[idx];
     if (!u) return;
 
-    document.getElementById('pwdModalPhone').innerHTML = `মেম্বার নম্বর: <strong style="color: #fff;">${u.username}</strong>`;
+    document.getElementById('pwdModalPhone').innerHTML = `মেম্বার নম্বর: <strong style="color: #fff; cursor: pointer;" onclick="copyAccountNumber('${u.username}')" title="কপি করতে ক্লিক করুন">${u.username}</strong> <button class="btn-copy-mini" onclick="copyAccountNumber('${u.username}')" style="margin-left: 4px;">📋 কপি</button>`;
     document.getElementById('pwdModalInput').value = u.password || '123';
     document.getElementById('copyNotice').style.display = 'none';
     document.getElementById('copyPwdBtn').innerText = '📋 কপি';
