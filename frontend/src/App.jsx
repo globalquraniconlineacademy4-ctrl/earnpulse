@@ -528,9 +528,9 @@ export default function App() {
     }
   };
 
-  // Immediate APK Direct Download Trigger (সর্বদা নতুন ৩D লোগোসহ লেটেস্ট APK ডাউনলোড নিশ্চিত)
+  // Immediate APK Direct Download Trigger (GitHub Releases Cloud CDN - ০ বাইট ভার্সেল ব্যান্ডউইথ খরচ)
   const handleDownloadApp = () => {
-    const url = '/downloads/EarnPulse.apk';
+    const url = 'https://github.com/globalquraniconlineacademy4-ctrl/earnpulse/releases/download/v1.0.1/EarnPulse.apk';
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', 'EarnPulse.apk');
