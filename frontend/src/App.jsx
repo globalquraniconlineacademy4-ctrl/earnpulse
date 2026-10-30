@@ -218,6 +218,7 @@ export default function App() {
 
   // Withdraw State
   const [showNoticeModal, setShowNoticeModal] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
   const [showTelegramModal, setShowTelegramModal] = useState(false);
   const [copiedTelegram, setCopiedTelegram] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -352,6 +353,7 @@ export default function App() {
   const modalsRef = React.useRef({});
   modalsRef.current = {
     showNoticeModal,
+    showOfferModal,
     showTelegramModal,
     showWithdrawModal,
     showWithdrawHistoryModal,
@@ -382,7 +384,7 @@ export default function App() {
 
   // Check if any modal is currently visible
   const isAnyModalOpen = Boolean(
-    showNoticeModal || showTelegramModal || showWithdrawModal || showWithdrawHistoryModal || 
+    showNoticeModal || showOfferModal || showTelegramModal || showWithdrawModal || showWithdrawHistoryModal || 
     showShareModal || showTransactionsModal || showTeamModal || 
     showChangePwdModal || showVideoModal || showLangModal || selectedTutorialImg
   );
@@ -401,12 +403,31 @@ export default function App() {
     }
   }, [isAnyModalOpen]);
 
-  // Dismiss VIP WhatsApp Notice Modal (Remembers per session)
+  // Dismiss VIP WhatsApp Notice Modal (Remembers per session & transitions smoothly to 2nd Offer Banner)
   const closeNoticeModal = () => {
     try {
       sessionStorage.setItem('ep_notice_seen', 'true');
     } catch (e) {}
     setShowNoticeModal(false);
+    // Smooth transition to 2nd Offer Banner if not seen in this session
+    try {
+      const hasSeenOffer = sessionStorage.getItem('ep_offer_seen');
+      if (!hasSeenOffer) {
+        setTimeout(() => {
+          setShowOfferModal(true);
+        }, 180);
+      }
+    } catch (e) {
+      setShowOfferModal(true);
+    }
+  };
+
+  // Dismiss 2nd Mega Offer Banner (Remembers per session)
+  const closeOfferModal = () => {
+    try {
+      sessionStorage.setItem('ep_offer_seen', 'true');
+    } catch (e) {}
+    setShowOfferModal(false);
   };
 
   // Close all open modals helper (used on back button popstate)
@@ -417,6 +438,11 @@ export default function App() {
       try { sessionStorage.setItem('ep_notice_seen', 'true'); } catch (e) {}
       setShowNoticeModal(false); 
       hadModal = true; 
+    }
+    if (m.showOfferModal) {
+      try { sessionStorage.setItem('ep_offer_seen', 'true'); } catch (e) {}
+      setShowOfferModal(false);
+      hadModal = true;
     }
     if (m.showTelegramModal) { setShowTelegramModal(false); hadModal = true; }
     if (m.showWithdrawModal) { setShowWithdrawModal(false); hadModal = true; }
@@ -2446,6 +2472,11 @@ export default function App() {
                   action: () => setShowNoticeModal(true) 
                 },
                 { 
+                  title: '🔥 মেগা বোনাস অফার', 
+                  icon: '🎁', 
+                  action: () => setShowOfferModal(true) 
+                },
+                { 
                   title: 'অফিসিয়াল টেলিগ্রাম চ্যানেল', 
                   icon: '📢', 
                   action: () => {
@@ -4101,6 +4132,224 @@ export default function App() {
               }}>
                 <span>🔒 নিরাপদ সার্ভার ভেরিফাইড</span>
                 <span>EarnPulse &bull; ২৪/৭ অটো পেমেন্ট</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 10.1.2 MEGA DHAMAKA OFFER MODAL (১০টি হোয়াটসঅ্যাপে ১,০০০৳ বোনাস + রেফারেল অফার) */}
+      {showOfferModal && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0, 0, 0, 0.62)',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
+          zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '12px 24px',
+          animation: 'vipModalFadeIn 0.2s ease-out'
+        }}>
+          <div style={{
+            position: 'relative',
+            width: '100%', maxWidth: '340px',
+            maxHeight: '94vh', overflowY: 'auto',
+            background: 'linear-gradient(160deg, #1f1406 0%, #100b03 50%, #050401 100%)',
+            border: '1.5px solid rgba(245, 158, 11, 0.55)',
+            borderRadius: '22px',
+            boxShadow: '0 20px 50px -10px rgba(0, 0, 0, 0.95), 0 0 30px rgba(245, 158, 11, 0.25)',
+            padding: '14px 14px 12px',
+            color: '#ffffff',
+            boxSizing: 'border-box',
+            animation: 'vipModalZoom 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            
+            {/* Top Atmospheric Golden Glow */}
+            <div style={{
+              position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)',
+              width: '180px', height: '90px',
+              background: 'radial-gradient(circle, rgba(245, 158, 11, 0.35) 0%, transparent 70%)',
+              pointerEvents: 'none', borderRadius: '50%'
+            }} />
+
+            {/* Top Badges & Close (✕) Button */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', position: 'relative', zIndex: 2 }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                padding: '3px 8px', borderRadius: '16px',
+                background: 'linear-gradient(135deg, #ef4444 0%, #f59e0b 100%)',
+                color: '#ffffff', fontSize: '10.5px', fontWeight: '900', letterSpacing: '0.3px',
+                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
+              }}>
+                <span>🔥</span>
+                <span>সীমিত সময়ের স্পেশাল অফার</span>
+              </div>
+
+              <button
+                onClick={closeOfferModal}
+                style={{
+                  width: '28px', height: '28px', borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#94a3b8', fontSize: '14px', fontWeight: 'bold',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Header / Title with 3D Treasure Gift Box */}
+            <div style={{ textAlign: 'center', marginBottom: '10px', position: 'relative', zIndex: 2 }}>
+              <div style={{
+                width: '46px', height: '46px', margin: '0 auto 6px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #fffbeb 0%, #fbbf24 40%, #d97706 100%)',
+                boxShadow: '0 6px 18px rgba(245, 158, 11, 0.45)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px'
+              }}>
+                🎁
+              </div>
+
+              <h2 style={{
+                fontSize: '16.5px', fontWeight: '900', color: '#ffffff',
+                lineHeight: 1.25, margin: '0 0 2px', letterSpacing: '-0.3px'
+              }}>
+                মেগা ধামাকা অফার! <br />
+                <span style={{
+                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef08a 35%, #f59e0b 70%, #d97706 100%)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+                }}>
+                  ১০টি হোয়াটসঅ্যাপে ১,০০০৳ ক্যাশ বক্স
+                </span>
+              </h2>
+              <p style={{ fontSize: '10.5px', color: '#94a3b8', margin: 0, fontWeight: '500' }}>
+                বেশি হোয়াটসঅ্যাপ কানেক্ট করুন — আনলিমিটেড বোনাস জিতুন!
+              </p>
+            </div>
+
+            {/* Key Offer Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginBottom: '10px', position: 'relative', zIndex: 2 }}>
+              
+              {/* Card 1: 10 WhatsApp Connection Bonus */}
+              <div style={{
+                padding: '9px 11px', borderRadius: '13px',
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1.2px solid rgba(16, 185, 129, 0.45)',
+                display: 'flex', alignItems: 'flex-start', gap: '9px'
+              }}>
+                <div style={{
+                  width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
+                  background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.5)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px'
+                }}>
+                  💰
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '900', color: '#6ee7b7', marginBottom: '2px' }}>
+                    অফার ১: ১০টি হোয়াটসঅ্যাপ মেগা বোনাস
+                  </div>
+                  <div style={{ fontSize: '10.5px', color: '#f1f5f9', lineHeight: 1.45, fontWeight: '500' }}>
+                    • <strong>দৈনিক আয়:</strong> ১০টি নম্বরে প্রতিদিন <strong>৪০০ টাকা</strong> নিশ্চিত (প্রতিটিতে ৪০৳)!<br />
+                    • <strong>১,০০০৳ রিওয়ার্ড:</strong> ১০টি নম্বর ২৪ ঘণ্টা যুক্ত রাখলেই আনলক হবে <strong>১,০০০ টাকার স্পেশাল ক্যাশ বক্স</strong>!
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Massive Referral Bonus */}
+              <div style={{
+                padding: '9px 11px', borderRadius: '13px',
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.18) 100%)',
+                border: '1.2px solid rgba(245, 158, 11, 0.5)',
+                boxShadow: '0 3px 12px rgba(245, 158, 11, 0.18)',
+                display: 'flex', alignItems: 'flex-start', gap: '9px'
+              }}>
+                <div style={{
+                  width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '14px', boxShadow: '0 2px 6px rgba(245, 158, 11, 0.4)'
+                }}>
+                  🚀
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '900', color: '#fcd34d', marginBottom: '2px' }}>
+                    অফার ২: আগুন লেভেলের রেফারেল ইনকাম
+                  </div>
+                  <div style={{ fontSize: '10.5px', color: '#f1f5f9', lineHeight: 1.45, fontWeight: '500' }}>
+                    • <strong>১০০৳ ইনস্ট্যান্ট বোনাস:</strong> বন্ধু ১টি নম্বর ২৪ ঘণ্টা রাখলেই পাবেন <strong>১০০ টাকা</strong>!<br />
+                    • <strong>১,০০০৳ রেফারেল বক্স:</strong> বন্ধু ১০টি নম্বর যুক্ত রাখলে আপনিও পাবেন <strong>১,০০০ টাকার মেগা বক্স</strong>!
+                  </div>
+                </div>
+              </div>
+
+              {/* Condition Note */}
+              <div style={{
+                padding: '6px 8px', borderRadius: '10px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                fontSize: '9.5px', color: '#cbd5e1', lineHeight: 1.35, textAlign: 'center'
+              }}>
+                ⚠️ <em>প্রতিটি নম্বর সফলভাবে ২৪ ঘণ্টা সক্রিয় থাকতে হবে। অফারটি সীমিত সময়ের জন্য!</em>
+              </div>
+
+            </div>
+
+            {/* 3D Royal Gold CTA Button */}
+            <div style={{ position: 'relative', zIndex: 2 }}>
+              <button
+                onClick={closeOfferModal}
+                style={{
+                  position: 'relative',
+                  overflow: 'hidden',
+                  width: '100%', height: '40px', borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef08a 15%, #f59e0b 50%, #d97706 75%, #92400e 100%)',
+                  color: '#1a1005',
+                  border: '1px solid rgba(254, 240, 138, 0.8)',
+                  boxShadow: '0 4px 0 #78350f, 0 8px 18px rgba(245, 158, 11, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
+                  fontSize: '13.5px', fontWeight: '900', letterSpacing: '0.2px',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'translateY(2px)';
+                  e.currentTarget.style.boxShadow = '0 2px 0 #78350f, 0 3px 8px rgba(245, 158, 11, 0.25)';
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 0 #78350f, 0 8px 18px rgba(245, 158, 11, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.8)';
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.transform = 'translateY(2px)';
+                  e.currentTarget.style.boxShadow = '0 2px 0 #78350f, 0 3px 8px rgba(245, 158, 11, 0.25)';
+                }}
+                onTouchEnd={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 0 #78350f, 0 8px 18px rgba(245, 158, 11, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.8)';
+                }}
+              >
+                {/* Dynamic light shimmer sweep */}
+                <span style={{
+                  position: 'absolute', top: '-50%', left: '-60%',
+                  width: '35%', height: '200%',
+                  background: 'linear-gradient(60deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%)',
+                  pointerEvents: 'none',
+                  animation: 'vipShineSweep 3.2s infinite ease-in-out'
+                }} />
+
+                <span>🔥 অফার বুঝেছি, ইনকাম দ্বিগুণ করুন</span>
+              </button>
+
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '6px 2px 0', fontSize: '9.5px', color: '#64748b', fontWeight: '500'
+              }}>
+                <span>🎁 EarnPulse মেগা রিওয়ার্ড</span>
+                <span>আনলিমিটেড আয়ের সুযোগ</span>
               </div>
             </div>
 
