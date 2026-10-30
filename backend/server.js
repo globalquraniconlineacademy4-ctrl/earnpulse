@@ -23,19 +23,9 @@ app.use((req, res, next) => {
 });
 
 // Cloud Database Sync Middleware (MongoDB Atlas 24/7 Persistent Storage - Ultra-Fast Non-Blocking)
-app.use(async (req, res, next) => {
+app.use((req, res, next) => {
   if (db.syncFromCloud) {
-    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
-      try {
-        await Promise.race([
-          db.syncFromCloud(),
-          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
-        ]);
-      } catch (e) {}
-    } else {
-      // In-memory state is already loaded and ready - sync in background so HTTP response is instant!
-      db.syncFromCloud().catch(() => {});
-    }
+    db.syncFromCloud().catch(() => {});
   }
   next();
 });
@@ -1619,7 +1609,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.30.16',
+      build_version: '2026.10.30.17',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
