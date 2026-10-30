@@ -150,6 +150,39 @@ function formatBdDateTime(isoStr) {
   }
 }
 
+// Reliable detection for Android APK / In-App WebView vs standard web browser
+const isInsideApp = () => {
+  if (typeof window === 'undefined') return false;
+  // 1. Native bridge objects
+  if (window.Capacitor || window.Android || window.AndroidInterface || window._isNativeApp || window.cordova) {
+    return true;
+  }
+  // 2. Standalone PWA / installed WebAPK
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+    return true;
+  }
+  if (window.navigator.standalone === true) {
+    return true;
+  }
+
+  const ua = window.navigator.userAgent || '';
+  // 3. Android WebView strictly has '; wv' or 'Version/X.X Chrome'
+  const isAndroid = /Android/i.test(ua);
+  if (isAndroid) {
+    const isWv = /\bwv\b/i.test(ua);
+    const hasVersionChrome = /Version\/[0-9.]+/i.test(ua) && /Chrome\/[0-9.]+/i.test(ua);
+    if (isWv || hasVersionChrome) return true;
+  }
+
+  // 4. iOS WebView (if any)
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  if (isIOS && !/Safari/i.test(ua)) {
+    return true;
+  }
+
+  return false;
+};
+
 export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem('token') || '');
   const [user, setUser] = useState(() => {
@@ -2537,10 +2570,14 @@ export default function App() {
                   title: 'অফিসিয়াল টেলিগ্রাম চ্যানেল', 
                   icon: '📢', 
                   action: () => {
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                      navigator.clipboard.writeText('EarnPulse_Channel').catch(() => {});
+                    if (isInsideApp()) {
+                      if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText('EarnPulse_Channel').catch(() => {});
+                      }
+                      setShowTelegramModal(true);
+                    } else {
+                      window.open('https://t.me/EarnPulse_Channel', '_blank', 'noopener,noreferrer');
                     }
-                    setShowTelegramModal(true);
                   }
                 },
                 { 
@@ -4072,18 +4109,25 @@ export default function App() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => {
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                      navigator.clipboard.writeText('EarnPulse_Channel').catch(() => {});
+                <a
+                  href="https://t.me/EarnPulse_Channel"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    if (isInsideApp()) {
+                      e.preventDefault();
+                      if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText('EarnPulse_Channel').catch(() => {});
+                      }
+                      setShowTelegramModal(true);
                     }
-                    setShowTelegramModal(true);
                   }}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                     width: '100%', height: '36px', borderRadius: '10px',
                     background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                     color: '#ffffff',
+                    textDecoration: 'none',
                     fontSize: '12px', fontWeight: '900',
                     border: '1px solid rgba(255, 255, 255, 0.25)',
                     boxShadow: '0 3px 10px rgba(2, 132, 199, 0.45)',
@@ -4096,7 +4140,7 @@ export default function App() {
                 >
                   <span style={{ fontSize: '14px' }}>📢</span>
                   <span>নতুন অফিসিয়াল চ্যানেলে জয়েন করুন</span>
-                </button>
+                </a>
               </div>
               
               {/* Compact 2-Column Grid for Rules (ব্যান হলে নো টেনশন & ২৪ ঘণ্টায় ইনকাম) */}
