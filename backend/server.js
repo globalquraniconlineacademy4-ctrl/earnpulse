@@ -170,16 +170,7 @@ async function calculateMemberTodayOnlineHours(userId, todayStr, todayMidnightMs
 
 app.get('/api/checkin/status', authenticateToken, async (req, res) => {
   if (db.syncFromCloud) {
-    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
-      try {
-        await Promise.race([
-          db.syncFromCloud(),
-          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
-        ]);
-      } catch (e) {}
-    } else {
-      db.syncFromCloud().catch(() => {});
-    }
+    db.syncFromCloud().catch(() => {});
   }
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
@@ -1561,16 +1552,7 @@ app.post('/api/whatsapp/sync-earnings', authenticateToken, async (req, res) => {
 // -------------------------------------------------------------
 app.get('/api/referrals', authenticateToken, async (req, res) => {
   if (db.syncFromCloud) {
-    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
-      try {
-        await Promise.race([
-          db.syncFromCloud(),
-          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
-        ]);
-      } catch (e) {}
-    } else {
-      db.syncFromCloud().catch(() => {});
-    }
+    db.syncFromCloud().catch(() => {});
   }
   db.read();
   const referrals = db.get('users')
@@ -1626,16 +1608,7 @@ app.get('/api/referrals', authenticateToken, async (req, res) => {
 // -------------------------------------------------------------
 app.get('/api/config', async (req, res) => {
   if (db.syncFromCloud) {
-    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
-      try {
-        await Promise.race([
-          db.syncFromCloud(),
-          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
-        ]);
-      } catch (e) {}
-    } else {
-      db.syncFromCloud().catch(() => {});
-    }
+    db.syncFromCloud().catch(() => {});
   }
   db.read();
   const config = db.get('system_config').value() || {};
@@ -1646,7 +1619,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.30.15',
+      build_version: '2026.10.30.16',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1770,16 +1743,7 @@ app.get('/api/withdraw/history', authenticateToken, async (req, res) => {
   res.setHeader('Expires', '0');
 
   if (db.syncFromCloud) {
-    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
-      try {
-        await Promise.race([
-          db.syncFromCloud(),
-          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
-        ]);
-      } catch (e) {}
-    } else {
-      db.syncFromCloud().catch(() => {});
-    }
+    db.syncFromCloud().catch(() => {});
   }
   db.read();
   const userId = req.user.id;
@@ -1804,16 +1768,7 @@ app.get('/api/user/transactions', authenticateToken, async (req, res) => {
   res.setHeader('Expires', '0');
 
   if (db.syncFromCloud) {
-    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
-      try {
-        await Promise.race([
-          db.syncFromCloud(),
-          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
-        ]);
-      } catch (e) {}
-    } else {
-      db.syncFromCloud().catch(() => {});
-    }
+    db.syncFromCloud().catch(() => {});
   }
   db.read();
   const userId = req.user.id;
@@ -2155,16 +2110,7 @@ app.post('/api/admin/config', authenticateToken, requireAdmin, async (req, res) 
 
   // ১. সবার আগে ক্লাউড থেকে সর্বশেষ লাইভ কনফিগ লোড করা
   if (db.syncFromCloud) {
-    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
-      try {
-        await Promise.race([
-          db.syncFromCloud(),
-          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
-        ]);
-      } catch (e) {}
-    } else {
-      db.syncFromCloud().catch(() => {});
-    }
+    db.syncFromCloud().catch(() => {});
   }
   db.read();
   const current = db.get('system_config').value() || {};
@@ -2237,16 +2183,7 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
 
   // সর্বদা ক্লাউড অ্যাটলাস থেকে ফ্রেশ ডেটা নিশ্চিত করুন
   if (db.syncFromCloud) {
-    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
-      try {
-        await Promise.race([
-          db.syncFromCloud(),
-          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
-        ]);
-      } catch (e) {}
-    } else {
-      db.syncFromCloud().catch(() => {});
-    }
+    db.syncFromCloud().catch(() => {});
   }
   db.read();
 
