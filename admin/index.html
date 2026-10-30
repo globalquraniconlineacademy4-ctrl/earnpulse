@@ -768,6 +768,30 @@
     }
   });
 
+  function formatBdDateTime(isoStr) {
+    if (!isoStr) return '';
+    try {
+      const d = new Date(isoStr);
+      if (isNaN(d.getTime())) return String(isoStr).replace('T', ' ').substring(0, 16);
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Dhaka',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).formatToParts(d);
+
+      const map = {};
+      parts.forEach(p => { map[p.type] = p.value; });
+      const dayPeriod = (map.dayPeriod || '').toUpperCase();
+      return `${map.year}-${map.month}-${map.day} ${map.hour}:${map.minute} ${dayPeriod}`;
+    } catch (e) {
+      return String(isoStr).replace('T', ' ').substring(0, 16);
+    }
+  }
+
   function adminLogout() {
     if (!confirm('আপনি কি অ্যাডমিন ড্যাশবোর্ড থেকে লগআউট করতে চান?')) return;
     localStorage.removeItem('admin_token');
@@ -857,7 +881,7 @@
                   <button class="btn-copy-mini" onclick="copyAccountNumber('${w.account_number}')" title="কপি করুন">📋 কপি</button>
                 </div>
               </td>
-              <td style="font-size: 11px; color: var(--text-muted);">${(w.created_at || '').substring(0, 16).replace('T', ' ')}</td>
+              <td style="font-size: 11px; color: var(--text-muted);">${formatBdDateTime(w.created_at)}</td>
               <td>
                 <span class="pill pill-yellow">
                   অপেক্ষমান
@@ -892,7 +916,7 @@
                 </div>
                 <div class="withdraw-card-row">
                   <span class="withdraw-card-label">তারিখ:</span>
-                  <span class="withdraw-card-value" style="font-size: 11px; color: var(--text-muted);">${(w.created_at || '').substring(0, 16).replace('T', ' ')}</span>
+                  <span class="withdraw-card-value" style="font-size: 11px; color: var(--text-muted);">${formatBdDateTime(w.created_at)}</span>
                 </div>
                 <div class="withdraw-card-row">
                   <span class="withdraw-card-label">স্ট্যাটাস:</span>
@@ -991,7 +1015,7 @@
             </td>
             <td style="color: #34d399; font-weight: 800; font-size: 14px;">৳ ${(parseFloat(u.balance) || 0).toFixed(2)}</td>
             <td>${wpBtn}</td>
-            <td style="font-size: 11px; color: var(--text-muted);">${(u.created_at || '').substring(0, 16).replace('T', ' ')}</td>
+            <td style="font-size: 11px; color: var(--text-muted);">${formatBdDateTime(u.created_at)}</td>
           </tr>
         `;
       }).join('');
@@ -1045,7 +1069,7 @@
             <td>
               <strong style="color: #fbbf24; font-family: monospace;">${n.online_duration_str || '00:00:00'}</strong>
             </td>
-            <td style="font-size: 11px; color: var(--text-muted);">${(n.login_date || '').substring(0, 16).replace('T', ' ')}</td>
+            <td style="font-size: 11px; color: var(--text-muted);">${formatBdDateTime(n.login_date)}</td>
           </tr>
         `;
       }).join('');

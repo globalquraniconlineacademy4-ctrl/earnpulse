@@ -126,6 +126,30 @@ function WhatsAppCountdownTimer({
   );
 }
 
+function formatBdDateTime(isoStr) {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return String(isoStr).replace('T', ' ').substring(0, 16);
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Dhaka',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).formatToParts(d);
+
+    const map = {};
+    parts.forEach(p => { map[p.type] = p.value; });
+    const dayPeriod = (map.dayPeriod || '').toUpperCase();
+    return `${map.year}-${map.month}-${map.day} ${map.hour}:${map.minute} ${dayPeriod}`;
+  } catch (e) {
+    return String(isoStr).replace('T', ' ').substring(0, 16);
+  }
+}
+
 export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem('token') || '');
   const [user, setUser] = useState(() => {
@@ -3518,9 +3542,7 @@ export default function App() {
                                 ? (lang === 'bn' ? 'রেফারেল কমিশন' : 'Referral Commission')
                                 : (item.description || (lang === 'bn' ? 'বোনাস' : 'Bonus'))))));
 
-                      const formattedDate = item.created_at 
-                        ? item.created_at.replace('T', ' ').substring(0, 19)
-                        : '';
+                      const formattedDate = formatBdDateTime(item.created_at);
 
                       return (
                         <div
@@ -4713,9 +4735,7 @@ export default function App() {
                         bg: '#fef3c7', color: '#d97706'
                       };
 
-                      const formattedDate = item.created_at
-                        ? item.created_at.replace('T', ' ').substring(0, 19)
-                        : '';
+                      const formattedDate = formatBdDateTime(item.created_at);
 
                       return (
                         <div
