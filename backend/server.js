@@ -1609,7 +1609,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.30.17',
+      build_version: '2026.10.30.18',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -2165,6 +2165,7 @@ app.post('/api/admin/config', authenticateToken, requireAdmin, async (req, res) 
 
 app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
+  const idStr = String(req.params.id);
   const { status, adminNote } = req.body;
 
   if (!['approved', 'rejected'].includes(status)) {
@@ -2173,11 +2174,29 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
 
   // সর্বদা ক্লাউড অ্যাটলাস থেকে ফ্রেশ ডেটা নিশ্চিত করুন
   if (db.syncFromCloud) {
-    db.syncFromCloud().catch(() => {});
+    try {
+      await Promise.race([
+        db.syncFromCloud(),
+        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+      ]);
+    } catch (e) {}
   }
   db.read();
 
-  const withdraw = db.get('withdrawals').find({ id }).value();
+  let withdraw = (db.get('withdrawals').value() || []).find(w => w && (w.id === id || String(w.id) === idStr));
+  if (!withdraw && db.getMongoDb) {
+    try {
+      const mdb = await db.getMongoDb();
+      if (mdb) {
+        const doc = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
+        if (doc && doc.data && Array.isArray(doc.data.withdrawals)) {
+          withdraw = doc.data.withdrawals.find(w => w && (w.id === id || String(w.id) === idStr));
+          db.setState(doc.data);
+        }
+      }
+    } catch (e) {}
+  }
+
   if (!withdraw) {
     return res.status(404).json({ success: false, msg: 'উত্তোলন রিকোয়েস্ট পাওয়া যায়নি' });
   }
@@ -2249,14 +2268,17 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
       if (mdb) {
         const updateTasks = [
           mdb.collection('app_state').updateOne(
-            { _id: 'earnpulse_store', 'data.withdrawals.id': id },
+            { _id: 'earnpulse_store' },
             { 
               $set: { 
-                'data.withdrawals.$.status': status,
-                'data.withdrawals.$.admin_note': adminNote || '',
-                'data.withdrawals.$.processed_at': nowIso,
+                'data.withdrawals.$[w].status': status,
+                'data.withdrawals.$[w].admin_note': adminNote || '',
+                'data.withdrawals.$[w].processed_at': nowIso,
                 updated_at: new Date()
               } 
+            },
+            {
+              arrayFilters: [{ '$or': [{ 'w.id': id }, { 'w.id': idStr }, { 'w.id': Number(id) }] }]
             }
           )
         ];
