@@ -3808,17 +3808,17 @@ export default function App() {
         </div>
       )}
 
-      {/* 10.1 VIP WHATSAPP NOTICE & ANTI-BAN MODAL (রাজকীয় রয়্যাল গোল্ড ব্যানার) */}
+      {/* 10.1 VIP WHATSAPP NOTICE & ANTI-BAN MODAL (কমপ্যাক্ট রাজকীয় রয়্যাল গোল্ড ব্যানার) */}
       {showNoticeModal && (
         <div style={{
           position: 'fixed', inset: 0,
-          background: 'rgba(0, 0, 0, 0.78)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+          background: 'rgba(0, 0, 0, 0.60)',
+          backdropFilter: 'blur(2px)',
+          WebkitBackdropFilter: 'blur(2px)',
           zIndex: 9999,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '16px',
-          animation: 'vipModalFadeIn 0.22s ease-out'
+          padding: '12px 24px',
+          animation: 'vipModalFadeIn 0.2s ease-out'
         }}>
           <style>{`
             @keyframes vipModalFadeIn {
@@ -3826,7 +3826,7 @@ export default function App() {
               to { opacity: 1; }
             }
             @keyframes vipModalZoom {
-              from { opacity: 0; transform: scale(0.92); }
+              from { opacity: 0; transform: scale(0.94); }
               to { opacity: 1; transform: scale(1); }
             }
             @keyframes vipShineSweep {
@@ -3838,34 +3838,34 @@ export default function App() {
           
           <div style={{
             position: 'relative',
-            width: '100%', maxWidth: '390px',
-            maxHeight: '92vh', overflowY: 'auto',
+            width: '100%', maxWidth: '340px',
+            maxHeight: '94vh', overflowY: 'auto',
             background: 'linear-gradient(160deg, #181510 0%, #0d0b08 50%, #050403 100%)',
             border: '1.5px solid rgba(245, 158, 11, 0.45)',
-            borderRadius: '26px',
-            boxShadow: '0 25px 60px -10px rgba(0, 0, 0, 0.95), 0 0 35px rgba(245, 158, 11, 0.22)',
-            padding: '22px 18px 18px',
+            borderRadius: '22px',
+            boxShadow: '0 20px 50px -10px rgba(0, 0, 0, 0.95), 0 0 25px rgba(245, 158, 11, 0.2)',
+            padding: '14px 14px 12px',
             color: '#ffffff',
             boxSizing: 'border-box',
-            animation: 'vipModalZoom 0.24s cubic-bezier(0.16, 1, 0.3, 1)'
+            animation: 'vipModalZoom 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
             
             {/* Top Atmospheric Golden Glow */}
             <div style={{
-              position: 'absolute', top: '-50px', left: '50%', transform: 'translateX(-50%)',
-              width: '220px', height: '120px',
-              background: 'radial-gradient(circle, rgba(245, 158, 11, 0.35) 0%, transparent 70%)',
+              position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)',
+              width: '180px', height: '90px',
+              background: 'radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, transparent 70%)',
               pointerEvents: 'none', borderRadius: '50%'
             }} />
 
             {/* Top Badges & Close (✕) Button */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', position: 'relative', zIndex: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', position: 'relative', zIndex: 2 }}>
               <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '5px',
-                padding: '4px 10px', borderRadius: '20px',
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                padding: '3px 8px', borderRadius: '16px',
                 background: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
-                color: '#1a1005', fontSize: '11px', fontWeight: '900', letterSpacing: '0.4px',
-                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)'
+                color: '#1a1005', fontSize: '10.5px', fontWeight: '900', letterSpacing: '0.3px',
+                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.35)'
               }}>
                 <span>⚡</span>
                 <span>জরুরি নির্দেশনা</span>
@@ -3874,10 +3874,10 @@ export default function App() {
               <button
                 onClick={closeNoticeModal}
                 style={{
-                  width: '32px', height: '32px', borderRadius: '50%',
+                  width: '28px', height: '28px', borderRadius: '50%',
                   background: 'rgba(255, 255, 255, 0.08)',
                   border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#94a3b8', fontSize: '16px', fontWeight: 'bold',
+                  color: '#94a3b8', fontSize: '14px', fontWeight: 'bold',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', transition: 'all 0.15s ease'
                 }}
@@ -3889,12 +3889,12 @@ export default function App() {
             </div>
 
             {/* Header / Title with New 3D Brand Logo */}
-            <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative', zIndex: 2 }}>
+            <div style={{ textAlign: 'center', marginBottom: '10px', position: 'relative', zIndex: 2 }}>
               <div style={{
-                width: '68px', height: '68px', margin: '0 auto 8px',
+                width: '48px', height: '48px', margin: '0 auto 6px',
                 borderRadius: '50%', padding: '2px',
                 background: 'linear-gradient(135deg, #fffbeb 0%, #fbbf24 40%, #d97706 100%)',
-                boxShadow: '0 8px 24px rgba(245, 158, 11, 0.45)',
+                boxShadow: '0 6px 18px rgba(245, 158, 11, 0.4)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
                 <img
@@ -3909,8 +3909,8 @@ export default function App() {
               </div>
 
               <h2 style={{
-                fontSize: '19px', fontWeight: '900', color: '#ffffff',
-                lineHeight: 1.3, margin: '0 0 3px', letterSpacing: '-0.3px'
+                fontSize: '16px', fontWeight: '900', color: '#ffffff',
+                lineHeight: 1.25, margin: '0 0 2px', letterSpacing: '-0.3px'
               }}>
                 সার্ভার আপগ্রেড নোটিশ ও <br />
                 <span style={{
@@ -3920,59 +3920,59 @@ export default function App() {
                   অফিসিয়াল চ্যানেল ঘোষণা
                 </span>
               </h2>
-              <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0, fontWeight: '500' }}>
+              <p style={{ fontSize: '10.5px', color: '#94a3b8', margin: 0, fontWeight: '500' }}>
                 EarnPulse এর সাথে নিশ্চিন্তে আয় ও সঠিক আপডেটের নিয়ম
               </p>
             </div>
 
             {/* Key Information Cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '16px', position: 'relative', zIndex: 2 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginBottom: '10px', position: 'relative', zIndex: 2 }}>
               
               {/* Card 0: Server Upgrade & Apology Message */}
               <div style={{
-                padding: '13px 14px', borderRadius: '16px',
+                padding: '9px 11px', borderRadius: '13px',
                 background: 'rgba(16, 185, 129, 0.1)',
-                border: '1.5px solid rgba(16, 185, 129, 0.45)',
-                display: 'flex', alignItems: 'flex-start', gap: '12px'
+                border: '1.2px solid rgba(16, 185, 129, 0.45)',
+                display: 'flex', alignItems: 'flex-start', gap: '9px'
               }}>
                 <div style={{
-                  width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
+                  width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
                   background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.5)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px'
                 }}>
                   🚀
                 </div>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: '900', color: '#6ee7b7', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '900', color: '#6ee7b7', marginBottom: '2px' }}>
                     সিস্টেম আপডেট সফল ও দুঃখপ্রকাশ
                   </div>
-                  <div style={{ fontSize: '11.5px', color: '#f1f5f9', lineHeight: 1.55, fontWeight: '500' }}>
-                    আমাদের প্ল্যাটফর্মে মেম্বার সংখ্যা অনেক বেড়ে যাওয়ায় এবং সিস্টেমের কিছু জরুরি আপডেটের জন্য গতকাল সাময়িক অসুবিধার কারণে <strong>আমরা আন্তরিকভাবে দুঃখ প্রকাশ করছি</strong>। এখন সকল সার্ভিস পুরোদমে দ্রুতগতিতে চালু রয়েছে। আপনার যেকোনো প্রয়োজনে পাশে আছি আমরা!
+                  <div style={{ fontSize: '10.5px', color: '#f1f5f9', lineHeight: 1.45, fontWeight: '500' }}>
+                    মেম্বার বৃদ্ধি ও সিস্টেম আপডেটের জন্য গতকালের সাময়িক অসুবিধার কারণে <strong>আমরা আন্তরিক দুঃখ প্রকাশ করছি</strong>। এখন সকল সার্ভিস পুরোদমে দ্রুতগতিতে চালু রয়েছে!
                   </div>
                 </div>
               </div>
 
               {/* Card Official Telegram Channel (New Channel Reassurance) */}
               <div style={{
-                padding: '13px 14px', borderRadius: '16px',
-                background: 'linear-gradient(135deg, rgba(34, 158, 217, 0.18) 0%, rgba(14, 116, 144, 0.22) 100%)',
-                border: '1.5px solid rgba(56, 189, 248, 0.55)',
-                boxShadow: '0 4px 18px rgba(14, 165, 233, 0.2)'
+                padding: '9px 11px', borderRadius: '13px',
+                background: 'linear-gradient(135deg, rgba(34, 158, 217, 0.16) 0%, rgba(14, 116, 144, 0.2) 100%)',
+                border: '1.2px solid rgba(56, 189, 248, 0.55)',
+                boxShadow: '0 3px 12px rgba(14, 165, 233, 0.18)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '11px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '9px', marginBottom: '8px' }}>
                   <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
+                    width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
                     background: '#229ED9', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '18px', boxShadow: '0 2px 8px rgba(34, 158, 217, 0.5)'
+                    fontSize: '14px', boxShadow: '0 2px 6px rgba(34, 158, 217, 0.5)'
                   }}>
                     ✈️
                   </div>
                   <div>
-                    <div style={{ fontSize: '13.5px', fontWeight: '900', color: '#38bdf8', marginBottom: '3px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '900', color: '#38bdf8', marginBottom: '2px' }}>
                       নতুন অফিসিয়াল টেলিগ্রাম চ্যানেল
                     </div>
-                    <div style={{ fontSize: '11.5px', color: '#e2e8f0', lineHeight: 1.5, fontWeight: '500' }}>
-                      আমাদের পূর্বের টেলিগ্রাম চ্যানেলটিতে টেকনিক্যাল সমস্যার কারণে এই <strong>নতুন অফিসিয়াল চ্যানেলটি চালু করা হয়েছে</strong>। পরবর্তী সব জরুরি আপডেট ও পেমেন্ট প্রুফ পেতে দ্রুত এই নতুন চ্যানেলে যুক্ত হয়ে নিন।
+                    <div style={{ fontSize: '10.5px', color: '#e2e8f0', lineHeight: 1.4, fontWeight: '500' }}>
+                      পূর্বের চ্যানেলে টেকনিক্যাল সমস্যার কারণে এই <strong>নতুন চ্যানেলটি চালু করা হয়েছে</strong>। সব আপডেট ও পেমেন্ট প্রুফ পেতে দ্রুত যুক্ত হোন।
                     </div>
                   </div>
                 </div>
@@ -3982,13 +3982,13 @@ export default function App() {
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    width: '100%', height: '42px', borderRadius: '12px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    width: '100%', height: '36px', borderRadius: '10px',
                     background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                     color: '#ffffff', textDecoration: 'none',
-                    fontSize: '13px', fontWeight: '900',
+                    fontSize: '12px', fontWeight: '900',
                     border: '1px solid rgba(255, 255, 255, 0.25)',
-                    boxShadow: '0 4px 14px rgba(2, 132, 199, 0.5)',
+                    boxShadow: '0 3px 10px rgba(2, 132, 199, 0.45)',
                     boxSizing: 'border-box', cursor: 'pointer', transition: 'transform 0.15s ease'
                   }}
                   onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.98)'; }}
@@ -3996,79 +3996,42 @@ export default function App() {
                   onTouchStart={(e) => { e.currentTarget.style.transform = 'scale(0.98)'; }}
                   onTouchEnd={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                 >
-                  <span style={{ fontSize: '16px' }}>📢</span>
+                  <span style={{ fontSize: '14px' }}>📢</span>
                   <span>নতুন অফিসিয়াল চ্যানেলে জয়েন করুন</span>
                 </a>
               </div>
               
-              {/* Card 1: Rollover Guarantee */}
-              <div style={{
-                padding: '11px 12px', borderRadius: '15px',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                display: 'flex', alignItems: 'flex-start', gap: '11px'
-              }}>
+              {/* Compact 2-Column Grid for Rules (ব্যান হলে নো টেনশন & ২৪ ঘণ্টায় ইনকাম) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
+                {/* Rule 1: Rollover Guarantee */}
                 <div style={{
-                  width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
-                  background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                  padding: '7px 8px', borderRadius: '11px',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                  display: 'flex', flexDirection: 'column', gap: '3px'
                 }}>
-                  ⏳
-                </div>
-                <div>
-                  <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#fcd34d', marginBottom: '2px' }}>
-                    ব্যান হলেও সময় নষ্ট হবে না!
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ fontSize: '13px' }}>⏳</span>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#fcd34d' }}>ব্যান নো-টেনশন!</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.45 }}>
-                    আপনার নম্বরটি ২৪ ঘন্টা পূর্ণ হওয়ার আগেই কোনো কারণে ডিসকানেক্ট বা ব্যান হয়ে গেলে <strong>ভয় পাবেন না</strong>। ওই নম্বরটি আবার কানেক্ট করলে <strong>আগের সময় থেকেই কাউন্ট প্লাস হবে!</strong>
+                  <div style={{ fontSize: '9.5px', color: '#cbd5e1', lineHeight: 1.35 }}>
+                    পুনরায় কানেক্ট করলে আগের সময় থেকেই কাউন্ট হবে।
                   </div>
                 </div>
-              </div>
 
-              {/* Card 2: Auto Reward */}
-              <div style={{
-                padding: '11px 12px', borderRadius: '15px',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                display: 'flex', alignItems: 'flex-start', gap: '11px'
-              }}>
+                {/* Rule 2: Auto Reward */}
                 <div style={{
-                  width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
-                  background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
+                  padding: '7px 8px', borderRadius: '11px',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  display: 'flex', flexDirection: 'column', gap: '3px'
                 }}>
-                  💰
-                </div>
-                <div>
-                  <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#6ee7b7', marginBottom: '2px' }}>
-                    ২৪ ঘন্টা পূর্ণ হলেই ইনকাম জমা!
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ fontSize: '13px' }}>💰</span>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#6ee7b7' }}>২৪ ঘণ্টায় ইনকাম!</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.45 }}>
-                    মোট ২৪ ঘন্টা (৮৬,৪০০ সেকেন্ড) সফলভাবে যুক্ত থাকলেই <strong>স্বয়ংক্রিয়ভাবে আপনার একাউন্টে পুরো ইনকাম ও বোনাস</strong> জমা হয়ে যাবে।
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: WhatsApp Business Tip */}
-              <div style={{
-                padding: '11px 12px', borderRadius: '15px',
-                background: 'rgba(99, 102, 241, 0.08)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
-                display: 'flex', alignItems: 'flex-start', gap: '11px'
-              }}>
-                <div style={{
-                  width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0,
-                  background: 'rgba(99, 102, 241, 0.2)', border: '1px solid rgba(99, 102, 241, 0.35)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px'
-                }}>
-                  💡
-                </div>
-                <div>
-                  <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#a5b4fc', marginBottom: '2px' }}>
-                    দীর্ঘস্থায়ী সংযোগ ও সুরক্ষার সেরা টিপস:
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.45 }}>
-                    সাধারণ হোয়াটসঅ্যাপের পরিবর্তে <strong>WhatsApp Business (হোয়াটসঅ্যাপ বিজনেস)</strong> ব্যবহার করার চেষ্টা করুন। বিজনেস একাউন্টে কানেকশন অনেক বেশি শক্তিশালী থাকে, সহজে ব্যান হয় না এবং একটানা নিশ্চিন্তে ইনকাম পাওয়া যায়।
+                  <div style={{ fontSize: '9.5px', color: '#cbd5e1', lineHeight: 1.35 }}>
+                    মোট ২৪ ঘণ্টা যুক্ত থাকলেই স্বয়ংক্রিয় ইনকাম জমা।
                   </div>
                 </div>
               </div>
@@ -4082,30 +4045,30 @@ export default function App() {
                 style={{
                   position: 'relative',
                   overflow: 'hidden',
-                  width: '100%', height: '46px', borderRadius: '15px',
+                  width: '100%', height: '40px', borderRadius: '12px',
                   background: 'linear-gradient(135deg, #fffbeb 0%, #fef08a 15%, #f59e0b 50%, #d97706 75%, #92400e 100%)',
                   color: '#1a1005',
                   border: '1px solid rgba(254, 240, 138, 0.8)',
-                  boxShadow: '0 5px 0 #78350f, 0 10px 22px rgba(245, 158, 11, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
-                  fontSize: '14.5px', fontWeight: '900', letterSpacing: '0.2px',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  boxShadow: '0 4px 0 #78350f, 0 8px 18px rgba(245, 158, 11, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
+                  fontSize: '13.5px', fontWeight: '900', letterSpacing: '0.2px',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                   transition: 'all 0.15s ease'
                 }}
                 onMouseDown={(e) => {
-                  e.currentTarget.style.transform = 'translateY(3px)';
-                  e.currentTarget.style.boxShadow = '0 2px 0 #78350f, 0 4px 10px rgba(245, 158, 11, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(2px)';
+                  e.currentTarget.style.boxShadow = '0 2px 0 #78350f, 0 3px 8px rgba(245, 158, 11, 0.25)';
                 }}
                 onMouseUp={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 5px 0 #78350f, 0 10px 22px rgba(245, 158, 11, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.8)';
+                  e.currentTarget.style.boxShadow = '0 4px 0 #78350f, 0 8px 18px rgba(245, 158, 11, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.8)';
                 }}
                 onTouchStart={(e) => {
-                  e.currentTarget.style.transform = 'translateY(3px)';
-                  e.currentTarget.style.boxShadow = '0 2px 0 #78350f, 0 4px 10px rgba(245, 158, 11, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(2px)';
+                  e.currentTarget.style.boxShadow = '0 2px 0 #78350f, 0 3px 8px rgba(245, 158, 11, 0.25)';
                 }}
                 onTouchEnd={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 5px 0 #78350f, 0 10px 22px rgba(245, 158, 11, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.8)';
+                  e.currentTarget.style.boxShadow = '0 4px 0 #78350f, 0 8px 18px rgba(245, 158, 11, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.8)';
                 }}
               >
                 {/* Dynamic light shimmer sweep */}
@@ -4122,7 +4085,7 @@ export default function App() {
 
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 4px 0', fontSize: '10.5px', color: '#64748b', fontWeight: '500'
+                padding: '6px 2px 0', fontSize: '9.5px', color: '#64748b', fontWeight: '500'
               }}>
                 <span>🔒 নিরাপদ সার্ভার ভেরিফাইড</span>
                 <span>EarnPulse &bull; ২৪/৭ অটো পেমেন্ট</span>
