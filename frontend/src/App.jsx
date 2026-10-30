@@ -153,30 +153,18 @@ function formatBdDateTime(isoStr) {
 // Reliable detection for Android APK / In-App WebView vs standard web browser
 const isInsideApp = () => {
   if (typeof window === 'undefined') return false;
-  // 1. Native bridge objects
-  if (window.Capacitor || window.Android || window.AndroidInterface || window._isNativeApp || window.cordova) {
+  // If explicitly wrapped in Cordova or native Capacitor shell
+  if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) {
     return true;
   }
-  // 2. Standalone PWA / installed WebAPK
-  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
-    return true;
-  }
-  if (window.navigator.standalone === true) {
+  if (window.cordova || window._isNativeApp) {
     return true;
   }
 
-  const ua = window.navigator.userAgent || '';
-  // 3. Android WebView strictly has '; wv' or 'Version/X.X Chrome'
+  const ua = (window.navigator && window.navigator.userAgent) || '';
+  // Standard Android WebView inside an APK strictly contains '; wv' or ' wv)'
   const isAndroid = /Android/i.test(ua);
-  if (isAndroid) {
-    const isWv = /\bwv\b/i.test(ua);
-    const hasVersionChrome = /Version\/[0-9.]+/i.test(ua) && /Chrome\/[0-9.]+/i.test(ua);
-    if (isWv || hasVersionChrome) return true;
-  }
-
-  // 4. iOS WebView (if any)
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
-  if (isIOS && !/Safari/i.test(ua)) {
+  if (isAndroid && /\bwv\b/i.test(ua)) {
     return true;
   }
 
