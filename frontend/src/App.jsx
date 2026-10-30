@@ -574,6 +574,7 @@ export default function App() {
   useEffect(() => {
     if (token) {
       fetchUserData();
+      fetchWithdrawHistory();
       // Show VIP Notice Banner once per session when member enters the site or app
       try {
         const hasSeen = sessionStorage.getItem('ep_notice_seen');
@@ -884,11 +885,21 @@ export default function App() {
 
   const fetchWithdrawHistory = async () => {
     if (!token) return;
-    setWithdrawHistoryLoading(true);
+    if (withdrawHistory.length === 0) {
+      setWithdrawHistoryLoading(true);
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
     try {
-      const res = await fetch(`${API_BASE}/withdraw/history`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await fetch(`${API_BASE}/withdraw/history?_t=${Date.now()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache'
+        },
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       const d = await res.json();
       if (d && d.success) {
         setWithdrawHistory(d.history || []);
@@ -896,6 +907,7 @@ export default function App() {
     } catch (e) {
       console.error('Fetch withdraw history error:', e);
     } finally {
+      clearTimeout(timeoutId);
       setWithdrawHistoryLoading(false);
     }
   };
@@ -4642,10 +4654,21 @@ export default function App() {
                   filtered = filtered.filter(w => new Date(w.created_at) >= sevenDaysAgo);
                 }
 
-                if (withdrawHistoryLoading) {
+                if (withdrawHistoryLoading && withdrawHistory.length === 0) {
                   return (
-                    <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8', fontSize: '13px' }}>
-                      {lang === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'}
+                    <div style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                      justifyContent: 'center', height: '100%', minHeight: '220px',
+                      color: '#64748b', textAlign: 'center'
+                    }}>
+                      <div style={{
+                        width: '30px', height: '30px', border: '3px solid #e2e8f0',
+                        borderTop: '3px solid #15803d', borderRadius: '50%',
+                        animation: 'spin 0.8s linear infinite', marginBottom: '12px'
+                      }}></div>
+                      <div style={{ fontSize: '13px', fontWeight: '500', color: '#64748b' }}>
+                        {lang === 'bn' ? 'লোড হচ্ছে...' : 'Loading...'}
+                      </div>
                     </div>
                   );
                 }

@@ -1584,7 +1584,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.30.09',
+      build_version: '2026.10.30.10',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1703,13 +1703,27 @@ app.get('/api/withdraw/history', authenticateToken, async (req, res) => {
   res.setHeader('Expires', '0');
 
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
+      try {
+        await Promise.race([
+          db.syncFromCloud(),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+        ]);
+      } catch (e) {}
+    } else {
+      db.syncFromCloud().catch(() => {});
+    }
   }
   db.read();
-  const history = db.get('withdrawals')
-    .filter({ user_id: req.user.id })
-    .orderBy(['id'], ['desc'])
-    .value();
+  const userId = req.user.id;
+  const username = req.user.username;
+  const history = (db.get('withdrawals').value() || [])
+    .filter(w => w && (
+      w.user_id === userId ||
+      String(w.user_id) === String(userId) ||
+      (username && (w.username === username || w.phone === username))
+    ))
+    .sort((a, b) => (b.id || 0) - (a.id || 0));
 
   return res.json({ success: true, history });
 });
@@ -1723,18 +1737,35 @@ app.get('/api/user/transactions', authenticateToken, async (req, res) => {
   res.setHeader('Expires', '0');
 
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
+      try {
+        await Promise.race([
+          db.syncFromCloud(),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+        ]);
+      } catch (e) {}
+    } else {
+      db.syncFromCloud().catch(() => {});
+    }
   }
   db.read();
-  const logs = db.get('earnings_log')
-    .filter(l => l && l.user_id === req.user.id && l.type !== 'withdraw')
-    .orderBy(['id'], ['desc'])
-    .value() || [];
+  const userId = req.user.id;
+  const username = req.user.username;
+  const logs = (db.get('earnings_log').value() || [])
+    .filter(l => l && (
+      l.user_id === userId ||
+      String(l.user_id) === String(userId) ||
+      (username && (l.username === username || l.phone === username))
+    ) && l.type !== 'withdraw')
+    .sort((a, b) => (b.id || 0) - (a.id || 0));
 
-  const withdrawals = db.get('withdrawals')
-    .filter(w => w && w.user_id === req.user.id)
-    .orderBy(['id'], ['desc'])
-    .value() || [];
+  const withdrawals = (db.get('withdrawals').value() || [])
+    .filter(w => w && (
+      w.user_id === userId ||
+      String(w.user_id) === String(userId) ||
+      (username && (w.username === username || w.phone === username))
+    ))
+    .sort((a, b) => (b.id || 0) - (a.id || 0));
 
   // Combine earnings and withdrawals into unified transaction list
   const combined = [
