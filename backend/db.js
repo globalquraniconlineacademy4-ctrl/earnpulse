@@ -140,7 +140,19 @@ async function _performSyncFromCloud() {
     const doc = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
     if (doc && doc.data) {
       if (Array.isArray(doc.data.earnings_log)) {
-        doc.data.earnings_log = doc.data.earnings_log.filter(l => !INVALID_DUPLICATE_LOG_IDS.has(Number(l.id)));
+        const seen = new Set();
+        const unique = [];
+        doc.data.earnings_log.forEach(l => {
+          if (!l) return;
+          if (INVALID_DUPLICATE_LOG_IDS.has(Number(l.id))) return;
+          if (l.type === 'invite_bonus' || l.type === 'referral_bonus') {
+            const k = l.user_id + '_' + l.type + '_' + (l.settle_id || '') + '_' + (l.source_user_id || '');
+            if (seen.has(k)) return;
+            seen.add(k);
+          }
+          unique.push(l);
+        });
+        doc.data.earnings_log = unique;
       }
       if (Array.isArray(doc.data.withdrawals)) {
         // টার্মিনাল স্ট্যাটাস সুরক্ষা: লোকাল মেমোরিতে যদি ইতিমধ্যে 'approved' বা 'rejected' থাকে, তবে ক্লাউডের স্টেল 'pending' দ্বারা যেন তা ওভাররাইট না হয়
