@@ -4139,11 +4139,11 @@ export default function App() {
         </div>
       )}
 
-      {/* 10.1.2 MEGA DHAMAKA OFFER MODAL (১০টি হোয়াটসঅ্যাপে ১,০০০৳ বোনাস + রেফারেল অফার) */}
+      {/* 10.1.2 MEGA DHAMAKA OFFER MODAL (১০টি হোয়াটসঅ্যাপে ১,০০০৳ বোনাস + রেফারেল অফার - ১ম ব্যানারের মতো ১০০% ক্লিন ও স্পষ্ট) */}
       {showOfferModal && (
         <div style={{
           position: 'fixed', inset: 0,
-          background: 'rgba(0, 0, 0, 0.62)',
+          background: 'rgba(0, 0, 0, 0.60)',
           backdropFilter: 'blur(2px)',
           WebkitBackdropFilter: 'blur(2px)',
           zIndex: 9999,
@@ -4155,10 +4155,10 @@ export default function App() {
             position: 'relative',
             width: '100%', maxWidth: '340px',
             maxHeight: '94vh', overflowY: 'auto',
-            background: 'linear-gradient(160deg, #1f1406 0%, #100b03 50%, #050401 100%)',
-            border: '1.5px solid rgba(245, 158, 11, 0.55)',
+            background: 'linear-gradient(160deg, #181510 0%, #0d0b08 50%, #050403 100%)',
+            border: '1.5px solid rgba(245, 158, 11, 0.45)',
             borderRadius: '22px',
-            boxShadow: '0 20px 50px -10px rgba(0, 0, 0, 0.95), 0 0 30px rgba(245, 158, 11, 0.25)',
+            boxShadow: '0 20px 50px -10px rgba(0, 0, 0, 0.95), 0 0 25px rgba(245, 158, 11, 0.2)',
             padding: '14px 14px 12px',
             color: '#ffffff',
             boxSizing: 'border-box',
@@ -4169,7 +4169,7 @@ export default function App() {
             <div style={{
               position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)',
               width: '180px', height: '90px',
-              background: 'radial-gradient(circle, rgba(245, 158, 11, 0.35) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, transparent 70%)',
               pointerEvents: 'none', borderRadius: '50%'
             }} />
 
@@ -4178,12 +4178,12 @@ export default function App() {
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '4px',
                 padding: '3px 8px', borderRadius: '16px',
-                background: 'linear-gradient(135deg, #ef4444 0%, #f59e0b 100%)',
-                color: '#ffffff', fontSize: '10.5px', fontWeight: '900', letterSpacing: '0.3px',
-                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
+                background: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+                color: '#1a1005', fontSize: '10.5px', fontWeight: '900', letterSpacing: '0.3px',
+                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.35)'
               }}>
                 <span>🔥</span>
-                <span>সীমিত সময়ের স্পেশাল অফার</span>
+                <span>স্পেশাল মেগা অফার</span>
               </div>
 
               <button
@@ -4203,20 +4203,25 @@ export default function App() {
               </button>
             </div>
 
-            {/* Header / Title with 3D Treasure Gift Box */}
+            {/* Header / Title matching 1st Banner crispness */}
             <div style={{ textAlign: 'center', marginBottom: '10px', position: 'relative', zIndex: 2 }}>
               <div style={{
-                width: '46px', height: '46px', margin: '0 auto 6px',
-                borderRadius: '50%',
+                width: '48px', height: '48px', margin: '0 auto 6px',
+                borderRadius: '50%', padding: '2px',
                 background: 'linear-gradient(135deg, #fffbeb 0%, #fbbf24 40%, #d97706 100%)',
-                boxShadow: '0 6px 18px rgba(245, 158, 11, 0.45)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px'
+                boxShadow: '0 6px 18px rgba(245, 158, 11, 0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                🎁
+                <div style={{
+                  width: '100%', height: '100%', borderRadius: '50%',
+                  background: '#181510', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px'
+                }}>
+                  🎁
+                </div>
               </div>
 
               <h2 style={{
-                fontSize: '16.5px', fontWeight: '900', color: '#ffffff',
+                fontSize: '16px', fontWeight: '900', color: '#ffffff',
                 lineHeight: 1.25, margin: '0 0 2px', letterSpacing: '-0.3px'
               }}>
                 মেগা ধামাকা অফার! <br />
@@ -4228,14 +4233,14 @@ export default function App() {
                 </span>
               </h2>
               <p style={{ fontSize: '10.5px', color: '#94a3b8', margin: 0, fontWeight: '500' }}>
-                বেশি হোয়াটসঅ্যাপ কানেক্ট করুন — আনলিমিটেড বোনাস জিতুন!
+                বেশি হোয়াটসঅ্যাপ কানেক্ট করুন ও জিতে নিন বিশাল ক্যাশ রিওয়ার্ড
               </p>
             </div>
 
-            {/* Key Offer Cards */}
+            {/* Key Offer Cards (High Contrast & Crisp Typography) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginBottom: '10px', position: 'relative', zIndex: 2 }}>
               
-              {/* Card 1: 10 WhatsApp Connection Bonus */}
+              {/* Card 1: 10 WhatsApp Mega Bonus (Clean Mint Green Theme) */}
               <div style={{
                 padding: '9px 11px', borderRadius: '13px',
                 background: 'rgba(16, 185, 129, 0.1)',
@@ -4251,50 +4256,71 @@ export default function App() {
                 </div>
                 <div>
                   <div style={{ fontSize: '12px', fontWeight: '900', color: '#6ee7b7', marginBottom: '2px' }}>
-                    অফার ১: ১০টি হোয়াটসঅ্যাপ মেগা বোনাস
+                    ১০টি হোয়াটসঅ্যাপ মেগা বোনাস
                   </div>
                   <div style={{ fontSize: '10.5px', color: '#f1f5f9', lineHeight: 1.45, fontWeight: '500' }}>
-                    • <strong>দৈনিক আয়:</strong> ১০টি নম্বরে প্রতিদিন <strong>৩২০ টাকা</strong> নিশ্চিত (প্রতিটিতে ৩২৳)!<br />
-                    • <strong>১,০০০৳ রিওয়ার্ড:</strong> ১০টি নম্বর ২৪ ঘণ্টা যুক্ত রাখলেই আনলক হবে <strong>১,০০০ টাকার স্পেশাল ক্যাশ বক্স</strong>!
+                    ১০টি নম্বর যুক্ত রাখলে প্রতিদিন নিশ্চিত <strong>৩২০ টাকা আয়</strong> (প্রতিটিতে ৩২৳)! আর প্রথমবার ২৪ ঘণ্টা পূর্ণ হলেই উপহার পাবেন <strong>১,০০০ টাকার স্পেশাল ক্যাশ বক্স</strong>!
                   </div>
                 </div>
               </div>
 
-              {/* Card 2: Massive Referral Bonus */}
+              {/* Card 2: Massive Referral Bonus (Clean Sky Blue Theme) */}
               <div style={{
                 padding: '9px 11px', borderRadius: '13px',
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.18) 100%)',
-                border: '1.2px solid rgba(245, 158, 11, 0.5)',
-                boxShadow: '0 3px 12px rgba(245, 158, 11, 0.18)',
-                display: 'flex', alignItems: 'flex-start', gap: '9px'
+                background: 'linear-gradient(135deg, rgba(34, 158, 217, 0.16) 0%, rgba(14, 116, 144, 0.2) 100%)',
+                border: '1.2px solid rgba(56, 189, 248, 0.55)',
+                boxShadow: '0 3px 12px rgba(14, 165, 233, 0.18)'
               }}>
                 <div style={{
                   width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '14px', boxShadow: '0 2px 6px rgba(245, 158, 11, 0.4)'
+                  background: '#229ED9', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '14px', boxShadow: '0 2px 6px rgba(34, 158, 217, 0.5)'
                 }}>
                   🚀
                 </div>
                 <div>
-                  <div style={{ fontSize: '12px', fontWeight: '900', color: '#fcd34d', marginBottom: '2px' }}>
-                    অফার ২: আগুন লেভেলের রেফারেল ইনকাম
+                  <div style={{ fontSize: '12px', fontWeight: '900', color: '#38bdf8', marginBottom: '2px' }}>
+                    আগুন লেভেলের রেফারেল ইনকাম
                   </div>
-                  <div style={{ fontSize: '10.5px', color: '#f1f5f9', lineHeight: 1.45, fontWeight: '500' }}>
-                    • <strong>১০০৳ ইনস্ট্যান্ট বোনাস:</strong> বন্ধু ১টি নম্বর ২৪ ঘণ্টা রাখলেই পাবেন <strong>১০০ টাকা</strong>!<br />
-                    • <strong>১,০০০৳ রেফারেল বক্স:</strong> বন্ধু ১০টি নম্বর যুক্ত রাখলে আপনিও পাবেন <strong>১,০০০ টাকার মেগা বক্স</strong>!
+                  <div style={{ fontSize: '10.5px', color: '#e2e8f0', lineHeight: 1.4, fontWeight: '500' }}>
+                    আপনার রেফারে কোনো বন্ধু ১টি নম্বর ২৪ ঘণ্টা রাখলেই পাবেন <strong>১০০ টাকা বোনাস</strong>! আর বন্ধু ১০টি নম্বর যুক্ত রাখলে আপনিও পাবেন <strong>১,০০০ টাকার মেগা বক্স</strong>!
                   </div>
                 </div>
               </div>
 
-              {/* Condition Note */}
-              <div style={{
-                padding: '6px 8px', borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                fontSize: '9.5px', color: '#cbd5e1', lineHeight: 1.35, textAlign: 'center'
-              }}>
-                ⚠️ <em>প্রতিটি নম্বর সফলভাবে ২৪ ঘণ্টা সক্রিয় থাকতে হবে। অফারটি সীমিত সময়ের জন্য!</em>
+              {/* Compact 2-Column Grid (Just like Banner 1!) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
+                {/* Rule 1: 24 Hour Active Rule */}
+                <div style={{
+                  padding: '7px 8px', borderRadius: '11px',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                  display: 'flex', flexDirection: 'column', gap: '3px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ fontSize: '13px' }}>⏳</span>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#fcd34d' }}>২৪ ঘণ্টা শর্ত</span>
+                  </div>
+                  <div style={{ fontSize: '9.5px', color: '#cbd5e1', lineHeight: 1.35 }}>
+                    প্রতিটি নম্বর সফলভাবে ২৪ ঘণ্টা সক্রিয় থাকতে হবে।
+                  </div>
+                </div>
+
+                {/* Rule 2: Limited Time Offer */}
+                <div style={{
+                  padding: '7px 8px', borderRadius: '11px',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  display: 'flex', flexDirection: 'column', gap: '3px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ fontSize: '13px' }}>⚡</span>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#6ee7b7' }}>সীমিত অফার!</span>
+                  </div>
+                  <div style={{ fontSize: '9.5px', color: '#cbd5e1', lineHeight: 1.35 }}>
+                    দেরি না করে এখনই বেশি নম্বর যুক্ত করে আয় বাড়ান।
+                  </div>
+                </div>
               </div>
 
             </div>
