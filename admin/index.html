@@ -253,8 +253,39 @@
       }
       .withdraw-mobile-cards {
         display: flex !important;
-        flex-direction: column;
-        gap: 10px;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        gap: 12px !important;
+        padding-bottom: 10px !important;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+      }
+      .withdraw-mobile-cards::-webkit-scrollbar {
+        height: 5px;
+      }
+      .withdraw-mobile-cards::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 10px;
+      }
+      .withdraw-mobile-cards::-webkit-scrollbar-thumb {
+        background: rgba(56, 189, 248, 0.4);
+        border-radius: 10px;
+      }
+      .withdraw-mobile-cards::-webkit-scrollbar-thumb:hover {
+        background: rgba(56, 189, 248, 0.7);
+      }
+      .withdraw-card {
+        flex: 0 0 88%;
+        min-width: 280px;
+        max-width: 330px;
+        scroll-snap-align: start;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      }
+      .withdraw-mobile-cards .withdraw-card:only-child {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
       }
       .config-grid {
         grid-template-columns: 1fr !important;
@@ -452,11 +483,17 @@
     </div>
   </div>
 
-  <!-- Section 1: Withdrawals Approval (উত্তোলন অনুমোদন) -->
+  <!-- Section 1: Withdrawals Approval (উত্তোলন অনুমোদন - আনুভূমিক/হরাইজন্টাল স্লাইডার) -->
   <div class="section-card">
-    <div class="section-header">
-      <div class="section-title">💸 উত্তোলন রিকোয়েস্ট ও অনুমোদন তালিকা</div>
-      <button onclick="loadAdminData()" class="action-btn" style="background: rgba(255,255,255,0.08); color: #fff;">🔄 রিফ্রেশ</button>
+    <div class="section-header" style="flex-wrap: wrap; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <div class="section-title">💸 উত্তোলন রিকোয়েস্ট ও অনুমোদন তালিকা</div>
+        <span id="withdrawCountBadge" style="display: none; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); font-weight: 700;"></span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span id="withdrawSwipeHint" style="display: none; font-size: 11px; color: #38bdf8; font-weight: 700;">👉 ডানে স্ক্রল করুন</span>
+        <button onclick="loadAdminData()" class="action-btn" style="background: rgba(255,255,255,0.08); color: #fff;">🔄 রিফ্রেশ</button>
+      </div>
     </div>
 
     <!-- Desktop Table (>= 641px) -->
@@ -922,7 +959,20 @@
             `;
           }).join('');
         }
+        const countBadge = document.getElementById('withdrawCountBadge');
+        const swipeHint = document.getElementById('withdrawSwipeHint');
+        if (countBadge) {
+          countBadge.style.display = 'inline-block';
+          countBadge.innerText = `${pendingList.length} টি পেন্ডিং`;
+        }
+        if (swipeHint) {
+          swipeHint.style.display = pendingList.length > 1 ? 'inline-block' : 'none';
+        }
       } else {
+        const countBadge = document.getElementById('withdrawCountBadge');
+        const swipeHint = document.getElementById('withdrawSwipeHint');
+        if (countBadge) countBadge.style.display = 'none';
+        if (swipeHint) swipeHint.style.display = 'none';
         wTable.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 25px; font-size: 14px;">✓ কোনো অপেক্ষমান উত্তোলন রিকোয়েস্ট নেই</td></tr>';
         if (wCards) wCards.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 30px; font-size: 14px; font-weight: 600; background: rgba(255,255,255,0.02); border-radius: 14px; border: 1px dashed rgba(255,255,255,0.08);">✓ কোনো অপেক্ষমান উত্তোলন রিকোয়েস্ট নেই</div>';
       }
@@ -1210,6 +1260,18 @@
       setTimeout(() => {
         cardEl.remove();
         const remainingCards = document.querySelectorAll('.withdraw-card');
+        const countBadge = document.getElementById('withdrawCountBadge');
+        const swipeHint = document.getElementById('withdrawSwipeHint');
+        if (countBadge) {
+          if (remainingCards.length > 0) {
+            countBadge.innerText = `${remainingCards.length} টি পেন্ডিং`;
+          } else {
+            countBadge.style.display = 'none';
+          }
+        }
+        if (swipeHint) {
+          swipeHint.style.display = remainingCards.length > 1 ? 'inline-block' : 'none';
+        }
         if (remainingCards.length === 0) {
           const wCards = document.getElementById('withdrawalsMobileCards');
           if (wCards) wCards.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 30px; font-size: 14px; font-weight: 600; background: rgba(255,255,255,0.02); border-radius: 14px; border: 1px dashed rgba(255,255,255,0.08);">✓ কোনো অপেক্ষমান উত্তোলন রিকোয়েস্ট নেই</div>';
