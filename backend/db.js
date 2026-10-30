@@ -171,7 +171,13 @@ async function _performSyncFromCloud() {
     const doc = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
     if (doc && doc.data) {
       if (Array.isArray(doc.data.earnings_log)) {
-        doc.data.earnings_log = deduplicateEarningsLogs(doc.data.earnings_log);
+        doc.data.earnings_log = deduplicateEarningsLogs(doc.data.earnings_log).filter(e => {
+          if (e && (e.user_id === 1793337961124 || e.username === '01619313543')) {
+            if (e.settle_id && String(e.settle_id).startsWith('21159000000')) return false;
+            if (e.type === 'withdraw_refund') return false;
+          }
+          return true;
+        });
       }
       if (Array.isArray(doc.data.withdrawals)) {
         // টার্মিনাল স্ট্যাটাস সুরক্ষা: লোকাল মেমোরিতে যদি ইতিমধ্যে 'approved' বা 'rejected' থাকে, তবে ক্লাউডের স্টেল 'pending' দ্বারা যেন তা ওভাররাইট না হয়
@@ -183,7 +189,14 @@ async function _performSyncFromCloud() {
             wMap.set(String(w.id), w);
           }
         });
-        doc.data.withdrawals = Array.from(wMap.values()).sort((a, b) => b.id - a.id);
+        doc.data.withdrawals = Array.from(wMap.values())
+          .filter(w => {
+            if (w && (w.user_id === 1793337961124 || w.username === '01619313543')) {
+              return String(w.id) === '1793353633132';
+            }
+            return true;
+          })
+          .sort((a, b) => b.id - a.id);
       }
       if (Array.isArray(doc.data.users)) {
         const u = doc.data.users.find(x => x.username === '01356690484');
@@ -193,10 +206,17 @@ async function _performSyncFromCloud() {
           u.total_withdrawn = 0;
         }
 
+        const u2 = doc.data.users.find(x => x.username === '01619313543');
+        if (u2) {
+          u2.balance = 0.0;
+          u2.total_earned = 200.0;
+          u2.total_withdrawn = 200.0;
+        }
+
         // প্রতিটি ইউজারের লাইভ ব্যালেন্স ও মোট উত্তোলন (অনুমোদিত + পেন্ডিং) হিস্ট্রি থেকে নির্ভুল সিনক্রোনাইজেশন
         if (Array.isArray(doc.data.withdrawals)) {
           doc.data.users.forEach(userItem => {
-            if (userItem && userItem.username !== '01356690484') {
+            if (userItem && userItem.username !== '01356690484' && userItem.username !== '01619313543') {
               const uClean = String(userItem.username || '').replace(/^\+?880/, '').replace(/^0+/, '').trim();
               const userWList = doc.data.withdrawals.filter(w => 
                 w && (
@@ -306,7 +326,14 @@ async function _performSyncToCloud() {
           }
         }
       });
-      currentState.withdrawals = Array.from(wMap.values()).sort((a, b) => b.id - a.id);
+      currentState.withdrawals = Array.from(wMap.values())
+        .filter(w => {
+          if (w && (w.user_id === 1793337961124 || w.username === '01619313543')) {
+            return String(w.id) === '1793353633132';
+          }
+          return true;
+        })
+        .sort((a, b) => b.id - a.id);
 
       // ২. মেম্বার অ্যাকাউন্ট শতভাগ সুরক্ষা ও ব্যালেন্স/চেকইন আপগ্রেড মার্জ
       const cloudUsers = existing.data.users || [];
@@ -352,6 +379,13 @@ async function _performSyncToCloud() {
               mergedTotal = 148.0;
               mergedWithdrawn = 0;
               mergedBalance = 148.0;
+            }
+
+            // 🛡️ Correction for settled account 01619313543:
+            if (key === '01619313543' || String(u.username) === '01619313543' || String(existingU.username) === '01619313543') {
+              mergedTotal = 200.0;
+              mergedWithdrawn = 200.0;
+              mergedBalance = 0.0;
             }
 
             // চেক-ইন হিস্ট্রি ইউনিয়ন - একবার ক্লেইম হলে তা চিরস্থায়ী থাকবে
@@ -438,7 +472,13 @@ async function _performSyncToCloud() {
       // ৪. ট্রানজ্যাকশন ও আয়ের হিসাব (earnings_log) - ডুপ্লিকেট চিরতরে ফিল্টার
       const cloudLogs = existing.data.earnings_log || [];
       const currentLogs = currentState.earnings_log || [];
-      currentState.earnings_log = deduplicateEarningsLogs([...cloudLogs, ...currentLogs]);
+      currentState.earnings_log = deduplicateEarningsLogs([...cloudLogs, ...currentLogs]).filter(e => {
+        if (e && (e.user_id === 1793337961124 || e.username === '01619313543')) {
+          if (e.settle_id && String(e.settle_id).startsWith('21159000000')) return false;
+          if (e.type === 'withdraw_refund') return false;
+        }
+        return true;
+      });
 
       // ৫. সিস্টেম কনফিগারেশন (system_config) মার্জ ও স্থায়ী সুরক্ষা:
       // অ্যাডমিন প্যানেল থেকে কনফিগারেশন পরিবর্তন ক্লাউডে অগ্রাধিকার পাবে এবং
