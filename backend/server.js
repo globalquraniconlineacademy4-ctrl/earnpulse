@@ -1609,7 +1609,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.30.22',
+      build_version: '2026.10.30.23',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -2035,8 +2035,10 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
 
   const usersList = usersWithNumbers;
 
-  const activeWA = Math.max(activeMemberWA, ebOnlineCount);
-  const totalLinked = Math.max(totalMemberWA, Array.isArray(ebWsList) ? ebWsList.length : 0, allLinked.length);
+  // 🛡️ ফ্লিকার-মুক্ত নিখুঁত সক্রিয় WA গণনা: লোকাল ডাটাবেজের সকল লাইভ অনলাইন নম্বর ও EarnBondhu রিয়েল-টাইম সিনক্রোনাইজেশন
+  const allOnlineCount = allLinked.filter(n => n && (n.status === 'online' || n.status === 1 || String(n.status).toLowerCase() === 'online')).length;
+  const activeWA = Math.max(allOnlineCount, activeMemberWA, ebOnlineCount);
+  const totalLinked = Math.max(allLinked.length, totalMemberWA, Array.isArray(ebWsList) ? ebWsList.length : 0);
 
   // 5. Complete numbers list with owner username and live elapsed duration
   const numbersList = allLinked.map(n => {

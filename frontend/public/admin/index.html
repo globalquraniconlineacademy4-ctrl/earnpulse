@@ -690,17 +690,9 @@
   let currentUsersList = [];
 
   function restoreCachedStats() {
+    // পুরানো স্টেল বা মিসম্যাচ ক্যাশ মুছে ফেলা হলো যাতে ১ সেকেন্ডের জন্যও ভুল সংখ্যা ফ্লিকার না করে
     try {
-      const cached = localStorage.getItem('cached_admin_stats');
-      if (cached) {
-        const stats = JSON.parse(cached);
-        if (stats) {
-          if (stats.totalUsers !== undefined) document.getElementById('totalUsers').innerText = stats.totalUsers;
-          if (stats.activeWA !== undefined) document.getElementById('totalLinked').innerText = stats.activeWA;
-          if (stats.pendingWithdrawals !== undefined) document.getElementById('pendingWithdraw').innerText = stats.pendingWithdrawals;
-          if (stats.totalPaidOut !== undefined) document.getElementById('totalPaid').innerText = '৳ ' + (parseFloat(stats.totalPaidOut) || 0).toFixed(2);
-        }
-      }
+      localStorage.removeItem('cached_admin_stats');
     } catch (e) {}
   }
 
@@ -1034,7 +1026,7 @@
         `;
       }).join('');
     } else {
-      uTable.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">${rawQuery ? 'কোনো মেম্বার খুঁজে পাওয়া যায়নি' : (memberFilterMode === 'connected' ? 'কোনো কানেক্টেড মেম্বার পাওয়া যায়নি (উপরে "সকল মেম্বার" বাটনে চাপুন)' : 'কোনো মেম্বার নেই')}</td></tr>`;
+      uTable.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">${query ? 'কোনো মেম্বার খুঁজে পাওয়া যায়নি' : (memberFilterMode === 'connected' ? 'কোনো কানেক্টেড মেম্বার পাওয়া যায়নি (উপরে "সকল মেম্বার" বাটনে চাপুন)' : 'কোনো মেম্বার নেই')}</td></tr>`;
     }
   }
 
