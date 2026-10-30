@@ -112,6 +112,37 @@ const INVALID_DUPLICATE_LOG_IDS = new Set([
   1793175126330
 ]);
 
+// Bulletproof Deduplication of earnings_log across all members
+function deduplicateEarningsLogs(logs) {
+  if (!Array.isArray(logs)) return [];
+  const seen = new Set();
+  const result = [];
+  const sorted = [...logs].sort((a, b) => (b.id || 0) - (a.id || 0));
+
+  for (const l of sorted) {
+    if (!l || !l.user_id || !l.type) continue;
+    if (INVALID_DUPLICATE_LOG_IDS.has(Number(l.id))) continue;
+    let key = '';
+    if (l.type === 'invite_bonus') {
+      key = l.user_id + '_invite_' + (l.source_user_id || l.source_username || '');
+    } else if (l.type === 'referral_bonus') {
+      key = l.user_id + '_ref_' + (l.settle_id || (l.created_at ? l.created_at.slice(0, 13) : '')) + '_' + (l.source_user_id || l.source_username || '');
+    } else if (l.type === 'whatsapp_online') {
+      key = l.user_id + '_wa_' + (l.settle_id || (l.phone_number + '_' + (l.created_at ? l.created_at.slice(0, 10) : '')));
+    } else if (l.type === 'daily_checkin') {
+      key = l.user_id + '_checkin_' + (l.created_at ? l.created_at.slice(0, 10) : '');
+    } else {
+      key = l.user_id + '_' + l.type + '_' + (l.id || Math.random());
+    }
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(l);
+    }
+  }
+  return result;
+}
+
 let hasSyncedFromCloud = false;
 let lastCloudSyncTime = 0;
 let syncFromCloudPromise = null;
@@ -140,19 +171,7 @@ async function _performSyncFromCloud() {
     const doc = await mdb.collection('app_state').findOne({ _id: 'earnpulse_store' });
     if (doc && doc.data) {
       if (Array.isArray(doc.data.earnings_log)) {
-        const seen = new Set();
-        const unique = [];
-        doc.data.earnings_log.forEach(l => {
-          if (!l) return;
-          if (INVALID_DUPLICATE_LOG_IDS.has(Number(l.id))) return;
-          if (l.type === 'invite_bonus' || l.type === 'referral_bonus') {
-            const k = l.user_id + '_' + l.type + '_' + (l.settle_id || '') + '_' + (l.source_user_id || '');
-            if (seen.has(k)) return;
-            seen.add(k);
-          }
-          unique.push(l);
-        });
-        doc.data.earnings_log = unique;
+        doc.data.earnings_log = deduplicateEarningsLogs(doc.data.earnings_log);
       }
       if (Array.isArray(doc.data.withdrawals)) {
         // টার্মিনাল স্ট্যাটাস সুরক্ষা: লোকাল মেমোরিতে যদি ইতিমধ্যে 'approved' বা 'rejected' থাকে, তবে ক্লাউডের স্টেল 'pending' দ্বারা যেন তা ওভাররাইট না হয়
@@ -419,12 +438,7 @@ async function _performSyncToCloud() {
       // ৪. ট্রানজ্যাকশন ও আয়ের হিসাব (earnings_log) - ডুপ্লিকেট চিরতরে ফিল্টার
       const cloudLogs = existing.data.earnings_log || [];
       const currentLogs = currentState.earnings_log || [];
-      const logMap = new Map();
-      cloudLogs.forEach(l => { if (l && l.id) logMap.set(String(l.id), l); });
-      currentLogs.forEach(l => { if (l && l.id) logMap.set(String(l.id), l); });
-      currentState.earnings_log = Array.from(logMap.values())
-        .filter(l => !INVALID_DUPLICATE_LOG_IDS.has(Number(l.id)))
-        .sort((a, b) => b.id - a.id);
+      currentState.earnings_log = deduplicateEarningsLogs([...cloudLogs, ...currentLogs]);
 
       // ৫. সিস্টেম কনফিগারেশন (system_config) মার্জ ও স্থায়ী সুরক্ষা:
       // অ্যাডমিন প্যানেল থেকে কনফিগারেশন পরিবর্তন ক্লাউডে অগ্রাধিকার পাবে এবং
@@ -488,6 +502,12 @@ adapter.write = function(data) {
 
 const originalWrite = db.write.bind(db);
 db.write = function() {
+  try {
+    const state = db.getState();
+    if (state && Array.isArray(state.earnings_log)) {
+      state.earnings_log = deduplicateEarningsLogs(state.earnings_log);
+    }
+  } catch (e) {}
   const result = originalWrite();
   if (MONGODB_URI && hasSyncedFromCloud) {
     db.lastCloudSyncPromise = syncToCloud();
@@ -513,5 +533,6 @@ db.syncFromCloud = syncFromCloud;
 db.hasSyncedFromCloudOnce = hasSyncedFromCloudOnce;
 db.syncToCloud = syncToCloud;
 db.getMongoDb = getMongoDb;
+db.deduplicateEarningsLogs = deduplicateEarningsLogs;
 
 module.exports = db;

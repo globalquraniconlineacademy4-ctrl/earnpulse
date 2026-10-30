@@ -588,7 +588,14 @@ async function syncOfficialEarnBondhuSettlements() {
 
           // 2. Tier 1 Referral Commission (15% = ৳ 4.80)
           const tier1 = parseFloat((rewardAmount * 0.15).toFixed(2));
-          if (tier1 > 0) {
+          const hasReceivedTier1 = allCurrentLogs.some(l => 
+            l.user_id === parentUser.id && 
+            l.type === 'referral_bonus' && 
+            l.tier === 1 && 
+            ((settleId && String(l.settle_id) === settleId) || (l.source_user_id === ownerUser.id && String(l.created_at || '').slice(0, 10) === String(nowIso).slice(0, 10)))
+          );
+
+          if (tier1 > 0 && !hasReceivedTier1) {
             parentUser.balance = parseFloat(((parentUser.balance || 0) + tier1).toFixed(2));
             parentUser.total_earned = parseFloat(((parentUser.total_earned || 0) + tier1).toFixed(2));
             db.get('users').find({ id: parentUser.id }).assign({ balance: parentUser.balance, total_earned: parentUser.total_earned }).write();
@@ -611,7 +618,14 @@ async function syncOfficialEarnBondhuSettlements() {
               const grandParent = users.find(u => u.id === parentUser.referred_by_id);
               if (grandParent) {
                 const tier2 = parseFloat((rewardAmount * 0.05).toFixed(2));
-                if (tier2 > 0) {
+                const hasReceivedTier2 = allCurrentLogs.some(l => 
+                  l.user_id === grandParent.id && 
+                  l.type === 'referral_bonus' && 
+                  l.tier === 2 && 
+                  ((settleId && String(l.settle_id) === settleId) || (l.source_user_id === ownerUser.id && String(l.created_at || '').slice(0, 10) === String(nowIso).slice(0, 10)))
+                );
+
+                if (tier2 > 0 && !hasReceivedTier2) {
                   grandParent.balance = parseFloat(((grandParent.balance || 0) + tier2).toFixed(2));
                   grandParent.total_earned = parseFloat(((grandParent.total_earned || 0) + tier2).toFixed(2));
                   db.get('users').find({ id: grandParent.id }).assign({ balance: grandParent.balance, total_earned: grandParent.total_earned }).write();
@@ -1584,7 +1598,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.30.13',
+      build_version: '2026.10.30.14',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1751,7 +1765,9 @@ app.get('/api/user/transactions', authenticateToken, async (req, res) => {
   db.read();
   const userId = req.user.id;
   const username = req.user.username;
-  const logs = (db.get('earnings_log').value() || [])
+  const rawLogs = db.get('earnings_log').value() || [];
+  const deduplicated = db.deduplicateEarningsLogs ? db.deduplicateEarningsLogs(rawLogs) : rawLogs;
+  const logs = deduplicated
     .filter(l => l && (
       l.user_id === userId ||
       String(l.user_id) === String(userId) ||
