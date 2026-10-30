@@ -257,7 +257,14 @@ export default function App() {
   const [changePwdError, setChangePwdError] = useState('');
   const [changePwdSuccess, setChangePwdSuccess] = useState('');
   const [teamStats, setTeamStats] = useState({ totalCount: 0, totalTeamEarnings: 0 });
-  const [transactions, setTransactions] = useState([]);
+  const [transactions, setTransactions] = useState(() => {
+    try {
+      const s = localStorage.getItem('cached_transactions');
+      return s ? JSON.parse(s) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [transFilter, setTransFilter] = useState('all'); // 'all', 'online', 'subCommission', 'checkIn', 'invite', 'register', 'dailyLogin', 'bindWhatsapp', 'system', 'withdraw'
   const [transDateFilter, setTransDateFilter] = useState('all'); // 'all', 'today', 'yesterday', '7days'
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -266,7 +273,14 @@ export default function App() {
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [withdrawMsg, setWithdrawMsg] = useState('');
   const [minWithdrawAmount, setMinWithdrawAmount] = useState(100);
-  const [withdrawHistory, setWithdrawHistory] = useState([]);
+  const [withdrawHistory, setWithdrawHistory] = useState(() => {
+    try {
+      const s = localStorage.getItem('cached_withdraw_history');
+      return s ? JSON.parse(s) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [showWithdrawHistoryModal, setShowWithdrawHistoryModal] = useState(false);
   const [withdrawStatusFilter, setWithdrawStatusFilter] = useState('all');
   const [withdrawDateFilter, setWithdrawDateFilter] = useState('all');
@@ -901,6 +915,7 @@ export default function App() {
       const d = await res.json();
       if (d && d.success) {
         setTransactions(d.transactions || []);
+        localStorage.setItem('cached_transactions', JSON.stringify(d.transactions || []));
       }
     } catch (e) {
       console.error('Fetch transactions error:', e);
@@ -927,6 +942,7 @@ export default function App() {
       const d = await res.json();
       if (d && d.success) {
         setWithdrawHistory(d.history || []);
+        localStorage.setItem('cached_withdraw_history', JSON.stringify(d.history || []));
       }
     } catch (e) {
       console.error('Fetch withdraw history error:', e);

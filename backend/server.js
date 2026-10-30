@@ -27,7 +27,10 @@ app.use(async (req, res, next) => {
   if (db.syncFromCloud) {
     if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
       try {
-        await db.syncFromCloud();
+        await Promise.race([
+          db.syncFromCloud(),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+        ]);
       } catch (e) {}
     } else {
       // In-memory state is already loaded and ready - sync in background so HTTP response is instant!
@@ -167,7 +170,16 @@ async function calculateMemberTodayOnlineHours(userId, todayStr, todayMidnightMs
 
 app.get('/api/checkin/status', authenticateToken, async (req, res) => {
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
+      try {
+        await Promise.race([
+          db.syncFromCloud(),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+        ]);
+      } catch (e) {}
+    } else {
+      db.syncFromCloud().catch(() => {});
+    }
   }
   db.read();
   const user = db.get('users').find({ id: req.user.id }).value();
@@ -212,7 +224,16 @@ app.post('/api/checkin/do', authenticateToken, async (req, res) => {
   activeCheckinUsers.add(req.user.id);
   try {
     if (db.syncFromCloud) {
-      try { await db.syncFromCloud(); } catch (e) {}
+      if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
+        try {
+          await Promise.race([
+            db.syncFromCloud(),
+            new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+          ]);
+        } catch (e) {}
+      } else {
+        db.syncFromCloud().catch(() => {});
+      }
     }
     db.read();
     const user = db.get('users').find({ id: req.user.id }).value();
@@ -722,7 +743,16 @@ app.get('/api/user/me', authenticateToken, async (req, res) => {
   res.setHeader('Expires', '0');
 
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
+      try {
+        await Promise.race([
+          db.syncFromCloud(),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+        ]);
+      } catch (e) {}
+    } else {
+      db.syncFromCloud().catch(() => {});
+    }
   }
   syncOfficialEarnBondhuSettlements().catch(() => {});
   db.read();
@@ -1531,7 +1561,16 @@ app.post('/api/whatsapp/sync-earnings', authenticateToken, async (req, res) => {
 // -------------------------------------------------------------
 app.get('/api/referrals', authenticateToken, async (req, res) => {
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
+      try {
+        await Promise.race([
+          db.syncFromCloud(),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+        ]);
+      } catch (e) {}
+    } else {
+      db.syncFromCloud().catch(() => {});
+    }
   }
   db.read();
   const referrals = db.get('users')
@@ -1587,7 +1626,16 @@ app.get('/api/referrals', authenticateToken, async (req, res) => {
 // -------------------------------------------------------------
 app.get('/api/config', async (req, res) => {
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
+      try {
+        await Promise.race([
+          db.syncFromCloud(),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+        ]);
+      } catch (e) {}
+    } else {
+      db.syncFromCloud().catch(() => {});
+    }
   }
   db.read();
   const config = db.get('system_config').value() || {};
@@ -1598,7 +1646,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.30.14',
+      build_version: '2026.10.30.15',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -1627,7 +1675,12 @@ app.post('/api/withdraw', authenticateToken, async (req, res) => {
 
   // সর্বদা ক্লাউড থেকে সর্বশেষ লাইভ ব্যালেন্স ও হিস্ট্রি রিড করুন
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(true); } catch (e) {}
+    try {
+      await Promise.race([
+        db.syncFromCloud(true),
+        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2500))
+      ]);
+    } catch (e) {}
   }
   db.read();
 
@@ -1854,7 +1907,16 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
   res.setHeader('Expires', '0');
 
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
+      try {
+        await Promise.race([
+          db.syncFromCloud(),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+        ]);
+      } catch (e) {}
+    } else {
+      db.syncFromCloud().catch(() => {});
+    }
   }
   syncOfficialEarnBondhuSettlements().catch(() => {});
   db.read();
@@ -1886,10 +1948,13 @@ app.get('/api/admin/overview', authenticateToken, requireAdmin, async (req, res)
   const allLinked = db.get('linked_numbers').value() || [];
   const pendingPairings = db.get('pending_pairings').value() || [];
 
-  // 1. Fetch real-time live WhatsApp numbers from EarnBondhu
+  // 1. Fetch real-time live WhatsApp numbers from EarnBondhu (Ultra-Fast 2.5s Timeout Race)
   let ebWsList = [];
   try {
-    ebWsList = await bridge.fetchWsOnlineStatusList();
+    ebWsList = await Promise.race([
+      bridge.fetchWsOnlineStatusList(),
+      new Promise(res => setTimeout(() => res(bridge.getCachedWsStatusList ? bridge.getCachedWsStatusList() : []), 2500))
+    ]);
   } catch (err) {}
   const ebOnlineList = (Array.isArray(ebWsList) ? ebWsList : []).filter(w => 
     w.currentStatus === '1' || String(w.currentStatus).toLowerCase() === 'online'
@@ -2090,7 +2155,16 @@ app.post('/api/admin/config', authenticateToken, requireAdmin, async (req, res) 
 
   // ১. সবার আগে ক্লাউড থেকে সর্বশেষ লাইভ কনফিগ লোড করা
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
+      try {
+        await Promise.race([
+          db.syncFromCloud(),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+        ]);
+      } catch (e) {}
+    } else {
+      db.syncFromCloud().catch(() => {});
+    }
   }
   db.read();
   const current = db.get('system_config').value() || {};
@@ -2163,7 +2237,16 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
 
   // সর্বদা ক্লাউড অ্যাটলাস থেকে ফ্রেশ ডেটা নিশ্চিত করুন
   if (db.syncFromCloud) {
-    try { await db.syncFromCloud(); } catch (e) {}
+    if (!db.hasSyncedFromCloudOnce || !db.hasSyncedFromCloudOnce()) {
+      try {
+        await Promise.race([
+          db.syncFromCloud(),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 2000))
+        ]);
+      } catch (e) {}
+    } else {
+      db.syncFromCloud().catch(() => {});
+    }
   }
   db.read();
 

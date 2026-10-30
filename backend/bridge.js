@@ -436,6 +436,7 @@ module.exports = {
   fetchAccountStatus,
   fetchAccountList,
   fetchWsOnlineStatusList,
+  getCachedWsStatusList: () => cachedWsStatusList || [],
   fetchOfficialSettlementsList,
   autoLoginEarnBondhu,
   getEarnBondhuClient
