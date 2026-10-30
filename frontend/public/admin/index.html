@@ -966,7 +966,8 @@
     }
 
     if (filtered.length > 0) {
-      uTable.innerHTML = filtered.map(u => {
+      const displayList = query ? filtered : filtered.slice(0, 100);
+      uTable.innerHTML = displayList.map(u => {
         const originalIdx = currentUsersList.indexOf(u);
         const wpNums = (u.wp_numbers && Array.isArray(u.wp_numbers)) ? u.wp_numbers : [];
         const onlineCount = (u.online_count !== undefined) 
