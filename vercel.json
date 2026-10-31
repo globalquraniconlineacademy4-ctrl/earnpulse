@@ -82,11 +82,5 @@
       "source": "/((?!api|admin).*)",
       "destination": "/index.html"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/telegram-cron",
-      "schedule": "0 3,9,14 * * *"
-    }
   ]
 }
