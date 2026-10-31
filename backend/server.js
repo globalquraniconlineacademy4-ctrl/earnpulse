@@ -27,10 +27,6 @@ app.use((req, res, next) => {
   if (db.syncFromCloud) {
     db.syncFromCloud().catch(() => {});
   }
-  // Passive Telegram Channel Auto-Post (Self-triggering on member traffic)
-  setTimeout(() => {
-    checkAndSendAutoTelegramPost().catch(() => {});
-  }, 1000);
   next();
 });
 
@@ -82,8 +78,24 @@ async function checkAndSendAutoTelegramPost(forceKey = null) {
   const bdDateStr = new Date(now.getTime() + 6 * 3600 * 1000).toISOString().slice(0, 10);
   const slotKey = `${bdDateStr}_${currentSlot}`;
 
-  const postsLog = db.get('telegram_auto_posts').value() || [];
-  const alreadyPosted = postsLog.some(p => p && p.slotKey === slotKey);
+  // Direct MongoDB Atlas Lock Check across all serverless instances
+  let alreadyPosted = false;
+  try {
+    if (db.getMongoDb) {
+      const mdb = await db.getMongoDb();
+      if (mdb) {
+        const found = await mdb.collection('telegram_posts_history').findOne({ slotKey });
+        if (found) alreadyPosted = true;
+      }
+    }
+  } catch (e) {
+    console.error('Mongo check error in telegram auto post:', e.message);
+  }
+
+  if (!alreadyPosted) {
+    const postsLog = db.get('telegram_auto_posts').value() || [];
+    alreadyPosted = postsLog.some(p => p && p.slotKey === slotKey);
+  }
 
   if (alreadyPosted && !forceKey) {
     return { alreadyPosted: true, slotKey };
@@ -121,6 +133,22 @@ async function checkAndSendAutoTelegramPost(forceKey = null) {
     const tgData = await tgRes.json();
 
     if (tgData && tgData.ok) {
+      // Save directly to MongoDB Atlas
+      try {
+        if (db.getMongoDb) {
+          const mdb = await db.getMongoDb();
+          if (mdb) {
+            await mdb.collection('telegram_posts_history').updateOne(
+              { slotKey },
+              { $set: { slotKey, slot: currentSlot, date: bdDateStr, message_id: tgData.result?.message_id, created_at: new Date().toISOString() } },
+              { upsert: true }
+            );
+          }
+        }
+      } catch (e) {
+        console.error('Mongo save error in telegram auto post:', e.message);
+      }
+
       if (!db.get('telegram_auto_posts').value()) {
         db.set('telegram_auto_posts', []).write();
       }
@@ -1728,7 +1756,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.31.13',
+      build_version: '2026.10.31.14',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
