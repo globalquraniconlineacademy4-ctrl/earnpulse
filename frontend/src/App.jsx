@@ -4057,12 +4057,19 @@ export default function App() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
                   <div style={{
-                    width: '32px', height: '32px', borderRadius: '9px', flexShrink: 0,
-                    background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)',
+                    width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                    boxShadow: '0 4px 14px rgba(34, 158, 217, 0.45)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '16px', boxShadow: '0 3px 8px rgba(14, 165, 233, 0.45)'
+                    overflow: 'hidden'
                   }}>
-                    ✈️
+                    <img
+                      src="/brand/telegram-logo.png"
+                      alt="Telegram"
+                      style={{
+                        width: '100%', height: '100%',
+                        objectFit: 'contain', display: 'block'
+                      }}
+                    />
                   </div>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: '900', color: '#38bdf8', marginBottom: '3px' }}>
@@ -4491,12 +4498,20 @@ export default function App() {
 
             {/* Telegram Icon */}
             <div style={{
-              width: '54px', height: '54px', margin: '0 auto 10px',
-              borderRadius: '50%', background: '#229ED9',
+              width: '56px', height: '56px', margin: '0 auto 10px',
+              borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 8px 24px rgba(34, 158, 217, 0.45)', fontSize: '26px'
+              boxShadow: '0 8px 24px rgba(34, 158, 217, 0.45)',
+              overflow: 'hidden'
             }}>
-              ✈️
+              <img
+                src="/brand/telegram-logo.png"
+                alt="Telegram"
+                style={{
+                  width: '100%', height: '100%',
+                  objectFit: 'contain', display: 'block'
+                }}
+              />
             </div>
 
             <h3 style={{ fontSize: '16.5px', fontWeight: '900', color: '#ffffff', margin: '0 0 4px' }}>
