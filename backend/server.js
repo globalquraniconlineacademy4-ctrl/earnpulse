@@ -2324,7 +2324,7 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
 // -------------------------------------------------------------
 // TELEGRAM BROADCAST API (ADMIN ONLY - MOTIVATIONAL / UPDATES)
 // -------------------------------------------------------------
-app.post('/api/admin/telegram-broadcast', adminAuth, async (req, res) => {
+app.post('/api/admin/telegram-broadcast', authenticateToken, requireAdmin, async (req, res) => {
   const { message, buttonText, buttonUrl } = req.body;
   if (!message || !message.trim()) {
     return res.status(400).json({ success: false, msg: 'মেসেজ খালি হতে পারে না' });
