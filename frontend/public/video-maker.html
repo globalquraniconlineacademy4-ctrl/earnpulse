@@ -2,40 +2,51 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <title>EarnPulse Viral Reel / Shorts Video Generator</title>
+  <title>EarnPulse - Realistic App Walkthrough Video Maker</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background: #0f172a; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-    .container { max-width: 480px; width: 100%; text-align: center; }
-    h1 { font-size: 20px; color: #10b981; margin-bottom: 8px; }
-    p { font-size: 13px; color: #94a3b8; margin-bottom: 16px; }
-    .preview-box { position: relative; width: 360px; height: 640px; margin: 0 auto 20px; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 3px solid #1e293b; background: #020617; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background: #090d16; color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .container { max-width: 520px; width: 100%; text-align: center; }
+    h1 { font-size: 22px; color: #10b981; margin-bottom: 6px; font-weight: 800; }
+    p.desc { font-size: 13px; color: #94a3b8; margin-bottom: 16px; line-height: 1.4; }
+    .phone-wrapper { position: relative; width: 360px; height: 640px; margin: 0 auto 20px; border-radius: 36px; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 25px rgba(16, 185, 129, 0.2); border: 8px solid #1e293b; background: #000; }
     canvas { width: 100%; height: 100%; display: block; }
-    .btn { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 14px 28px; font-size: 16px; font-weight: bold; border-radius: 14px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 8px; }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .progress-bar { width: 100%; height: 6px; background: #1e293b; border-radius: 3px; margin-top: 14px; overflow: hidden; display: none; }
-    .progress-fill { width: 0%; height: 100%; background: #10b981; transition: width 0.1s; }
-    .status-text { margin-top: 8px; font-size: 13px; color: #38bdf8; font-weight: bold; min-height: 20px; }
+    .controls { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+    .btn { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 15px 30px; font-size: 16px; font-weight: bold; border-radius: 16px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 10px; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(16, 185, 129, 0.6); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .progress-bar { width: 100%; height: 8px; background: #1e293b; border-radius: 4px; overflow: hidden; display: none; margin-top: 6px; }
+    .progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #38bdf8); transition: width 0.1s; }
+    .status-text { font-size: 14px; color: #38bdf8; font-weight: 600; min-height: 22px; margin-top: 8px; }
+    .specs-badge { display: flex; justify-content: center; gap: 12px; margin-bottom: 14px; font-size: 12px; color: #cbd5e1; }
+    .specs-badge span { background: #1e293b; padding: 4px 10px; border-radius: 8px; border: 1px solid #334155; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🎬 EarnPulse রিলস / শর্টস ভিডিও মেকার</h1>
-    <p>নিচের বাটনে চাপ দিলে ২০ সেকেন্ডের একটি আকর্ষণীয় প্রমো ভিডিও তৈরি হয়ে ডাউনলোড হবে!</p>
+    <h1>🎬 EarnPulse রিয়েল অ্যাপ ওয়াকথ্রু ভিডিও</h1>
+    <p class="desc">১০০% সাইটের আসল ইন্টারফেস, সাইন আপ, ইনভাইট, পেয়ারিং কোড দিয়ে হোয়াটসঅ্যাপ লিঙ্ক, ২৪ ঘণ্টার টাইম-ল্যাপ্স ও বোনাসসহ কমপ্লিট ভিডিও!</p>
+    
+    <div class="specs-badge">
+      <span>⏱️ দৈর্ঘ্য: ৭৫ সেকেন্ড</span>
+      <span>📱 9:16 রিলস সাইজ</span>
+      <span>🎵 অরিজিনাল ব্যাকগ্রাউন্ড মিউজিক</span>
+    </div>
 
-    <div class="preview-box">
+    <div class="phone-wrapper">
       <canvas id="videoCanvas" width="720" height="1280"></canvas>
     </div>
 
-    <button id="renderBtn" class="btn" onclick="startRecording()">
-      <span>🎥 ভিডিও তৈরি ও ডাউনলোড করুন (MP4)</span>
-    </button>
+    <div class="controls">
+      <button id="renderBtn" class="btn" onclick="startRecording()">
+        <span>🎥 সম্পূর্ণ ভিডিও তৈরি ও ডাউনলোড করুন (MP4)</span>
+      </button>
 
-    <div class="progress-bar" id="progressBar">
-      <div class="progress-fill" id="progressFill"></div>
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="status-text" id="statusText">ভিডিওটি তৈরি করতে উপরের বাটনে চাপ দিন</div>
     </div>
-    <div class="status-text" id="statusText">রেডি - বাটনে চাপ দিন</div>
   </div>
 
   <script>
@@ -48,255 +59,817 @@
 
     const WIDTH = 720;
     const HEIGHT = 1280;
-    const DURATION = 18; // 18 seconds
+    const DURATION = 75; // 75 seconds total realistic walkthrough
     const FPS = 30;
     const TOTAL_FRAMES = DURATION * FPS;
 
-    // Draw frame function for any time t (0 to 18)
+    // Confetti particles for 24h milestone
+    const confettiList = [];
+    for (let i = 0; i < 70; i++) {
+      confettiList.push({
+        x: Math.random() * WIDTH,
+        y: Math.random() * HEIGHT,
+        size: Math.random() * 8 + 6,
+        color: ['#f59e0b', '#10b981', '#38bdf8', '#ec4899', '#8b5cf6'][Math.floor(Math.random() * 5)],
+        speedX: (Math.random() - 0.5) * 8,
+        speedY: Math.random() * 8 + 4,
+        rot: Math.random() * Math.PI
+      });
+    }
+
+    // Helper: Draw Phone Status Bar
+    function drawPhoneStatusBar() {
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, WIDTH, 54);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('10:30', 36, 36);
+
+      // Status Icons (WiFi, Signal, Battery)
+      ctx.textAlign = 'right';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('5G  📶  🔋 98%', WIDTH - 36, 36);
+    }
+
+    // Helper: Draw Bottom Navigation Bar
+    function drawBottomNav(activeItem = 'home') {
+      const navY = HEIGHT - 90;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, navY, WIDTH, 90);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, navY);
+      ctx.lineTo(WIDTH, navY);
+      ctx.stroke();
+
+      const items = [
+        { id: 'home', label: 'হোম', icon: '🏠' },
+        { id: 'tasks', label: 'টাস্ক', icon: '📋' },
+        { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
+        { id: 'my', label: 'আমার', icon: '👤' }
+      ];
+
+      const itemWidth = WIDTH / items.length;
+      items.forEach((item, idx) => {
+        const x = idx * itemWidth + itemWidth / 2;
+        const isActive = activeItem === item.id;
+
+        ctx.textAlign = 'center';
+        ctx.font = '28px sans-serif';
+        ctx.fillText(item.icon, x, navY + 38);
+
+        ctx.font = (isActive ? 'bold' : 'normal') + ' 18px sans-serif';
+        ctx.fillStyle = isActive ? '#10b981' : '#64748b';
+        ctx.fillText(item.label, x, navY + 68);
+
+        if (isActive) {
+          ctx.fillStyle = '#10b981';
+          ctx.beginPath();
+          ctx.arc(x, navY + 80, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    // Helper: Draw Cursor / Finger Touch
+    function drawFinger(x, y, radius = 24, pressing = false) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(16, 185, 129, 0.6)';
+      ctx.shadowBlur = pressing ? 25 : 10;
+      ctx.fillStyle = pressing ? 'rgba(16, 185, 129, 0.45)' : 'rgba(56, 189, 248, 0.35)';
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Master Render Frame
     function drawFrame(t) {
-      // 1. Dark Luxury Gradient Background
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-      bgGrad.addColorStop(0, '#020617');
-      bgGrad.addColorStop(0.5, '#064e3b');
-      bgGrad.addColorStop(1, '#020617');
-      ctx.fillStyle = bgGrad;
+      // Background canvas fill
+      ctx.fillStyle = '#f8fafc';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-      // Glowing floating circles
-      for (let i = 0; i < 5; i++) {
-        const cx = (WIDTH / 6) * (i + 1) + Math.sin(t * 2 + i) * 30;
-        const cy = 200 + (HEIGHT / 6) * i + Math.cos(t * 1.5 + i) * 40;
-        const rad = 80 + Math.sin(t + i) * 20;
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
-        g.addColorStop(0, 'rgba(16, 185, 129, 0.15)');
-        g.addColorStop(1, 'rgba(16, 185, 129, 0)');
-        ctx.fillStyle = g;
+      // ==========================================
+      // SCENE 1: (0s - 13s) - SIGN UP SCREEN
+      // ==========================================
+      if (t < 13) {
+        drawPhoneStatusBar();
+
+        // Top App Branding
+        ctx.fillStyle = '#065f46';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 36px sans-serif';
+        ctx.fillText('⚡ EarnPulse ⚡', WIDTH / 2, 120);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '20px sans-serif';
+        ctx.fillText('WhatsApp দিয়ে নিশ্চিত দৈনিক আয়', WIDTH / 2, 160);
+
+        // Sign Up Card
+        ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        ctx.roundRect(40, 200, 640, 760, 28);
         ctx.fill();
-      }
-
-      // Top Brand Header
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 36px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('⚡ EarnPulse Official ⚡', WIDTH / 2, 90);
-
-      ctx.fillStyle = '#34d399';
-      ctx.font = 'bold 24px sans-serif';
-      ctx.fillText('হোয়াটসঅ্যাপ দিয়ে সহজ অনলাইন আয়', WIDTH / 2, 135);
-
-      // SCENE 1: (0s - 4.5s) The Big Hook
-      if (t < 4.5) {
-        const scale = Math.min(1, t * 1.5);
-        ctx.save();
-        ctx.translate(WIDTH / 2, HEIGHT / 2);
-        ctx.scale(scale, scale);
-
-        // Big Offer Card
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-        ctx.beginPath();
-        ctx.roundRect(-300, -320, 600, 640, 32);
-        ctx.fill();
-        ctx.strokeStyle = '#10b981';
-        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 2;
         ctx.stroke();
 
-        ctx.fillStyle = '#f59e0b';
-        ctx.font = 'bold 65px sans-serif';
-        ctx.fillText('🔥 মেগা অফার 🔥', 0, -200);
+        // Tabs: [ লগইন ] [ অ্যাকাউন্ট তৈরি করুন (Active) ]
+        ctx.fillStyle = '#f1f5f9';
+        ctx.beginPath();
+        ctx.roundRect(70, 230, 580, 60, 16);
+        ctx.fill();
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 42px sans-serif';
-        ctx.fillText('কোনো কাজ ছাড়া', 0, -110);
-        ctx.fillText('প্রতিদিন নিশ্চিত ইনকাম!', 0, -45);
-
-        // Big Cash Badge
         ctx.fillStyle = '#10b981';
         ctx.beginPath();
-        ctx.roundRect(-240, 40, 480, 120, 24);
+        ctx.roundRect(360, 235, 285, 50, 12);
         ctx.fill();
 
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('লগইন', 215, 268);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 50px sans-serif';
-        ctx.fillText('৳ ৩২০ - ১,০০০ টাকা', 0, 118);
+        ctx.fillText('অ্যাকাউন্ট তৈরি করুন', 500, 268);
 
-        ctx.fillStyle = '#a7f3d0';
+        // Form Fields
+        // Field 1: Phone
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.roundRect(70, 330, 580, 75, 16);
+        ctx.fill();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('🇧🇩 +880', 95, 376);
+
+        // Typing phone animation
+        let phoneText = '';
+        if (t > 1.5) {
+          const digits = '1712345678';
+          const count = Math.min(digits.length, Math.floor((t - 1.5) * 5));
+          phoneText = digits.slice(0, count);
+        }
+        ctx.font = '22px sans-serif';
+        ctx.fillStyle = phoneText ? '#0f172a' : '#94a3b8';
+        ctx.fillText(phoneText || 'ফোন নম্বর লিখুন...', 210, 376);
+
+        // Field 2: Password
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.roundRect(70, 435, 580, 75, 16);
+        ctx.fill();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.stroke();
+
+        let passDots = '';
+        if (t > 4.0) {
+          const count = Math.min(8, Math.floor((t - 4.0) * 5));
+          passDots = '••••••••'.slice(0, count);
+        }
+        ctx.fillText(passDots || 'পাসওয়ার্ড দিন...', 95, 482);
+
+        // Field 3: Confirm Password
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.roundRect(70, 540, 580, 75, 16);
+        ctx.fill();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.stroke();
+        ctx.fillText(passDots ? '••••••••' : 'পাসওয়ার্ড নিশ্চিত করুন...', 95, 587);
+
+        // Field 4: Invite Code (Auto-Filled in Green Box!)
+        ctx.fillStyle = '#ecfdf5';
+        ctx.beginPath();
+        ctx.roundRect(70, 645, 580, 75, 16);
+        ctx.fill();
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#065f46';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText('🎁 ইনভাইট কোড (অটো যুক্ত):', 95, 680);
+        ctx.font = 'bold 26px monospace';
+        ctx.fillStyle = '#059669';
+        ctx.fillText('4E2YOO', 400, 682);
+
+        // Sign Up Button
+        const btnPress = t > 9.5 && t < 11.0;
+        ctx.fillStyle = btnPress ? '#047857' : '#10b981';
+        ctx.beginPath();
+        ctx.roundRect(70, 770, 580, 80, 20);
+        ctx.fill();
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 28px sans-serif';
-        ctx.fillText('✓ ফোনে ইন্টারনেট অফ থাকলেও চলবে', 0, 230);
-        ctx.restore();
+        ctx.fillText('অ্যাকাউন্ট তৈরি করুন 🚀', WIDTH / 2, 820);
+
+        // Animated Finger Tap
+        if (t > 8.0 && t < 12.0) {
+          const fingerY = btnPress ? 810 : 830 - (t - 8.0) * 10;
+          drawFinger(WIDTH / 2, 810, 30, btnPress);
+        }
       }
 
-      // SCENE 2: (4.5s - 9s) How to Connect (Step 1)
-      else if (t < 9.0) {
-        const localT = t - 4.5;
-        ctx.save();
-        ctx.translate(WIDTH / 2, HEIGHT / 2);
+      // ==========================================
+      // SCENE 2: (13s - 26s) - HOME DASHBOARD
+      // ==========================================
+      else if (t < 26) {
+        drawPhoneStatusBar();
 
-        // Card Box
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-        ctx.beginPath();
-        ctx.roundRect(-300, -320, 600, 640, 32);
-        ctx.fill();
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 44px sans-serif';
-        ctx.fillText('ধাপ ১: WhatsApp কানেক্ট', 0, -220);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 32px sans-serif';
-        ctx.fillText('আপনার নম্বর দিয়ে', 0, -140);
-        ctx.fillText('৮ ডিজিটের পেয়ারিং কোড নিন:', 0, -90);
-
-        // Pairing Code Box
-        ctx.fillStyle = '#1e293b';
-        ctx.beginPath();
-        ctx.roundRect(-240, -20, 480, 110, 20);
-        ctx.fill();
-        ctx.strokeStyle = '#10b981';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        // Pulsing Code
-        ctx.fillStyle = '#34d399';
-        ctx.font = 'bold 52px monospace';
-        ctx.fillText('A 8 K 2 - 9 P 4 X', 0, 55);
-
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '28px sans-serif';
-        ctx.fillText('হোয়াটসঅ্যাপের Linked Devices এ বসিয়ে', 0, 160);
-        ctx.fillText('১ ক্লিকে সচল করুন!', 0, 210);
-
-        ctx.restore();
-      }
-
-      // SCENE 3: (9s - 13.5s) Live Income Growing
-      else if (t < 13.5) {
-        const localT = t - 9.0;
-        ctx.save();
-        ctx.translate(WIDTH / 2, HEIGHT / 2);
-
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-        ctx.beginPath();
-        ctx.roundRect(-300, -320, 600, 640, 32);
-        ctx.fill();
-        ctx.strokeStyle = '#10b981';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        ctx.fillStyle = '#4ade80';
-        ctx.font = 'bold 44px sans-serif';
-        ctx.fillText('🟢 স্ট্যাটাস: Online', 0, -220);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 32px sans-serif';
-        ctx.fillText('২৪ ঘণ্টা কানেক্টেড থাকলেই', 0, -140);
-        ctx.fillText('অটোমেটিক ব্যালেন্স জমা!', 0, -90);
-
-        // Animated Balance Counter
-        const currentBal = Math.min(320, Math.floor(32 + (localT / 4.5) * 288));
+        // Header
         ctx.fillStyle = '#064e3b';
-        ctx.beginPath();
-        ctx.roundRect(-240, -10, 480, 130, 24);
-        ctx.fill();
-        ctx.strokeStyle = '#34d399';
-        ctx.lineWidth = 3;
-        ctx.stroke();
+        ctx.fillRect(0, 54, WIDTH, 230);
 
-        ctx.fillStyle = '#fbbf24';
-        ctx.font = 'bold 64px sans-serif';
-        ctx.fillText('৳ ' + currentBal + '.০০', 0, 78);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillText('স্বাগতম, Member 👋', 40, 115);
 
+        ctx.font = '18px sans-serif';
         ctx.fillStyle = '#a7f3d0';
-        ctx.font = 'bold 30px sans-serif';
-        ctx.fillText('🎁 ১০টি নম্বর = ১,০০০৳ স্পেশাল বক্স!', 0, 190);
-        ctx.fillText('👥 রেফারেল বোনাস ১৫% লাইফটাইম!', 0, 240);
+        ctx.fillText('ফোন: 01712-345678 • আইডি: #53174', 40, 150);
 
-        ctx.restore();
-      }
-
-      // SCENE 4: (13.5s - 18s) Instant Withdraw & CTA
-      else {
-        const localT = t - 13.5;
-        ctx.save();
-        ctx.translate(WIDTH / 2, HEIGHT / 2);
-
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        // Wallet Balance Card
+        ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.roundRect(-300, -320, 600, 640, 32);
+        ctx.roundRect(35, 185, 650, 180, 24);
+        ctx.fill();
+        ctx.shadowColor = 'rgba(0,0,0,0.08)';
+        ctx.shadowBlur = 15;
+
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('বর্তমান ওয়ালেট ব্যালেন্স', 65, 230);
+
+        ctx.font = 'bold 48px sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('৳ 0.00', 65, 290);
+
+        // Fast Withdraw Button
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.roundRect(470, 240, 180, 60, 16);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('উত্তোলন 💳', 560, 277);
+
+        // VIP Notice Banner
+        ctx.fillStyle = '#fef3c7';
+        ctx.beginPath();
+        ctx.roundRect(35, 390, 650, 130, 20);
         ctx.fill();
         ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 2;
         ctx.stroke();
 
-        ctx.fillStyle = '#f59e0b';
-        ctx.font = 'bold 48px sans-serif';
-        ctx.fillText('⚡ সুপার ফাস্ট উইথড্র ⚡', 0, -220);
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillStyle = '#b45309';
+        ctx.fillText('⚡ জরুরি নির্দেশনা ও মেগা অফার ⚡', 65, 430);
+        ctx.font = '18px sans-serif';
+        ctx.fillStyle = '#78350f';
+        ctx.fillText('হোয়াটসঅ্যাপ অনলাইন রাখলেই ঘণ্টায় ঘণ্টায় নিশ্চিত ইনকাম!', 65, 465);
+        ctx.fillText('১০টি নম্বর যুক্ত করলে প্রতিদিন ৩২০৳ + ১,০০০৳ উপহার!', 65, 495);
 
+        // Daily Check-in Promo Box
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 34px sans-serif';
-        ctx.fillText('সরাসরি বিকাশ ও নগদ-এ টাকা নিন!', 0, -140);
+        ctx.beginPath();
+        ctx.roundRect(35, 545, 650, 190, 20);
+        ctx.fill();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = '#10b981';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillText('🎁 ৭ দিনের দৈনিক চেক-ইন বোনাস', 65, 590);
+        ctx.font = '18px sans-serif';
+        ctx.fillStyle = '#475569';
+        ctx.fillText('প্রতিদিন চেক-ইন করে জিতে নিন ১০ টাকা ফ্রি ক্যাশ!', 65, 630);
+        ctx.fillText('হোয়াটসঅ্যাপ ৬ ঘণ্টা সক্রিয় থাকলেই ক্লেইম করা যাবে।', 65, 660);
+
+        // Bottom Nav (Home is active)
+        drawBottomNav('home');
+
+        // Finger moving to 'Tasks' tab
+        if (t > 22) {
+          drawFinger(WIDTH * 0.375, HEIGHT - 45, 28, t > 24);
+        }
+      }
+
+      // ==========================================
+      // SCENE 3: (26s - 39s) - TASKS & REFERRAL SECTION
+      // ==========================================
+      else if (t < 39) {
+        drawPhoneStatusBar();
+
+        ctx.fillStyle = '#065f46';
+        ctx.fillRect(0, 54, WIDTH, 110);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillText('📋 টাস্ক ও মেগা রেফারেল সেন্টার', WIDTH / 2, 120);
+
+        // Task 1: 10 WhatsApp Offer
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(35, 190, 650, 175, 20);
+        ctx.fill();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#0284c7';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillText('🚀 ১০টি WhatsApp মেগা অফার', 65, 235);
+
+        ctx.fillStyle = '#334155';
+        ctx.font = '19px sans-serif';
+        ctx.fillText('• প্রতিদিন নিশ্চিত ৩২০৳ আয় (প্রতিটিতে ৩২৳)!', 65, 275);
+        ctx.fillText('• ২৪ ঘণ্টা পূর্ণ হলেই ১,০০০ টাকার স্পেশাল ক্যাশ বক্স!', 65, 310);
+
+        // Task 2: Active Friend Referral
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(35, 390, 650, 190, 20);
+        ctx.fill();
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#059669';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillText('👥 বন্ধুদের রেফার করে আজীবন আয়', 65, 435);
+
+        ctx.fillStyle = '#334155';
+        ctx.font = '19px sans-serif';
+        ctx.fillText('• বন্ধু ২৪ ঘণ্টা সক্রিয় হলে ১০০ টাকা ইনস্ট্যান্ট বোনাস!', 65, 475);
+        ctx.fillText('• ১ম স্তর বন্ধুদের আয় থেকে ১৫% লাইফটাইম কমিশন!', 65, 510);
+        ctx.fillText('• ২য় স্তর সাব-রেফারেল থেকে অতিরিক্ত ৫% কমিশন!', 65, 545);
+
+        // Your Referral Code Card
+        ctx.fillStyle = '#f0fdf4';
+        ctx.beginPath();
+        ctx.roundRect(35, 605, 650, 140, 20);
+        ctx.fill();
+        ctx.strokeStyle = '#86efac';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillStyle = '#166534';
+        ctx.fillText('আপনার রেফারেল লিঙ্ক ও ইনভাইট কোড:', WIDTH / 2, 645);
+
+        ctx.font = 'bold 36px monospace';
+        ctx.fillStyle = '#15803d';
+        ctx.fillText('4E2YOO', WIDTH / 2, 700);
+
+        drawBottomNav('tasks');
+
+        // Finger moving to 'WhatsApp' tab
+        if (t > 35) {
+          drawFinger(WIDTH * 0.625, HEIGHT - 45, 28, t > 37.5);
+        }
+      }
+
+      // ==========================================
+      // SCENE 4: (39s - 54s) - WHATSAPP PAIRING CODE CONNECTION
+      // ==========================================
+      else if (t < 54) {
+        drawPhoneStatusBar();
+
+        ctx.fillStyle = '#064e3b';
+        ctx.fillRect(0, 54, WIDTH, 120);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 30px sans-serif';
+        ctx.fillText('💬 WhatsApp ডিভাইস সংযোগ', WIDTH / 2, 125);
+
+        // Phone Input Card
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(35, 200, 650, 480, 24);
+        ctx.fill();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 26px sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('৮ ডিজিটের পেয়ারিং কোড নিন', WIDTH / 2, 255);
+
+        ctx.font = '18px sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('আপনার WhatsApp নম্বর নিচে লিখুন:', WIDTH / 2, 290);
+
+        // Phone input
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.roundRect(70, 320, 580, 75, 16);
+        ctx.fill();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.stroke();
+
+        let wpPhone = '';
+        if (t > 40.5) {
+          const digits = '1898765432';
+          const count = Math.min(digits.length, Math.floor((t - 40.5) * 5));
+          wpPhone = digits.slice(0, count);
+        }
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('🇧🇩 +880', 95, 365);
+        ctx.font = '22px sans-serif';
+        ctx.fillText(wpPhone || 'হোয়াটসঅ্যাপ নম্বর দিন...', 210, 365);
+
+        // Code Get Button
+        const btnPress = t > 43.5 && t < 45.0;
+        ctx.fillStyle = btnPress ? '#047857' : '#10b981';
+        ctx.beginPath();
+        ctx.roundRect(70, 420, 580, 75, 18);
+        ctx.fill();
+
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(t > 44.5 ? '⏳ পেয়ারিং কোড তৈরি হচ্ছে...' : 'পেয়ারিং কোড পান 🔑', WIDTH / 2, 467);
+
+        // Pairing Code Popup (After 46s)
+        if (t > 46.5) {
+          ctx.fillStyle = '#020617';
+          ctx.beginPath();
+          ctx.roundRect(70, 520, 580, 130, 20);
+          ctx.fill();
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          ctx.fillStyle = '#34d399';
+          ctx.font = 'bold 50px monospace';
+          ctx.fillText('A 8 K 2 - 9 P 4 X', WIDTH / 2, 595);
+
+          ctx.font = 'bold 18px sans-serif';
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText('হোয়াটসঅ্যাপের Linked Devices এ বসিয়ে কানেক্ট করুন!', WIDTH / 2, 630);
+        }
+
+        // Connection Success Banner (After 50s)
+        if (t > 50.0) {
+          ctx.fillStyle = '#ecfdf5';
+          ctx.beginPath();
+          ctx.roundRect(35, 710, 650, 110, 20);
+          ctx.fill();
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.textAlign = 'center';
+          ctx.font = 'bold 26px sans-serif';
+          ctx.fillStyle = '#047857';
+          ctx.fillText('🟢 WhatsApp সফলভাবে সংযুক্ত (Online)!', WIDTH / 2, 755);
+          ctx.font = '18px sans-serif';
+          ctx.fillStyle = '#065f46';
+          ctx.fillText('ইনকাম স্বয়ংক্রিয়ভাবে ব্যাকগ্রাউন্ডে শুরু হয়েছে!', WIDTH / 2, 790);
+        }
+
+        drawBottomNav('whatsapp');
+
+        if (t > 42.5 && t < 45.0) {
+          drawFinger(WIDTH / 2, 455, 28, btnPress);
+        }
+      }
+
+      // ==========================================
+      // SCENE 5: (54s - 67s) - 24-HOUR TIME-LAPSE & DHAMAKA BONUS!
+      // ==========================================
+      else if (t < 67) {
+        drawPhoneStatusBar();
+
+        ctx.fillStyle = '#064e3b';
+        ctx.fillRect(0, 54, WIDTH, 120);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 30px sans-serif';
+        ctx.fillText('⏳ ২৪ ঘণ্টা সক্রিয় আর্নিং সাইকেল', WIDTH / 2, 125);
+
+        // Connected Account Box
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(35, 195, 650, 360, 24);
+        ctx.fill();
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 26px sans-serif';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText('WhatsApp (+880 1898765432)', 65, 245);
+
+        ctx.fillStyle = '#10b981';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText('🟢 সচল (Online) • ব্যাকগ্রাউন্ডে ইনকাম হচ্ছে', 65, 280);
+
+        // Live Clock Time-Lapse calculation
+        const localT = t - 54;
+        let hours = 0;
+        let mins = 0;
+        let secs = 0;
+
+        if (localT < 1.0) {
+          secs = Math.floor(localT * 10);
+        } else {
+          // FAST-FORWARD TIME-LAPSE TO 24:00:00!
+          const progress = Math.min(1, (localT - 1.0) / 4.0);
+          const totalSimSeconds = Math.floor(progress * 86400);
+          hours = Math.floor(totalSimSeconds / 3600);
+          mins = Math.floor((totalSimSeconds % 3600) / 60);
+          secs = totalSimSeconds % 60;
+        }
+
+        const clockStr = `${String(hours).padStart(2, '0')} : ${String(mins).padStart(2, '0')} : ${String(secs).padStart(2, '0')}`;
+
+        ctx.fillStyle = '#020617';
+        ctx.beginPath();
+        ctx.roundRect(65, 320, 590, 110, 20);
+        ctx.fill();
+
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 56px monospace';
+        ctx.fillStyle = hours >= 24 ? '#4ade80' : '#fbbf24';
+        ctx.fillText(clockStr, WIDTH / 2, 395);
+
+        // Progress bar
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.roundRect(65, 460, 590, 16, 8);
+        ctx.fill();
+
+        const pWidth = Math.min(590, (hours / 24) * 590);
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.roundRect(65, 460, pWidth, 16, 8);
+        ctx.fill();
+
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(`সক্রিয় সময়: ${hours} / ২৪ ঘণ্টা પૂર્ણ`, WIDTH / 2, 510);
+
+        // 💥 DHAMAKA CELEBRATION POPUP (When 24h hits at t >= 59.5s)
+        if (t >= 59.5) {
+          // Confetti Animation
+          confettiList.forEach(c => {
+            c.y += c.speedY;
+            c.x += c.speedX;
+            if (c.y > HEIGHT) c.y = -20;
+            ctx.fillStyle = c.color;
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // Gold Bonus Modal
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+          ctx.beginPath();
+          ctx.roundRect(40, 580, 640, 360, 28);
+          ctx.fill();
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 4;
+          ctx.stroke();
+
+          ctx.fillStyle = '#f59e0b';
+          ctx.font = 'bold 36px sans-serif';
+          ctx.fillText('🎉 ধামাকা বোনাস অর্জিত! 🎉', WIDTH / 2, 640);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 24px sans-serif';
+          ctx.fillText('২৪ ঘণ্টা সফল সংযোগ সম্পন্ন হয়েছে!', WIDTH / 2, 685);
+
+          // Reward Amount Badge
+          ctx.fillStyle = '#065f46';
+          ctx.beginPath();
+          ctx.roundRect(140, 715, 440, 90, 20);
+          ctx.fill();
+          ctx.strokeStyle = '#34d399';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          ctx.fillStyle = '#fbbf24';
+          ctx.font = 'bold 54px sans-serif';
+          ctx.fillText('+ ৳ ৩২.০০ টাকা', WIDTH / 2, 780);
+
+          ctx.fillStyle = '#a7f3d0';
+          ctx.font = 'bold 20px sans-serif';
+          ctx.fillText('ব্যালেন্সে সফলভাবে জমা হয়েছে!', WIDTH / 2, 840);
+          ctx.fillText('১০টি নম্বর থাকলে প্রতিদিন ৩২০৳ পাবেন!', WIDTH / 2, 875);
+        }
+
+        drawBottomNav('whatsapp');
+      }
+
+      // ==========================================
+      // SCENE 6: (67s - 75s) - INSTANT WITHDRAW TO BKASH & NAGAD + CTA
+      // ==========================================
+      else {
+        drawPhoneStatusBar();
+
+        ctx.fillStyle = '#064e3b';
+        ctx.fillRect(0, 54, WIDTH, 120);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 30px sans-serif';
+        ctx.fillText('💳 টাকা উত্তোলন (Withdraw)', WIDTH / 2, 125);
+
+        // Withdraw Success Card
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(35, 200, 650, 480, 24);
+        ctx.fill();
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.arc(WIDTH / 2, 280, 45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 45px sans-serif';
+        ctx.fillText('✓', WIDTH / 2, 296);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 30px sans-serif';
+        ctx.fillText('উইথড্র রিকোয়েস্ট সফল!', WIDTH / 2, 360);
+
+        ctx.font = '20px sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('বিকাশ ও নগদ একাউন্টে টাকা পাঠানো হয়েছে', WIDTH / 2, 395);
 
         // bKash & Nagad Badges
         ctx.fillStyle = '#e11d48';
         ctx.beginPath();
-        ctx.roundRect(-230, -70, 210, 70, 16);
+        ctx.roundRect(80, 430, 250, 75, 16);
         ctx.fill();
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 30px sans-serif';
-        ctx.fillText('bKash বিকাশ', -125, -25);
+        ctx.font = 'bold 26px sans-serif';
+        ctx.fillText('bKash বিকাশ', 205, 477);
 
         ctx.fillStyle = '#ea580c';
         ctx.beginPath();
-        ctx.roundRect(20, -70, 210, 70, 16);
+        ctx.roundRect(390, 430, 250, 75, 16);
         ctx.fill();
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 30px sans-serif';
-        ctx.fillText('Nagad নগদ', 125, -25);
+        ctx.font = 'bold 26px sans-serif';
+        ctx.fillText('Nagad নগদ', 515, 477);
 
-        // Big Call to Action
-        ctx.fillStyle = '#10b981';
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 38px sans-serif';
+        ctx.fillText('৳ ৫০০.০০ টাকা', WIDTH / 2, 570);
+
+        ctx.fillStyle = '#15803d';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText('⚡ স্ট্যাটাস: অনুমোদিত (Approved)', WIDTH / 2, 615);
+
+        // FINAL CALL TO ACTION BOX
+        ctx.fillStyle = '#020617';
         ctx.beginPath();
-        ctx.roundRect(-260, 40, 520, 100, 24);
+        ctx.roundRect(35, 710, 650, 220, 24);
         ctx.fill();
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 32px sans-serif';
+        ctx.fillText('🚀 আজই ঘরে বসে আয় শুরু করুন 🚀', WIDTH / 2, 765);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 40px sans-serif';
-        ctx.fillText('🚀 আজই ফ্রি জয়েন করুন 🚀', 0, 105);
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText('কোন কাজ নেই • সম্পূর্ণ ফ্রি • ১০০% নিরাপদ', WIDTH / 2, 810);
 
         ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 32px sans-serif';
-        ctx.fillText('👇 সাইট লিঙ্ক বায়োতে / কমেন্টে 👇', 0, 210);
+        ctx.font = 'bold 26px sans-serif';
+        ctx.fillText('👇 সাইট লিঙ্ক কমেন্টে ও বায়োতে দেওয়া আছে 👇', WIDTH / 2, 875);
 
-        ctx.restore();
+        drawBottomNav('home');
       }
-
-      // Bottom Watermark
-      ctx.fillStyle = '#64748b';
-      ctx.font = '22px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('EarnPulse • ১০০% নিরাপদ ও বিশ্বস্ত আয়ের প্ল্যাটফর্ম', WIDTH / 2, HEIGHT - 50);
     }
 
-    // Initial frame preview
-    drawFrame(2.0);
+    // Initial Preview Frame
+    drawFrame(60.0);
 
-    // Live Recording Engine using MediaRecorder
+    // ==========================================
+    // SYNTHESIZED UPBEAT BACKGROUND MUSIC GENERATOR
+    // ==========================================
+    function createUpbeatAudio(audioCtx, totalSeconds) {
+      const sampleRate = audioCtx.sampleRate;
+      const totalSamples = sampleRate * totalSeconds;
+      const buffer = audioCtx.createBuffer(2, totalSamples, sampleRate);
+      const chL = buffer.getChannelData(0);
+      const chR = buffer.getChannelData(1);
+
+      // Melody notes in Hz (Pentatonic Upbeat Pop)
+      const scale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25]; // C4, D4, E4, G4, A4, C5
+      const bpm = 124;
+      const beatSamples = Math.floor(sampleRate * (60 / bpm));
+
+      for (let i = 0; i < totalSamples; i++) {
+        const beatIndex = Math.floor(i / beatSamples);
+        const subBeat = i % beatSamples;
+        const progressInBeat = subBeat / beatSamples;
+
+        // 1. Kick Drum (every beat)
+        let kick = 0;
+        if (progressInBeat < 0.25) {
+          const kickFreq = 120 * Math.exp(-progressInBeat * 16);
+          kick = Math.sin(2 * Math.PI * kickFreq * (subBeat / sampleRate)) * (1 - progressInBeat * 4);
+        }
+
+        // 2. Hi-Hat (every half beat)
+        let hihat = 0;
+        const halfBeat = i % Math.floor(beatSamples / 2);
+        const halfProgress = halfBeat / (beatSamples / 2);
+        if (halfProgress < 0.15) {
+          hihat = (Math.random() * 2 - 1) * Math.exp(-halfProgress * 20) * 0.25;
+        }
+
+        // 3. Synth Bass & Arpeggio Note
+        const noteIdx = (beatIndex * 2 + Math.floor(progressInBeat * 2)) % scale.length;
+        const freq = scale[noteIdx];
+        const bassFreq = scale[beatIndex % 3] / 2;
+        const synth = Math.sin(2 * Math.PI * freq * (i / sampleRate)) * 0.15 * Math.exp(-progressInBeat * 2);
+        const bass = Math.sin(2 * Math.PI * bassFreq * (i / sampleRate)) * 0.25;
+
+        // 4. Milestone Celebration Fanfare (around 59s to 65s)
+        let fanfare = 0;
+        const currentSec = i / sampleRate;
+        if (currentSec >= 59.0 && currentSec <= 66.0) {
+          const fBeat = Math.floor((currentSec - 59.0) * 4);
+          const fNote = scale[(fBeat * 2) % scale.length] * 1.5;
+          fanfare = Math.sin(2 * Math.PI * fNote * (i / sampleRate)) * 0.35 * Math.exp(-((currentSec * 4) % 1) * 3);
+        }
+
+        const mixed = (kick * 0.4 + hihat * 0.25 + synth * 0.35 + bass * 0.25 + fanfare * 0.5) * 0.7;
+        chL[i] = mixed;
+        chR[i] = mixed;
+      }
+
+      return buffer;
+    }
+
+    // ==========================================
+    // RECORDING & EXPORT ENGINE
+    // ==========================================
     async function startRecording() {
       renderBtn.disabled = true;
       progressBar.style.display = 'block';
-      statusText.innerText = 'ভিডিও তৈরি হচ্ছে... অনুগ্রহ করে অপেক্ষা করুন';
+      statusText.innerText = 'অডিও ও ভিডিও সিন্থেসাইজ হচ্ছে... অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন';
 
-      const stream = canvas.captureStream(FPS);
-      let options = { mimeType: 'video/webm; codecs=vp9' };
+      // 1. Audio Setup
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      const audioCtx = new AudioContext();
+      const audioBuffer = createUpbeatAudio(audioCtx, DURATION);
+      const audioSource = audioCtx.createBufferSource();
+      audioSource.buffer = audioBuffer;
+
+      const audioDest = audioCtx.createMediaStreamDestination();
+      audioSource.connect(audioDest);
+      audioSource.connect(audioCtx.destination); // Let user hear the preview!
+
+      // 2. Video Canvas Stream
+      const canvasStream = canvas.captureStream(FPS);
+
+      // 3. Combined Stream (Video + Audio)
+      const combinedTracks = [
+        ...canvasStream.getVideoTracks(),
+        ...audioDest.stream.getAudioTracks()
+      ];
+      const combinedStream = new MediaStream(combinedTracks);
+
+      let options = { mimeType: 'video/webm; codecs=vp9,opus' };
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
         options = { mimeType: 'video/webm' };
       }
 
-      const recorder = new MediaRecorder(stream, options);
+      const recorder = new MediaRecorder(combinedStream, options);
       const chunks = [];
 
       recorder.ondataavailable = e => {
@@ -304,37 +877,45 @@
       };
 
       recorder.onstop = () => {
+        audioSource.stop();
         const blob = new Blob(chunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'EarnPulse_Viral_Reel.mp4';
+        a.download = 'EarnPulse_Walkthrough_Reel.mp4';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
 
-        statusText.innerText = '✅ ভিডিও সফলভাবে ডাউনলোড হয়েছে! (EarnPulse_Viral_Reel.mp4)';
+        statusText.innerText = '✅ ভিডিও সফলভাবে ডাউনলোড হয়েছে! (EarnPulse_Walkthrough_Reel.mp4)';
         renderBtn.disabled = false;
         renderBtn.innerHTML = '<span>✅ আবার ডাউনলোড করুন</span>';
       };
 
+      audioSource.start(0);
       recorder.start();
 
       let currentFrame = 0;
-      const interval = setInterval(() => {
-        const t = (currentFrame / TOTAL_FRAMES) * DURATION;
+      const frameInterval = 1000 / FPS;
+      const startTime = performance.now();
+
+      const timer = setInterval(() => {
+        const elapsed = (performance.now() - startTime) / 1000;
+        const t = Math.min(DURATION, elapsed);
         drawFrame(t);
 
         currentFrame++;
-        const percent = Math.floor((currentFrame / TOTAL_FRAMES) * 100);
+        const percent = Math.min(100, Math.floor((t / DURATION) * 100));
         progressFill.style.width = percent + '%';
-        statusText.innerText = `ভিডিও ফ্রেম তৈরি হচ্ছে: ${percent}% (${Math.floor(t)}s / ${DURATION}s)`;
+        statusText.innerText = `ভিডিও ফ্রেম রেন্ডারিং হচ্ছে: ${percent}% (${Math.floor(t)}s / ${DURATION}s)`;
 
-        if (currentFrame >= TOTAL_FRAMES) {
-          clearInterval(interval);
-          recorder.stop();
+        if (t >= DURATION || currentFrame >= TOTAL_FRAMES) {
+          clearInterval(timer);
+          setTimeout(() => {
+            recorder.stop();
+          }, 300);
         }
-      }, 1000 / FPS);
+      }, frameInterval);
     }
   </script>
 </body>
