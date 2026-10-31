@@ -1609,7 +1609,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.31.07',
+      build_version: '2026.10.31.08',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -2350,19 +2350,21 @@ app.post('/api/admin/telegram-broadcast', authenticateToken, requireAdmin, async
       }
     };
 
-    const response = await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, payload, {
-      timeout: 10000,
-      headers: { 'Content-Type': 'application/json' }
+    const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
+    const tgData = await tgRes.json();
 
-    if (response.data && response.data.ok) {
-      return res.json({ success: true, msg: 'টেলিগ্রাম চ্যানেলে সফলভাবে পোস্ট পাঠানো হয়েছে!', message_id: response.data.result.message_id });
+    if (tgData && tgData.ok) {
+      return res.json({ success: true, msg: 'টেলিগ্রাম চ্যানেলে সফলভাবে পোস্ট পাঠানো হয়েছে!', message_id: tgData.result.message_id });
     } else {
-      return res.status(500).json({ success: false, msg: 'টেলিগ্রাম রেসপন্স এরর' });
+      return res.status(500).json({ success: false, msg: tgData.description || 'টেলিগ্রাম রেসপন্স এরর' });
     }
   } catch (err) {
-    console.error('Telegram broadcast error:', err.response?.data || err.message);
-    return res.status(500).json({ success: false, msg: err.response?.data?.description || err.message });
+    console.error('Telegram broadcast error:', err.message);
+    return res.status(500).json({ success: false, msg: err.message });
   }
 });
 
@@ -2425,20 +2427,26 @@ app.all('/api/telegram-cron', async (req, res) => {
       }
     };
 
-    const response = await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, payload, {
-      timeout: 10000,
-      headers: { 'Content-Type': 'application/json' }
+    const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
+    const tgData = await tgRes.json();
 
-    return res.json({
-      success: true,
-      postedType: selectedKey,
-      bdHour,
-      message_id: response.data?.result?.message_id
-    });
+    if (tgData && tgData.ok) {
+      return res.json({
+        success: true,
+        postedType: selectedKey,
+        bdHour,
+        message_id: tgData.result?.message_id
+      });
+    } else {
+      return res.status(500).json({ success: false, error: tgData.description || 'Failed to post' });
+    }
   } catch (err) {
-    console.error('Telegram cron error:', err.response?.data || err.message);
-    return res.status(500).json({ success: false, error: err.response?.data?.description || err.message });
+    console.error('Telegram cron error:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
