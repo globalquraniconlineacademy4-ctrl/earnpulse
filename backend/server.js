@@ -1609,7 +1609,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.31.06',
+      build_version: '2026.10.31.07',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -2363,6 +2363,82 @@ app.post('/api/admin/telegram-broadcast', authenticateToken, requireAdmin, async
   } catch (err) {
     console.error('Telegram broadcast error:', err.response?.data || err.message);
     return res.status(500).json({ success: false, msg: err.response?.data?.description || err.message });
+  }
+});
+
+// -------------------------------------------------------------
+// TELEGRAM AUTOMATIC DAILY POSTING CRON (3 Times Daily)
+// -------------------------------------------------------------
+const DAILY_POSTS = {
+  morning: {
+    text: `🌅 <b>শুভ সকাল! EarnPulse-এ দিনটি শুরু হোক নিশ্চিত আয়ে</b> 🌅\n\nসম্মানিত মেম্বারগণ,\nআপনার হোয়াটসঅ্যাপ কি অনলাইন রয়েছে?\nহোয়াটসঅ্যাপ কানেক্টেড থাকলেই আপনার কোনো বাড়তি কাজ ছাড়াই প্রতি ঘণ্টায় স্বয়ংক্রিয়ভাবে ব্যালেন্সে ইনকাম জমা হতে থাকে!\n\n✅ <b>কানেক্টেড রাখার গুরুত্বপূর্ণ টিপস:</b>\n• ফোনের ইন্টারনেট কানেকশন অন রাখুন যাতে নির্বিঘ্নে ফুল সময় কাউন্ট হয়।\n• ২৪ ঘণ্টা সফলভাবে পূর্ণ হলেই নিশ্চিত আর্নিং বুঝে নিন!\n\n💡 এখনও যারা যুক্ত হননি, আজই আপনার হোয়াটসঅ্যাপ কানেক্ট করে ঘরে বসে আয় শুরু করুন!`,
+    btnText: '🌐 অ্যাপে যান ও WhatsApp কানেক্ট করুন'
+  },
+  afternoon: {
+    text: `🚀 <b>মেগা ধামাকা অফার: বেশি হোয়াটসঅ্যাপ, বেশি ইনকাম!</b> 🚀\n\nEarnPulse-এ আপনার আয় দ্বিগুণ ও তিনগুণ করার সেরা সুযোগ!\n\n💰 <b>১০টি হোয়াটসঅ্যাপ কানেক্ট রাখলে:</b>\n• প্রতিদিন নিশ্চিত ৩২০৳ আয় (প্রতিটিতে ৩২৳)!\n• আর প্রথমবার ২৪ ঘণ্টা পূর্ণ হলেই উপহার পাবেন <b>১,০০০ টাকার স্পেশাল ক্যাশ বক্স</b>!\n\n👥 <b>রেফারেল বোনাস:</b>\nবন্ধুকে রেফার করুন, বন্ধু ১০টি নম্বর যুক্ত রাখলে আপনিও পাবেন ১,০০০৳ মেগা বক্স!\n\n⏳ <b>ব্যান নো-টেনশন:</b> সাময়িক ডিসকানেক্ট হলেও পুনরায় যুক্ত করলে আগের সময় থেকেই কাউন্ট হবে। দেরি না করে আজই নম্বর যুক্ত করুন!`,
+    btnText: '🎁 মেগা অফার ও WhatsApp কানেক্ট'
+  },
+  night: {
+    text: `⚡ <b>উইথড্র ও ডেইলি ইনকাম নাইট আপডেট</b> ⚡\n\nসম্মানিত মেম্বারগণ,\nমেম্বারদের সকল উইথড্র রিকোয়েস্ট অত্যন্ত দ্রুততার সাথে বিকাশ ও নগদ-এ সফলভাবে সম্পন্ন করা হচ্ছে! আপনারা যারা নিয়ম মেনে কাজ করছেন তারা সম্পূর্ণ নিশ্চিন্তে নিয়মিত কাজ চালিয়ে যান।\n\n🌙 <b>রাতের বিশেষ রিমাইন্ডার:</b>\nরাতে ঘুমানোর সময়ও হোয়াটসঅ্যাপ কানেক্টেড থাকলে ব্যাকগ্রাউন্ডে সময় কাউন্ট হতে থাকবে এবং সকালে উঠেই দেখতে পাবেন আপনার ইনকাম জমা হয়ে গেছে!\n\n🔒 নিরাপদ প্ল্যাটফর্ম • দ্রুত পেমেন্ট • ১০০% বিশ্বস্ত`,
+    btnText: '🌐 ব্যালেন্স চেক ও উত্তোলন করুন'
+  }
+};
+
+app.all('/api/telegram-cron', async (req, res) => {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN || '8330333862:AAGY_NVccTwooCk2fTQ2aiuKxC2Fe7lRieU';
+  const chatId = process.env.TELEGRAM_CHAT_ID || '@EarnPulse_Channel';
+
+  // Determine current Bangladesh time (UTC + 6)
+  const now = new Date();
+  const utcHours = now.getUTCHours();
+  const bdHour = (utcHours + 6) % 24;
+
+  let selectedKey = 'morning';
+  if (bdHour >= 5 && bdHour < 12) {
+    selectedKey = 'morning';
+  } else if (bdHour >= 12 && bdHour < 18) {
+    selectedKey = 'afternoon';
+  } else {
+    selectedKey = 'night';
+  }
+
+  if (req.query.type && DAILY_POSTS[req.query.type]) {
+    selectedKey = req.query.type;
+  }
+
+  const post = DAILY_POSTS[selectedKey];
+
+  try {
+    const payload = {
+      chat_id: chatId,
+      text: post.text,
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: post.btnText,
+              url: 'https://earnpulse-beta.vercel.app'
+            }
+          ]
+        ]
+      }
+    };
+
+    const response = await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, payload, {
+      timeout: 10000,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    return res.json({
+      success: true,
+      postedType: selectedKey,
+      bdHour,
+      message_id: response.data?.result?.message_id
+    });
+  } catch (err) {
+    console.error('Telegram cron error:', err.response?.data || err.message);
+    return res.status(500).json({ success: false, error: err.response?.data?.description || err.message });
   }
 });
 
