@@ -4333,7 +4333,8 @@ export default function App() {
                 padding: '9px 11px', borderRadius: '13px',
                 background: 'linear-gradient(135deg, rgba(34, 158, 217, 0.16) 0%, rgba(14, 116, 144, 0.2) 100%)',
                 border: '1.2px solid rgba(56, 189, 248, 0.55)',
-                boxShadow: '0 3px 12px rgba(14, 165, 233, 0.18)'
+                boxShadow: '0 3px 12px rgba(14, 165, 233, 0.18)',
+                display: 'flex', alignItems: 'flex-start', gap: '9px'
               }}>
                 <div style={{
                   width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
