@@ -652,7 +652,7 @@ export default function App() {
   // Periodic Live Background Sync for WhatsApp List & Balance (Optimized to prevent excessive bandwidth)
   useEffect(() => {
     if (!token) return;
-    const intervalMs = activeTab === 'whatsapp' ? 8000 : 20000;
+    const intervalMs = activeTab === 'whatsapp' ? 12000 : 30000;
     const syncInterval = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
       fetchUserData(activeTab === 'whatsapp');
