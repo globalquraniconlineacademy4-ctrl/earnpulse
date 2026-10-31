@@ -2505,7 +2505,6 @@ app.all('/api/telegram-cron', async (req, res) => {
     return res.status(500).json({ success: false, error: err.message });
   }
 });
-});
 
 // Start Server
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
