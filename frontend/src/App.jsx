@@ -252,6 +252,14 @@ export default function App() {
     }
   }, []);
 
+  // When an old member (already logged in) clicks the register link from Telegram, take them straight to Home
+  useEffect(() => {
+    if (token && (window.location.pathname.startsWith('/register') || window.location.pathname.startsWith('/login'))) {
+      window.history.replaceState({ type: 'tab', tab: 'home' }, '', '/#home');
+      setActiveTab('home');
+    }
+  }, [token]);
+
   // Pairing State
   const [inputPhone, setInputPhone] = useState('');
   const [pairingLoading, setPairingLoading] = useState(false);
