@@ -1609,7 +1609,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.31.03',
+      build_version: '2026.10.31.04',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -2319,6 +2319,51 @@ app.post('/api/admin/withdraw/:id', authenticateToken, requireAdmin, async (req,
     msg: `উত্তোলন সফলভাবে ${status === 'approved' ? 'অনুমোদন' : 'বাতিল'} করা হয়েছে!`,
     withdrawal: updatedWithdrawal
   });
+});
+
+// -------------------------------------------------------------
+// TELEGRAM BROADCAST API (ADMIN ONLY - MOTIVATIONAL / UPDATES)
+// -------------------------------------------------------------
+app.post('/api/admin/telegram-broadcast', adminAuth, async (req, res) => {
+  const { message, buttonText, buttonUrl } = req.body;
+  if (!message || !message.trim()) {
+    return res.status(400).json({ success: false, msg: 'মেসেজ খালি হতে পারে না' });
+  }
+
+  const botToken = process.env.TELEGRAM_BOT_TOKEN || '8330333862:AAGY_NVccTwooCk2fTQ2aiuKxC2Fe7lRieU';
+  const chatId = process.env.TELEGRAM_CHAT_ID || '@EarnPulse_Channel';
+
+  try {
+    const payload = {
+      chat_id: chatId,
+      text: message.trim(),
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: buttonText || '🌐 ওয়েবসাইটে যান ও কাজ শুরু করুন',
+              url: buttonUrl || 'https://earnpulse-beta.vercel.app'
+            }
+          ]
+        ]
+      }
+    };
+
+    const response = await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, payload, {
+      timeout: 10000,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (response.data && response.data.ok) {
+      return res.json({ success: true, msg: 'টেলিগ্রাম চ্যানেলে সফলভাবে পোস্ট পাঠানো হয়েছে!', message_id: response.data.result.message_id });
+    } else {
+      return res.status(500).json({ success: false, msg: 'টেলিগ্রাম রেসপন্স এরর' });
+    }
+  } catch (err) {
+    console.error('Telegram broadcast error:', err.response?.data || err.message);
+    return res.status(500).json({ success: false, msg: err.response?.data?.description || err.message });
+  }
 });
 
 // Start Server
