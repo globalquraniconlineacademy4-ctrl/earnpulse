@@ -4009,9 +4009,9 @@ export default function App() {
             </div>
 
             {/* Header / Title with New 3D Brand Logo */}
-            <div style={{ textAlign: 'center', marginBottom: '10px', position: 'relative', zIndex: 2 }}>
+            <div style={{ textAlign: 'center', marginBottom: '12px', position: 'relative', zIndex: 2 }}>
               <div style={{
-                width: '48px', height: '48px', margin: '0 auto 6px',
+                width: '50px', height: '50px', margin: '0 auto 8px',
                 borderRadius: '50%', padding: '2px',
                 background: 'linear-gradient(135deg, #fffbeb 0%, #fbbf24 40%, #d97706 100%)',
                 boxShadow: '0 6px 18px rgba(245, 158, 11, 0.4)',
@@ -4029,70 +4029,47 @@ export default function App() {
               </div>
 
               <h2 style={{
-                fontSize: '16px', fontWeight: '900', color: '#ffffff',
-                lineHeight: 1.25, margin: '0 0 2px', letterSpacing: '-0.3px'
+                fontSize: '17px', fontWeight: '900', color: '#ffffff',
+                lineHeight: 1.3, margin: '0 0 4px', letterSpacing: '-0.3px'
               }}>
-                সার্ভার আপগ্রেড নোটিশ ও <br />
+                অফিসিয়াল টেলিগ্রাম চ্যানেল ও <br />
                 <span style={{
                   background: 'linear-gradient(135deg, #fffbeb 0%, #fef08a 35%, #f59e0b 70%, #d97706 100%)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
                 }}>
-                  অফিসিয়াল চ্যানেল ঘোষণা
+                  জরুরি ইনকাম নির্দেশনা
                 </span>
               </h2>
-              <p style={{ fontSize: '10.5px', color: '#94a3b8', margin: 0, fontWeight: '500' }}>
-                EarnPulse এর সাথে নিশ্চিন্তে আয় ও সঠিক আপডেটের নিয়ম
+              <p style={{ fontSize: '11px', color: '#94a3b8', margin: 0, fontWeight: '500' }}>
+                সব আপডেট ও পেমেন্ট প্রুফ পেতে যুক্ত থাকুন এবং নিশ্চিন্তে আয় করুন
               </p>
             </div>
 
             {/* Key Information Cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginBottom: '10px', position: 'relative', zIndex: 2 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '12px', position: 'relative', zIndex: 2 }}>
               
-              {/* Card 0: Server Upgrade & Apology Message */}
+              {/* Card Official Telegram Channel */}
               <div style={{
-                padding: '9px 11px', borderRadius: '13px',
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1.2px solid rgba(16, 185, 129, 0.45)',
-                display: 'flex', alignItems: 'flex-start', gap: '9px'
-              }}>
-                <div style={{
-                  width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
-                  background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.5)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px'
-                }}>
-                  🚀
-                </div>
-                <div>
-                  <div style={{ fontSize: '12px', fontWeight: '900', color: '#6ee7b7', marginBottom: '2px' }}>
-                    সিস্টেম আপডেট সফল ও দুঃখপ্রকাশ
-                  </div>
-                  <div style={{ fontSize: '10.5px', color: '#f1f5f9', lineHeight: 1.45, fontWeight: '500' }}>
-                    মেম্বার বৃদ্ধি ও সিস্টেম আপডেটের জন্য গতকালের সাময়িক অসুবিধার কারণে <strong>আমরা আন্তরিক দুঃখ প্রকাশ করছি</strong>। এখন সকল সার্ভিস পুরোদমে দ্রুতগতিতে চালু রয়েছে!
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Official Telegram Channel (New Channel Reassurance) */}
-              <div style={{
-                padding: '9px 11px', borderRadius: '13px',
-                background: 'linear-gradient(135deg, rgba(34, 158, 217, 0.16) 0%, rgba(14, 116, 144, 0.2) 100%)',
+                padding: '12px 13px', borderRadius: '15px',
+                background: 'linear-gradient(135deg, rgba(34, 158, 217, 0.18) 0%, rgba(14, 116, 144, 0.24) 100%)',
                 border: '1.2px solid rgba(56, 189, 248, 0.55)',
-                boxShadow: '0 3px 12px rgba(14, 165, 233, 0.18)'
+                boxShadow: '0 4px 16px rgba(14, 165, 233, 0.2)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '9px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
                   <div style={{
-                    width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
-                    background: '#229ED9', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '14px', boxShadow: '0 2px 6px rgba(34, 158, 217, 0.5)'
+                    width: '32px', height: '32px', borderRadius: '9px', flexShrink: 0,
+                    background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '16px', boxShadow: '0 3px 8px rgba(14, 165, 233, 0.45)'
                   }}>
                     ✈️
                   </div>
                   <div>
-                    <div style={{ fontSize: '12px', fontWeight: '900', color: '#38bdf8', marginBottom: '2px' }}>
-                      নতুন অফিসিয়াল টেলিগ্রাম চ্যানেল
+                    <div style={{ fontSize: '13px', fontWeight: '900', color: '#38bdf8', marginBottom: '3px' }}>
+                      অফিসিয়াল টেলিগ্রাম চ্যানেল
                     </div>
-                    <div style={{ fontSize: '10.5px', color: '#e2e8f0', lineHeight: 1.4, fontWeight: '500' }}>
-                      পূর্বের চ্যানেলে টেকনিক্যাল সমস্যার কারণে এই <strong>নতুন চ্যানেলটি চালু করা হয়েছে</strong>। সব আপডেট ও পেমেন্ট প্রুফ পেতে দ্রুত যুক্ত হোন।
+                    <div style={{ fontSize: '11px', color: '#e2e8f0', lineHeight: 1.45, fontWeight: '500' }}>
+                      সকল জরুরি আপডেট, নতুন ফিচার ও নিয়মিত পেমেন্ট প্রুফ সবার আগে পেতে সরাসরি আমাদের চ্যানেলে যুক্ত থাকুন।
                     </div>
                   </div>
                 </div>
@@ -4111,14 +4088,14 @@ export default function App() {
                     }
                   }}
                   style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                    width: '100%', height: '36px', borderRadius: '10px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+                    width: '100%', height: '38px', borderRadius: '11px',
                     background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                     color: '#ffffff',
                     textDecoration: 'none',
-                    fontSize: '12px', fontWeight: '900',
-                    border: '1px solid rgba(255, 255, 255, 0.25)',
-                    boxShadow: '0 3px 10px rgba(2, 132, 199, 0.45)',
+                    fontSize: '13px', fontWeight: '900',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.45)',
                     boxSizing: 'border-box', cursor: 'pointer', transition: 'transform 0.15s ease'
                   }}
                   onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.98)'; }}
@@ -4126,41 +4103,41 @@ export default function App() {
                   onTouchStart={(e) => { e.currentTarget.style.transform = 'scale(0.98)'; }}
                   onTouchEnd={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                 >
-                  <span style={{ fontSize: '14px' }}>📢</span>
-                  <span>নতুন অফিসিয়াল চ্যানেলে জয়েন করুন</span>
+                  <span style={{ fontSize: '15px' }}>📢</span>
+                  <span>অফিসিয়াল চ্যানেলে জয়েন করুন</span>
                 </a>
               </div>
               
               {/* Compact 2-Column Grid for Rules (ব্যান হলে নো টেনশন & ২৪ ঘণ্টায় ইনকাম) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 {/* Rule 1: Rollover Guarantee */}
                 <div style={{
-                  padding: '7px 8px', borderRadius: '11px',
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(245, 158, 11, 0.25)',
-                  display: 'flex', flexDirection: 'column', gap: '3px'
+                  padding: '9px 10px', borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  display: 'flex', flexDirection: 'column', gap: '4px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span style={{ fontSize: '13px' }}>⏳</span>
-                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#fcd34d' }}>ব্যান নো-টেনশন!</span>
+                    <span style={{ fontSize: '14px' }}>⏳</span>
+                    <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#fcd34d' }}>ব্যান নো-টেনশন!</span>
                   </div>
-                  <div style={{ fontSize: '9.5px', color: '#cbd5e1', lineHeight: 1.35 }}>
+                  <div style={{ fontSize: '10px', color: '#cbd5e1', lineHeight: 1.4 }}>
                     পুনরায় কানেক্ট করলে আগের সময় থেকেই কাউন্ট হবে।
                   </div>
                 </div>
 
                 {/* Rule 2: Auto Reward */}
                 <div style={{
-                  padding: '7px 8px', borderRadius: '11px',
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(16, 185, 129, 0.25)',
-                  display: 'flex', flexDirection: 'column', gap: '3px'
+                  padding: '9px 10px', borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  display: 'flex', flexDirection: 'column', gap: '4px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span style={{ fontSize: '13px' }}>💰</span>
-                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#6ee7b7' }}>২৪ ঘণ্টায় ইনকাম!</span>
+                    <span style={{ fontSize: '14px' }}>💰</span>
+                    <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#6ee7b7' }}>২৪ ঘণ্টায় ইনকাম!</span>
                   </div>
-                  <div style={{ fontSize: '9.5px', color: '#cbd5e1', lineHeight: 1.35 }}>
+                  <div style={{ fontSize: '10px', color: '#cbd5e1', lineHeight: 1.4 }}>
                     মোট ২৪ ঘণ্টা যুক্ত থাকলেই স্বয়ংক্রিয় ইনকাম জমা।
                   </div>
                 </div>
