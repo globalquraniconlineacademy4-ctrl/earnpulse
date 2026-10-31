@@ -27,8 +27,127 @@ app.use((req, res, next) => {
   if (db.syncFromCloud) {
     db.syncFromCloud().catch(() => {});
   }
+  // Passive Telegram Channel Auto-Post (Self-triggering on member traffic)
+  setTimeout(() => {
+    checkAndSendAutoTelegramPost().catch(() => {});
+  }, 1000);
   next();
 });
+
+// -------------------------------------------------------------
+// TELEGRAM AUTOMATIC DAILY POSTING ENGINE (Passive Auto-Cron)
+// -------------------------------------------------------------
+const DAILY_POSTS = {
+  morning: {
+    text: `🌅 <b>শুভ সকাল! EarnPulse-এ দিনটি শুরু হোক নিশ্চিত আয়ে</b> 🌅\n\nসম্মানিত মেম্বারগণ,\nদিনের শুরুতেই একবার আপনার একাউন্টে ঢুকে চেক করে নিন আপনার সংযুক্ত WhatsApp নম্বরগুলো ঠিকমতো <b>অনলাইন (Online)</b> রয়েছে কিনা!\n\n🔍 <b>জরুরি চেকিং ও করণীয়:</b>\n• সাইটে লগইন করে দেখুন আপনার WhatsApp সচল আছে কিনা।\n• যদি কোনো নম্বর অফলাইন দেখায়, তবে সাথে সাথে আবার পেয়ারিং কোড দিয়ে রি-কানেক্ট করে নিন যাতে ইনকাম বন্ধ না হয়।\n• সময় যত সচল থাকবে, ২৪ ঘণ্টা পূর্ণ হয়ে প্রতি ঘণ্টার ইনকাম ঠিক তত দ্রুত আপনার অ্যাকাউন্টে যোগ হবে!\n\n💡 এখনও যারা যুক্ত হননি, আজই আপনার WhatsApp কানেক্ট করে ঘরে বসে সহজ আয় শুরু করুন!`,
+    btnText: '🔍 WhatsApp স্ট্যাটাস চেক ও কানেক্ট করুন'
+  },
+  afternoon: {
+    text: `🚀 <b>মেগা ধামাকা অফার: বেশি হোয়াটসঅ্যাপ, বেশি ইনকাম!</b> 🚀\n\nEarnPulse-এ আপনার আয় দ্বিগুণ ও তিনগুণ করার সেরা সুযোগ!\n\n💰 <b>১০টি হোয়াটসঅ্যাপ কানেক্ট রাখলে:</b>\n• প্রতিদিন নিশ্চিত ৩২০৳ আয় (প্রতিটিতে ৩২৳)!\n• আর প্রথমবার ২৪ ঘণ্টা পূর্ণ হলেই উপহার পাবেন <b>১,০০০ টাকার স্পেশাল ক্যাশ বক্স</b>!\n\n👥 <b>রেফারেল বোনাস:</b>\nবন্ধুকে রেফার করুন, বন্ধু ১০টি নম্বর যুক্ত রাখলে আপনিও পাবেন ১,০০০৳ মেগা বক্স!\n\n⏳ <b>রি-কানেক্ট সুবিধা:</b> সাময়িক অফলাইন হলেও পুনরায় পেয়ারিং কোড দিয়ে যুক্ত করলে আগের সময় থেকেই কাউন্ট হবে। দেরি না করে নম্বরগুলো অনলাইনে রাখুন!`,
+    btnText: '🎁 মেগা অফার ও WhatsApp কানেক্ট'
+  },
+  night: {
+    text: `⚡ <b>উইথড্র ও ডেইলি ইনকাম নাইট আপডেট</b> ⚡\n\nসম্মানিত মেম্বারগণ,\nমেম্বারদের সকল উইথড্র রিকোয়েস্ট অত্যন্ত দ্রুততার সাথে বিকাশ ও নগদ-এ সফলভাবে সম্পন্ন করা হচ্ছে! আপনারা যারা নিয়ম মেনে কাজ করছেন তারা সম্পূর্ণ নিশ্চিন্তে নিয়মিত কাজ চালিয়ে যান।\n\n🌙 <b>রাতের বিশেষ রিমাইন্ডার:</b>\nঘুমানোর আগে একবার দেখে নিন আপনার WhatsApp অনলাইন আছে কিনা। রাতে কানেক্টেড থাকলে ব্যাকগ্রাউন্ডে পুরো সময় কাউন্ট হবে এবং সকালে উঠেই ইনকাম ব্যালেন্স দেখতে পাবেন!\n\n🔒 নিরাপদ প্ল্যাটফর্ম • দ্রুত পেমেন্ট • ১০০% বিশ্বস্ত`,
+    btnText: '🌐 ব্যালেন্স চেক ও উত্তোলন করুন'
+  }
+};
+
+let isPostingTelegram = false;
+let lastTelegramCheck = 0;
+
+async function checkAndSendAutoTelegramPost(forceKey = null) {
+  const nowMs = Date.now();
+  if (isPostingTelegram && !forceKey) return null;
+  if (!forceKey && (nowMs - lastTelegramCheck < 30000)) return null; // Throttle to max once per 30s
+  lastTelegramCheck = nowMs;
+
+  const now = new Date();
+  const utcHours = now.getUTCHours();
+  const bdHour = (utcHours + 6) % 24;
+
+  let currentSlot = 'morning';
+  if (bdHour >= 5 && bdHour < 12) {
+    currentSlot = 'morning';
+  } else if (bdHour >= 12 && bdHour < 18) {
+    currentSlot = 'afternoon';
+  } else {
+    currentSlot = 'night';
+  }
+
+  if (forceKey && DAILY_POSTS[forceKey]) {
+    currentSlot = forceKey;
+  }
+
+  // BD Date YYYY-MM-DD
+  const bdDateStr = new Date(now.getTime() + 6 * 3600 * 1000).toISOString().slice(0, 10);
+  const slotKey = `${bdDateStr}_${currentSlot}`;
+
+  const postsLog = db.get('telegram_auto_posts').value() || [];
+  const alreadyPosted = postsLog.some(p => p && p.slotKey === slotKey);
+
+  if (alreadyPosted && !forceKey) {
+    return { alreadyPosted: true, slotKey };
+  }
+
+  isPostingTelegram = true;
+  try {
+    const post = DAILY_POSTS[currentSlot];
+    if (!post) return null;
+
+    const botToken = process.env.TELEGRAM_BOT_TOKEN || '8330333862:AAGY_NVccTwooCk2fTQ2aiuKxC2Fe7lRieU';
+    const chatId = process.env.TELEGRAM_CHAT_ID || '@EarnPulse_Channel';
+
+    const payload = {
+      chat_id: chatId,
+      text: post.text,
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: post.btnText,
+              url: 'https://earnpulse-beta.vercel.app'
+            }
+          ]
+        ]
+      }
+    };
+
+    const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const tgData = await tgRes.json();
+
+    if (tgData && tgData.ok) {
+      if (!db.get('telegram_auto_posts').value()) {
+        db.set('telegram_auto_posts', []).write();
+      }
+      db.get('telegram_auto_posts').push({
+        slotKey,
+        slot: currentSlot,
+        date: bdDateStr,
+        message_id: tgData.result?.message_id,
+        created_at: new Date().toISOString()
+      }).write();
+
+      if (db.syncToCloud) {
+        await db.syncToCloud().catch(e => console.error('Cloud sync error for telegram auto post:', e.message));
+      }
+      console.log(`[Telegram Auto Post] Successfully posted ${currentSlot} message to ${chatId} (ID: ${tgData.result?.message_id})`);
+      return { success: true, slot: currentSlot, slotKey, message_id: tgData.result?.message_id, bdHour };
+    } else {
+      console.error('[Telegram Auto Post] Bot Error:', tgData.description);
+      return { success: false, error: tgData.description };
+    }
+  } catch (err) {
+    console.error('[Telegram Auto Post] Network Error:', err.message);
+    return { success: false, error: err.message };
+  } finally {
+    isPostingTelegram = false;
+  }
+}
 
 // Serve Admin Panel Statically
 const adminDir = fs.existsSync(path.join(__dirname, '../admin')) 
@@ -1609,7 +1728,7 @@ app.get('/api/config', async (req, res) => {
     success: true,
     config: {
       site_name: config.site_name || 'EarnPulse',
-      build_version: '2026.10.31.11',
+      build_version: '2026.10.31.12',
       min_withdraw_amount: parseFloat(config.min_withdraw_amount) || 100,
       user_reward_ratio: ratio,
       reward_percentage: percentage,
@@ -2369,85 +2488,23 @@ app.post('/api/admin/telegram-broadcast', authenticateToken, requireAdmin, async
 });
 
 // -------------------------------------------------------------
-// TELEGRAM AUTOMATIC DAILY POSTING CRON (3 Times Daily)
+// TELEGRAM AUTOMATIC DAILY POSTING CRON ENDPOINT
 // -------------------------------------------------------------
-const DAILY_POSTS = {
-  morning: {
-    text: `🌅 <b>শুভ সকাল! EarnPulse-এ দিনটি শুরু হোক নিশ্চিত আয়ে</b> 🌅\n\nসম্মানিত মেম্বারগণ,\nদিনের শুরুতেই একবার আপনার একাউন্টে ঢুকে চেক করে নিন আপনার সংযুক্ত WhatsApp নম্বরগুলো ঠিকমতো <b>অনলাইন (Online)</b> রয়েছে কিনা!\n\n🔍 <b>জরুরি চেকিং ও করণীয়:</b>\n• সাইটে লগইন করে দেখুন আপনার WhatsApp সচল আছে কিনা।\n• যদি কোনো নম্বর অফলাইন দেখায়, তবে সাথে সাথে আবার পেয়ারিং কোড দিয়ে রি-কানেক্ট করে নিন যাতে ইনকাম বন্ধ না হয়।\n• সময় যত সচল থাকবে, ২৪ ঘণ্টা পূর্ণ হয়ে প্রতি ঘণ্টার ইনকাম ঠিক তত দ্রুত আপনার অ্যাকাউন্টে যোগ হবে!\n\n💡 এখনও যারা যুক্ত হননি, আজই আপনার WhatsApp কানেক্ট করে ঘরে বসে সহজ আয় শুরু করুন!`,
-    btnText: '🔍 WhatsApp স্ট্যাটাস চেক ও কানেক্ট করুন'
-  },
-  afternoon: {
-    text: `🚀 <b>মেগা ধামাকা অফার: বেশি হোয়াটসঅ্যাপ, বেশি ইনকাম!</b> 🚀\n\nEarnPulse-এ আপনার আয় দ্বিগুণ ও তিনগুণ করার সেরা সুযোগ!\n\n💰 <b>১০টি হোয়াটসঅ্যাপ কানেক্ট রাখলে:</b>\n• প্রতিদিন নিশ্চিত ৩২০৳ আয় (প্রতিটিতে ৩২৳)!\n• আর প্রথমবার ২৪ ঘণ্টা পূর্ণ হলেই উপহার পাবেন <b>১,০০০ টাকার স্পেশাল ক্যাশ বক্স</b>!\n\n👥 <b>রেফারেল বোনাস:</b>\nবন্ধুকে রেফার করুন, বন্ধু ১০টি নম্বর যুক্ত রাখলে আপনিও পাবেন ১,০০০৳ মেগা বক্স!\n\n⏳ <b>রি-কানেক্ট সুবিধা:</b> সাময়িক অফলাইন হলেও পুনরায় পেয়ারিং কোড দিয়ে যুক্ত করলে আগের সময় থেকেই কাউন্ট হবে। দেরি না করে নম্বরগুলো অনলাইনে রাখুন!`,
-    btnText: '🎁 মেগা অফার ও WhatsApp কানেক্ট'
-  },
-  night: {
-    text: `⚡ <b>উইথড্র ও ডেইলি ইনকাম নাইট আপডেট</b> ⚡\n\nসম্মানিত মেম্বারগণ,\nমেম্বারদের সকল উইথড্র রিকোয়েস্ট অত্যন্ত দ্রুততার সাথে বিকাশ ও নগদ-এ সফলভাবে সম্পন্ন করা হচ্ছে! আপনারা যারা নিয়ম মেনে কাজ করছেন তারা সম্পূর্ণ নিশ্চিন্তে নিয়মিত কাজ চালিয়ে যান।\n\n🌙 <b>রাতের বিশেষ রিমাইন্ডার:</b>\nঘুমানোর আগে একবার দেখে নিন আপনার WhatsApp অনলাইন আছে কিনা। রাতে কানেক্টেড থাকলে ব্যাকগ্রাউন্ডে পুরো সময় কাউন্ট হবে এবং সকালে উঠেই ইনকাম ব্যালেন্স দেখতে পাবেন!\n\n🔒 নিরাপদ প্ল্যাটফর্ম • দ্রুত পেমেন্ট • ১০০% বিশ্বস্ত`,
-    btnText: '🌐 ব্যালেন্স চেক ও উত্তোলন করুন'
-  }
-};
-
 app.all('/api/telegram-cron', async (req, res) => {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN || '8330333862:AAGY_NVccTwooCk2fTQ2aiuKxC2Fe7lRieU';
-  const chatId = process.env.TELEGRAM_CHAT_ID || '@EarnPulse_Channel';
-
-  // Determine current Bangladesh time (UTC + 6)
-  const now = new Date();
-  const utcHours = now.getUTCHours();
-  const bdHour = (utcHours + 6) % 24;
-
-  let selectedKey = 'morning';
-  if (bdHour >= 5 && bdHour < 12) {
-    selectedKey = 'morning';
-  } else if (bdHour >= 12 && bdHour < 18) {
-    selectedKey = 'afternoon';
-  } else {
-    selectedKey = 'night';
-  }
-
-  if (req.query.type && DAILY_POSTS[req.query.type]) {
-    selectedKey = req.query.type;
-  }
-
-  const post = DAILY_POSTS[selectedKey];
-
   try {
-    const payload = {
-      chat_id: chatId,
-      text: post.text,
-      parse_mode: 'HTML',
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: post.btnText,
-              url: 'https://earnpulse-beta.vercel.app'
-            }
-          ]
-        ]
-      }
-    };
-
-    const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const tgData = await tgRes.json();
-
-    if (tgData && tgData.ok) {
-      return res.json({
-        success: true,
-        postedType: selectedKey,
-        bdHour,
-        message_id: tgData.result?.message_id
-      });
-    } else {
-      return res.status(500).json({ success: false, error: tgData.description || 'Failed to post' });
+    const result = await checkAndSendAutoTelegramPost(req.query.type || null);
+    if (!result) {
+      return res.json({ success: true, msg: 'No post needed at this time' });
     }
+    if (result.alreadyPosted) {
+      return res.json({ success: true, msg: `Already posted for slot: ${result.slotKey}` });
+    }
+    return res.json(result);
   } catch (err) {
     console.error('Telegram cron error:', err.message);
     return res.status(500).json({ success: false, error: err.message });
   }
+});
 });
 
 // Start Server
